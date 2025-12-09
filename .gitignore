@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Added by Autocommiter: ensure *.env*
+*.env*
+# Added by Autocommiter: ensure docx/
+docx/
+# Added by Autocommiter: ensure .docx/
+.docx/
