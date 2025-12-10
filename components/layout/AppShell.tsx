@@ -24,6 +24,7 @@ import {
     alpha
 } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
+import HomeIcon from '@mui/icons-material/Home';
 import CallIcon from '@mui/icons-material/Call';
 import PersonIcon from '@mui/icons-material/Person';
 import SearchIcon from '@mui/icons-material/Search';
@@ -44,7 +45,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const navItems = [
-        { label: 'Chats', href: '/', icon: <ChatIcon /> },
+        { label: 'Home', href: '/', icon: <HomeIcon /> },
+        { label: 'Chats', href: '/chats', icon: <ChatIcon /> },
         { label: 'Calls', href: '/calls', icon: <CallIcon /> },
         { label: 'Profile', href: '/profile', icon: <PersonIcon /> },
     ];
