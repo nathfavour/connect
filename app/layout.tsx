@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthOverlay } from '@/components/auth/AuthOverlay';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 export default function RootLayout({
   children,
@@ -28,8 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <AuthOverlay />
-        {children}
+        <ThemeProvider>
+          <AuthOverlay />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

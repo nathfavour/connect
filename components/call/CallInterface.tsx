@@ -95,15 +95,27 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
             display: 'flex',
             flexDirection: 'column'
         }}>
-            <Box sx={{ flex: 1, position: 'relative' }}>
+            <Box sx={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {/* Remote Video */}
                 <Box 
                     component="video"
                     ref={remoteVideoRef} 
                     autoPlay 
                     playsInline 
-                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: status === 'connected' ? 'block' : 'none' }} 
                 />
+                
+                {/* Placeholder when not connected */}
+                {status !== 'connected' && (
+                    <Box sx={{ textAlign: 'center', color: 'white' }}>
+                        <Typography variant="h5" gutterBottom>
+                            {status === 'Initializing...' ? 'Setting up call...' : status}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                            Waiting for remote video...
+                        </Typography>
+                    </Box>
+                )}
                 
                 {/* Local Video */}
                 <Box sx={{ 
@@ -116,7 +128,8 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
                     borderRadius: 2,
                     overflow: 'hidden',
                     border: '2px solid white',
-                    boxShadow: 3
+                    boxShadow: 3,
+                    zIndex: 1301
                 }}>
                     <Box 
                         component="video"
