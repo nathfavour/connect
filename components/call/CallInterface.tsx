@@ -7,12 +7,18 @@ import { ChatService } from '@/lib/services/chat';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useRouter } from 'next/navigation';
-import { Box, IconButton, Typography, Fab } from '@mui/material';
+import { Box, IconButton, Typography, Fab, Stack } from '@mui/material';
 import CallEndIcon from '@mui/icons-material/CallEnd';
+import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 
 export const CallInterface = ({ conversationId, isCaller }: { conversationId: string, isCaller: boolean }) => {
     const { user } = useAuth();
     const [status, setStatus] = useState('Initializing...');
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(false);
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const rtcManager = useRef<WebRTCManager | null>(null);
@@ -84,6 +90,22 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
     const endCall = () => {
         rtcManager.current?.cleanup();
         router.back();
+    };
+
+    const toggleMute = () => {
+        if (localVideoRef.current?.srcObject) {
+            const stream = localVideoRef.current.srcObject as MediaStream;
+            stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+            setIsMuted(!isMuted);
+        }
+    };
+
+    const toggleVideo = () => {
+        if (localVideoRef.current?.srcObject) {
+            const stream = localVideoRef.current.srcObject as MediaStream;
+            stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+            setIsVideoOff(!isVideoOff);
+        }
     };
 
     return (
@@ -163,12 +185,28 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
                 display: 'flex', 
                 justifyContent: 'center', 
                 alignItems: 'center', 
-                gap: 2,
+                gap: 3,
                 bgcolor: 'rgba(0,0,0,0.8)'
             }}>
-                <Fab color="error" onClick={endCall} aria-label="end call">
+                <IconButton 
+                    onClick={toggleMute} 
+                    sx={{ bgcolor: isMuted ? 'white' : 'rgba(255,255,255,0.2)', color: isMuted ? 'black' : 'white', '&:hover': { bgcolor: isMuted ? 'grey.200' : 'rgba(255,255,255,0.3)' } }}
+                    size="large"
+                >
+                    {isMuted ? <MicOffIcon /> : <MicIcon />}
+                </IconButton>
+
+                <Fab color="error" onClick={endCall} aria-label="end call" size="large">
                     <CallEndIcon />
                 </Fab>
+
+                <IconButton 
+                    onClick={toggleVideo} 
+                    sx={{ bgcolor: isVideoOff ? 'white' : 'rgba(255,255,255,0.2)', color: isVideoOff ? 'black' : 'white', '&:hover': { bgcolor: isVideoOff ? 'grey.200' : 'rgba(255,255,255,0.3)' } }}
+                    size="large"
+                >
+                    {isVideoOff ? <VideocamOffIcon /> : <VideocamIcon />}
+                </IconButton>
             </Box>
         </Box>
     );

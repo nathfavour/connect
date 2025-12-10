@@ -16,13 +16,15 @@ import {
     IconButton, 
     Paper,
     CircularProgress,
-    Chip
+    Chip,
+    Fab
 } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import CallMissedIcon from '@mui/icons-material/CallMissed';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
+import AddIcCallIcon from '@mui/icons-material/AddIcCall';
 
 export const CallHistory = () => {
     const { user } = useAuth();
@@ -71,7 +73,7 @@ export const CallHistory = () => {
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, position: 'relative', minHeight: '50vh' }}>
             {calls.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
                     <CallIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
@@ -116,6 +118,15 @@ export const CallHistory = () => {
                     ))}
                 </List>
             )}
+            
+            <Fab 
+                color="primary" 
+                aria-label="add call" 
+                sx={{ position: 'fixed', bottom: 80, right: 24 }}
+                onClick={() => router.push('/chats')}
+            >
+                <AddIcCallIcon />
+            </Fab>
         </Box>
     );
 };

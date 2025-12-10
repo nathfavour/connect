@@ -37,9 +37,9 @@ export const UserSearch = () => {
         setLoading(true);
         try {
             const response = await UsersService.searchUsers(query);
-            // Filter out self and private users
+            // Filter out private users
             const filtered = response.rows.filter((u: any) => {
-                if (u.$id === user?.$id) return false;
+                // Allow finding self for "Note to Self" feature
                 if (u.privacySettings) {
                     try {
                         const settings = JSON.parse(u.privacySettings);
@@ -60,14 +60,29 @@ export const UserSearch = () => {
         if (!user) return;
         try {
             const existing = await ChatService.getConversations(user.$id);
-            const found = existing.rows.find((c: any) => 
-                c.type === 'direct' && c.participants.includes(targetUserId)
-            );
+            
+            let found;
+            if (targetUserId === user.$id) {
+                // Self chat: look for direct chat with only 1 participant (me)
+                found = existing.rows.find((c: any) => 
+                    c.type === 'direct' && 
+                    c.participants.length === 1 && 
+                    c.participants[0] === user.$id
+                );
+            } else {
+                // Other chat: look for direct chat with target
+                found = existing.rows.find((c: any) => 
+                    c.type === 'direct' && 
+                    c.participants.includes(targetUserId) &&
+                    c.participants.length > 1
+                );
+            }
 
             if (found) {
                 router.push(`/chat/${found.$id}`);
             } else {
-                const newConv = await ChatService.createConversation([user.$id, targetUserId], 'direct');
+                const participants = targetUserId === user.$id ? [user.$id] : [user.$id, targetUserId];
+                const newConv = await ChatService.createConversation(participants, 'direct');
                 router.push(`/chat/${newConv.$id}`);
             }
         } catch (error) {

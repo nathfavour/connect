@@ -49,6 +49,13 @@ export const ChatList = () => {
                         } catch (e) {
                             return conv;
                         }
+                    } else {
+                        // Self Chat (participants only contains me)
+                        return {
+                            ...conv,
+                            otherUserId: user!.$id,
+                            name: 'Note to Self'
+                        };
                     }
                 }
                 return conv;

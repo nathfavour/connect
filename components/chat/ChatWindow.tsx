@@ -23,6 +23,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
     const [messages, setMessages] = useState<Messages[]>([]);
+    const [conversation, setConversation] = useState<any>(null);
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -31,6 +32,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     useEffect(() => {
         if (conversationId) {
             loadMessages();
+            loadConversation();
             const interval = setInterval(loadMessages, 5000);
             return () => clearInterval(interval);
         }
@@ -39,6 +41,32 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const loadConversation = async () => {
+        try {
+            const conv = await ChatService.getConversationById(conversationId);
+            if (conv.type === 'direct') {
+                const otherId = conv.participants.find((p: string) => p !== user!.$id);
+                if (otherId) {
+                    try {
+                        const profile = await UsersService.getProfileById(otherId);
+                        setConversation({ 
+                            ...conv, 
+                            name: profile ? (profile.displayName || profile.username) : 'User' 
+                        });
+                    } catch (e) {
+                        setConversation({ ...conv, name: 'User' });
+                    }
+                } else {
+                    setConversation({ ...conv, name: 'Note to Self' });
+                }
+            } else {
+                setConversation(conv);
+            }
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+        }
+    };
 
     const loadMessages = async () => {
         try {
@@ -86,7 +114,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        Chat
+                        {conversation?.name || 'Chat'}
                     </Typography>
                     <Button 
                         variant="contained" 

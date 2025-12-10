@@ -8,7 +8,6 @@ import {
     Typography, 
     Avatar, 
     Paper, 
-    Grid, 
     Button, 
     CircularProgress,
     Divider
@@ -75,26 +74,26 @@ export const Profile = () => {
             </Paper>
 
             <Typography variant="h6" fontWeight="bold" mb={2}>Stats</Typography>
-            <Grid container spacing={2}>
-                <Grid item xs={4}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', borderRadius: 3 }} variant="outlined">
                         <Typography variant="h4" fontWeight="bold" color="primary">0</Typography>
                         <Typography variant="body2" color="text.secondary">Posts</Typography>
                     </Paper>
-                </Grid>
-                <Grid item xs={4}>
+                </Box>
+                <Box sx={{ flex: 1 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', borderRadius: 3 }} variant="outlined">
                         <Typography variant="h4" fontWeight="bold" color="primary">0</Typography>
                         <Typography variant="body2" color="text.secondary">Followers</Typography>
                     </Paper>
-                </Grid>
-                <Grid item xs={4}>
+                </Box>
+                <Box sx={{ flex: 1 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', borderRadius: 3 }} variant="outlined">
                         <Typography variant="h4" fontWeight="bold" color="primary">0</Typography>
                         <Typography variant="body2" color="text.secondary">Following</Typography>
                     </Paper>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
         </Box>
     );
 };
