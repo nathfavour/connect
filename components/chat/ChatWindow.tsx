@@ -7,13 +7,13 @@ import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { Messages } from '@/types/appwrite';
 import { useRouter } from 'next/navigation';
-import { 
-    Box, 
-    Paper, 
-    Typography, 
-    TextField, 
-    IconButton, 
-    Button, 
+import {
+    Box,
+    Paper,
+    Typography,
+    TextField,
+    IconButton,
+    Button,
     CircularProgress,
     AppBar,
     Toolbar,
@@ -43,7 +43,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [attachment, setAttachment] = useState<File | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
@@ -69,9 +69,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 if (otherId) {
                     try {
                         const profile = await UsersService.getProfileById(otherId);
-                        setConversation({ 
-                            ...conv, 
-                            name: profile ? (profile.displayName || profile.username) : 'User' 
+                        setConversation({
+                            ...conv,
+                            name: profile ? (profile.displayName || profile.username) : 'User'
                         });
                     } catch (e) {
                         setConversation({ ...conv, name: 'User' });
@@ -109,7 +109,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setSending(true);
         const text = inputText;
         const file = attachment;
-        
+
         setInputText('');
         setAttachment(null);
 
@@ -185,17 +185,17 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         if (!fileId) return <Typography variant="body1">{msg.content}</Typography>;
 
         const bucketId = StorageService.getBucketForType(msg.type as any);
-        const viewUrl = StorageService.getFileView(fileId, bucketId).href;
-        const previewUrl = StorageService.getFilePreview(fileId, bucketId, 300, 300).href;
+        const viewUrl = StorageService.getFileView(fileId, bucketId);
+        const previewUrl = StorageService.getFilePreview(fileId, bucketId, 300, 300);
 
         switch (msg.type) {
             case 'image':
                 return (
                     <Box>
-                        <img 
-                            src={previewUrl} 
-                            alt="attachment" 
-                            style={{ maxWidth: '100%', borderRadius: 8, cursor: 'pointer' }} 
+                        <img
+                            src={previewUrl}
+                            alt="attachment"
+                            style={{ maxWidth: '100%', borderRadius: 8, cursor: 'pointer' }}
                             onClick={() => window.open(viewUrl, '_blank')}
                         />
                         {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
@@ -204,10 +204,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             case 'video':
                 return (
                     <Box>
-                        <video 
-                            src={viewUrl} 
-                            controls 
-                            style={{ maxWidth: '100%', borderRadius: 8 }} 
+                        <video
+                            src={viewUrl}
+                            controls
+                            style={{ maxWidth: '100%', borderRadius: 8 }}
                         />
                         {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
                     </Box>
@@ -222,10 +222,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
                         <InsertDriveFileIcon />
-                        <Typography 
-                            variant="body2" 
-                            component="a" 
-                            href={StorageService.getFileDownload(fileId, bucketId).href}
+                        <Typography
+                            variant="body2"
+                            component="a"
+                            href={StorageService.getFileDownload(fileId, bucketId)}
                             target="_blank"
                             sx={{ textDecoration: 'none', color: 'inherit' }}
                         >
@@ -249,9 +249,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
                         {conversation?.name || 'Chat'}
                     </Typography>
-                    <Button 
-                        variant="contained" 
-                        startIcon={<CallIcon />} 
+                    <Button
+                        variant="contained"
+                        startIcon={<CallIcon />}
                         onClick={handleCall}
                         sx={{ borderRadius: 4, boxShadow: 'none' }}
                     >
@@ -264,7 +264,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {messages.map((msg) => {
                     const isMe = msg.senderId === user?.$id;
-                    
+
                     if (msg.type === 'call_signal') {
                         try {
                             const signal = JSON.parse(msg.content || '{}');
@@ -288,9 +288,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }
 
                     return (
-                        <Box 
-                            key={msg.$id} 
-                            sx={{ 
+                        <Box
+                            key={msg.$id}
+                            sx={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
                                 maxWidth: '75%',
                                 p: 1.5,
@@ -326,16 +326,16 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             )}
 
             {/* Input */}
-            <Paper 
-                component="form" 
-                onSubmit={handleSend} 
+            <Paper
+                component="form"
+                onSubmit={handleSend}
                 sx={{ p: 2, display: 'flex', alignItems: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
                 elevation={0}
             >
                 <IconButton onClick={handleAttachClick} color="primary" sx={{ mr: 1 }}>
                     <AttachFileIcon />
                 </IconButton>
-                
+
                 <Menu
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
@@ -359,11 +359,11 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     </MenuItem>
                 </Menu>
 
-                <input 
-                    type="file" 
-                    hidden 
-                    ref={fileInputRef} 
-                    onChange={onFileChange} 
+                <input
+                    type="file"
+                    hidden
+                    ref={fileInputRef}
+                    onChange={onFileChange}
                 />
 
                 <TextField
@@ -374,23 +374,23 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     variant="outlined"
                     size="small"
                     disabled={isRecording || sending}
-                    sx={{ 
-                        mr: 1, 
-                        '& .MuiOutlinedInput-root': { 
+                    sx={{
+                        mr: 1,
+                        '& .MuiOutlinedInput-root': {
                             borderRadius: 4,
                             bgcolor: 'background.default'
-                        } 
+                        }
                     }}
                 />
-                
+
                 {inputText.trim() || attachment ? (
-                    <IconButton 
-                        type="submit" 
-                        color="primary" 
+                    <IconButton
+                        type="submit"
+                        color="primary"
                         disabled={sending}
-                        sx={{ 
-                            bgcolor: 'primary.main', 
-                            color: 'primary.contrastText', 
+                        sx={{
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText',
                             '&:hover': { bgcolor: 'primary.dark' },
                             width: 40,
                             height: 40
@@ -399,10 +399,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         {sending ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
                     </IconButton>
                 ) : (
-                    <IconButton 
+                    <IconButton
                         onClick={toggleRecording}
                         color={isRecording ? "error" : "default"}
-                        sx={{ 
+                        sx={{
                             bgcolor: isRecording ? 'error.light' : 'transparent',
                             '&:hover': { bgcolor: isRecording ? 'error.main' : 'action.hover' }
                         }}

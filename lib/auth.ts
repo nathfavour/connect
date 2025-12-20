@@ -119,5 +119,16 @@ export function useAuth() {
         }
     };
 
-    return { user, loading, login };
+    const logout = async () => {
+        try {
+            await account.deleteSession('current');
+            setUser(null);
+        } catch (error) {
+            console.error('Logout failed:', error);
+            // Even if session delete fails, clear local state
+            setUser(null);
+        }
+    };
+
+    return { user, loading, login, logout };
 }
