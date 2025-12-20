@@ -35,14 +35,17 @@ export const AuthOverlay = () => {
                     <button
                         onClick={login}
                         style={{
-                            backgroundColor: '#0070f3',
-                            color: 'white',
+                            backgroundColor: '#f9c806',
+                            color: '#1a1a1a',
                             border: 'none',
-                            padding: '12px 24px',
-                            borderRadius: '25px',
+                            padding: '14px 28px',
+                            borderRadius: '16px',
                             fontSize: '16px',
+                            fontWeight: '700',
                             cursor: 'pointer',
-                            width: '100%'
+                            width: '100%',
+                            boxShadow: '0 4px 14px 0 rgba(249, 200, 6, 0.39)',
+                            transition: 'all 0.2s ease'
                         }}
                     >
                         Sign In with Whisperr ID
