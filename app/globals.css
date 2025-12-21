@@ -1,67 +1,46 @@
 :root {
-  /* Light mode: ash-white bg, very dark brown fg */
-  --background: #f8f8f8;
-  --foreground: #0f0a08;
-  --card: #ffffff;
-  --card-foreground: #0f0a08;
-  --popover: #ffffff;
-  --popover-foreground: #0f0a08;
-  --primary: #FFC700;
-  --primary-foreground: #1a1a1a;
-  --secondary: #3d2f26;
-  --secondary-foreground: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #FFC700;
-  --accent-foreground: #1a1a1a;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #e8e8e8;
-  --input: #e8e8e8;
-  --ring: #FFC700;
-  --radius: 1rem;
-}
+  --void: #1B1C20;
+  --matter: #2D2421;
+  --matter-highlight: #484A3B;
+  --tungsten: #FFC107;
+  --shadow-indigo: rgba(26, 35, 126, 0.4);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark mode: very dark ash bg, brownish white fg */
-    --background: #0f0f0f;
-    --foreground: #faf8f6;
-    --card: #1a1a1a;
-    --card-foreground: #faf8f6;
-    --popover: #1a1a1a;
-    --popover-foreground: #faf8f6;
-    --primary: #FFC700;
-    --primary-foreground: #1a1a1a;
-    --secondary: #c4b5a8;
-    --secondary-foreground: #1a1a1a;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #FFC700;
-    --accent-foreground: #1a1a1a;
-    --destructive: #7f1d1d;
-    --destructive-foreground: #ffffff;
-    --border: #2a2a2a;
-    --input: #2a2a2a;
-    --ring: #FFC700;
-  }
+  --background: var(--void);
+  --foreground: #FAF8F6;
+  --card: var(--matter);
+  --card-foreground: #FAF8F6;
+  --primary: var(--tungsten);
+  --primary-foreground: #1B1C20;
+  --border: #3D3D3D;
+  --ring: var(--tungsten);
+  --radius: 4px;
+
+  --shadow-tangible: 8px 12px 20px var(--shadow-indigo);
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
+  background-color: var(--void);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
   height: 100%;
   margin: 0;
   padding: 0;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-mono), monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Inter', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
