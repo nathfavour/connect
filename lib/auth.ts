@@ -82,7 +82,21 @@ export function useAuth() {
         checkSession();
     }, []);
 
-    const login = () => {
+    const login = async () => {
+        if (typeof window === 'undefined') return;
+
+        // First, check if we already have a session locally
+        try {
+            const session = await account.get();
+            if (session) {
+                console.log('Active session detected in whisperrconnect, skipping IDM window');
+                setUser(session);
+                return;
+            }
+        } catch (e) {
+            // No session, proceed to open window
+        }
+
         const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
         const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
         const currentUri = window.location.href;
