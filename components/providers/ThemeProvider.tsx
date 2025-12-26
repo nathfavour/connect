@@ -48,58 +48,69 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     () =>
       createTheme({
         palette: {
-          mode,
+          mode: 'dark',
           primary: {
-            main: '#FFC107', // Tungsten Sun
-            contrastText: '#1B1C20',
+            main: '#00F0FF', // Electric Teal
+            contrastText: '#000000',
           },
           secondary: {
-            main: '#1A237E', // Adire Indigo
-            contrastText: '#FAF8F6',
+            main: '#F2F2F2', // Titanium
           },
           background: {
-            default: mode === 'light' ? '#FAF8F6' : '#1B1C20', // Solar / Void
-            paper: mode === 'light' ? '#EADDD3' : '#2D2421',   // Sand / Laterite
+            default: '#000000', // The Void
+            paper: '#0A0A0A',   // The Surface
           },
           text: {
-            primary: mode === 'light' ? '#1B1C20' : '#FAF8F6',
-            secondary: mode === 'light' ? '#5E4E42' : '#A69080',
+            primary: '#F2F2F2',   // Titanium
+            secondary: '#A1A1AA', // Gunmetal
+            disabled: '#404040',  // Carbon
           },
-          divider: mode === 'light' ? 'rgba(26, 35, 126, 0.1)' : '#3D3D3D',
+          divider: '#222222', // Subtle Border
         },
         shape: {
           borderRadius: 12,
         },
         typography: {
-          fontFamily: 'var(--font-inter), "Inter", sans-serif',
+          fontFamily: '"Satoshi", "Inter", sans-serif',
           h1: {
-            fontFamily: 'var(--font-mono), monospace',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
+            fontFamily: '"Space Grotesk", sans-serif',
+            fontSize: '32px',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            color: '#F2F2F2',
           },
           h2: {
-            fontFamily: 'var(--font-mono), monospace',
-            fontWeight: 700,
+            fontFamily: '"Space Grotesk", sans-serif',
+            fontSize: '24px',
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
           },
           h3: {
-            fontFamily: 'var(--font-mono), monospace',
-            fontWeight: 700,
+            fontFamily: '"Space Grotesk", sans-serif',
+            fontSize: '20px',
+            fontWeight: 600,
           },
           button: {
-            fontFamily: 'var(--font-mono), monospace',
-            textTransform: 'uppercase',
-            fontWeight: 800,
-            letterSpacing: '0.05em',
+            fontFamily: '"Space Grotesk", sans-serif',
+            textTransform: 'none',
+            fontWeight: 600,
           },
         },
         components: {
+          MuiCssBaseline: {
+            styleOverrides: {
+              body: {
+                backgroundColor: '#000000',
+                color: '#F2F2F2',
+              },
+            },
+          },
           MuiAppBar: {
             styleOverrides: {
               root: {
-                backgroundColor: mode === 'light' ? 'rgba(250, 248, 246, 0.8)' : 'rgba(27, 28, 32, 0.8)',
-                color: mode === 'light' ? '#1B1C20' : '#FAF8F6',
-                backdropFilter: 'blur(12px)',
-                borderBottom: `2px solid ${mode === 'light' ? 'rgba(26, 35, 126, 0.1)' : '#3D3D3D'}`,
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                backdropFilter: 'blur(20px)',
+                borderBottom: '1px solid #222222',
                 boxShadow: 'none',
               }
             }
@@ -107,29 +118,33 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiDrawer: {
             styleOverrides: {
               paper: {
-                backgroundColor: mode === 'light' ? '#FAF8F6' : '#1B1C20',
-                borderRight: `2px solid ${mode === 'light' ? 'rgba(26, 35, 126, 0.1)' : '#3D3D3D'}`,
+                backgroundColor: '#000000',
+                borderRight: '1px solid #222222',
               }
             }
           },
           MuiButton: {
             styleOverrides: {
               root: {
-                borderRadius: 12,
-                padding: '12px 24px',
+                borderRadius: 8,
+                padding: '8px 16px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: mode === 'light'
-                  ? '0px 2px 4px rgba(26, 35, 126, 0.2), 0px 8px 16px rgba(26, 35, 126, 0.1), inset 0px 1px 0px rgba(255, 193, 7, 0.2)'
-                  : '0px 2px 4px rgba(0, 0, 0, 0.4), 0px 8px 16px rgba(26, 35, 126, 0.2), inset 0px 1px 0px rgba(255, 193, 7, 0.2)',
+                border: '1px solid #222222',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: mode === 'light'
-                    ? '0px 4px 8px rgba(26, 35, 126, 0.4), 0px 12px 24px rgba(26, 35, 126, 0.2), inset 0px 1px 0px rgba(255, 193, 7, 0.2)'
-                    : '0px 4px 8px rgba(0, 0, 0, 0.6), 0px 12px 24px rgba(26, 35, 126, 0.4), inset 0px 1px 0px rgba(255, 193, 7, 0.2)',
+                  borderColor: '#404040',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                 },
                 '&:active': {
-                  transform: 'translateY(0)',
-                  boxShadow: 'none',
+                  transform: 'scale(0.98)',
+                },
+              },
+              containedPrimary: {
+                backgroundColor: '#00F0FF',
+                color: '#000000',
+                border: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 240, 255, 0.8)',
+                  boxShadow: '0 0 15px rgba(0, 240, 255, 0.3)',
                 },
               },
             }
@@ -137,26 +152,22 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiCard: {
             styleOverrides: {
               root: {
-                borderRadius: 24,
-                backgroundColor: mode === 'light' ? '#EADDD3' : '#2D2421',
-                border: `2px solid ${mode === 'light' ? 'rgba(26, 35, 126, 0.1)' : '#3D3D3D'}`,
-                boxShadow: mode === 'light'
-                  ? '0px 2px 4px rgba(26, 35, 126, 0.2), 0px 8px 16px rgba(26, 35, 126, 0.1), inset 0px 1px 0px rgba(255, 193, 7, 0.2)'
-                  : '0px 2px 4px rgba(0, 0, 0, 0.4), 0px 8px 16px rgba(26, 35, 126, 0.2), inset 0px 1px 0px rgba(255, 193, 7, 0.2)',
+                borderRadius: 12,
+                backgroundColor: 'rgba(10, 10, 10, 0.7)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 backgroundImage: 'none',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: mode === 'light'
-                    ? '0px 4px 8px rgba(26, 35, 126, 0.4), 0px 12px 24px rgba(26, 35, 126, 0.2), inset 0px 1px 0px rgba(255, 193, 7, 0.2)'
-                    : '0px 4px 8px rgba(0, 0, 0, 0.6), 0px 12px 24px rgba(26, 35, 126, 0.4), inset 0px 1px 0px rgba(255, 193, 7, 0.2)',
+                  borderColor: '#404040',
+                  transform: 'translateY(-2px)',
                 },
               }
             }
           }
         }
       }),
-    [mode],
+    [],
   );
 
   return (
