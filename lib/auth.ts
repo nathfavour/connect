@@ -83,6 +83,25 @@ export function useAuth() {
         checkSession();
     }, []);
 
+    // Listen for postMessage from IDM window
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+            const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
+            if (event.origin !== `https://${authSubdomain}.${domain}`) return;
+
+            if (event.data?.type === 'idm:auth-success') {
+                console.log('Received auth success via postMessage in whisperrconnect');
+                checkSession();
+                setIsAuthenticating(false);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
+
     const login = async () => {
         if (typeof window === 'undefined' || isAuthenticating) return;
 
@@ -118,12 +137,14 @@ export function useAuth() {
         const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
         const currentUri = window.location.href;
 
-        const idmsUrl = `https://${authSubdomain}.${domain}?source=${encodeURIComponent(currentUri)}`;
+        const idmsUrl = `https://${authSubdomain}.${domain}/login`;
+        const redirectUrl = new URL(idmsUrl);
+        redirectUrl.searchParams.set('source', currentUri);
 
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         if (isMobile) {
-            window.location.href = idmsUrl;
+            window.location.href = redirectUrl.toString();
         } else {
             const width = 500;
             const height = 600;
@@ -137,28 +158,15 @@ export function useAuth() {
             );
 
             if (!popup) {
-                setIsAuthenticating(false);
+                console.warn('Popup blocked, falling back to redirect in whisperrconnect');
+                window.location.href = redirectUrl.toString();
                 return;
             }
 
-            const interval = setInterval(async () => {
-                try {
-                    const session = await account.get();
-                    if (session) {
-                        setUser(session);
-                        setIsAuthenticating(false);
-                        clearInterval(interval);
-                        popup?.close();
-                    }
-                } catch (e) {
-                }
-                if (popup.closed) {
-                    clearInterval(interval);
-                    setIsAuthenticating(false);
-                }
-            }, 1000);
+            // The postMessage listener (added below) will handle success
         }
     };
+
 
     const logout = async () => {
         try {
