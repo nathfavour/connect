@@ -16,6 +16,7 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import { UsersService } from '@/lib/services/users';
+import { account } from '@/lib/appwrite/client';
 
 interface EditProfileModalProps {
     open: boolean;
@@ -84,6 +85,21 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
                 bio,
                 displayName
             });
+
+            // Update global account name and username preference for ecosystem coherence
+            try {
+                if (displayName || username) {
+                    if (displayName) await account.updateName(displayName);
+                    const currentPrefs = await account.getPrefs();
+                    await account.updatePrefs({
+                        ...currentPrefs,
+                        username: username.toLowerCase().trim()
+                    });
+                }
+            } catch (prefErr) {
+                console.warn('Failed to sync display name or username to account prefs', prefErr);
+            }
+
             onUpdate();
             onClose();
         } catch (err: any) {
