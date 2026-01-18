@@ -160,7 +160,7 @@ export const UsersService = {
         } catch (e) {
             return null;
         }
-    }
+    },
 
     async searchUsers(query: string) {
         // Search by username or displayName
