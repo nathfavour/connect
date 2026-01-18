@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Client, Account } from 'appwrite';
+import { UsersService } from '@/lib/services/users';
 
 // Initialize Appwrite
 const client = new Client()
@@ -60,6 +61,7 @@ export function useAuth() {
         try {
             const session = await account.get();
             setUser(session);
+            await UsersService.ensureProfileForUser(session as any);
             setLoading(false);
         } catch (error: any) {
             // Try silent discovery
@@ -68,6 +70,7 @@ export function useAuth() {
             try {
                 const retrySession = await account.get();
                 setUser(retrySession);
+                await UsersService.ensureProfileForUser(retrySession as any);
             } catch {
                 const isNetworkError = !error.response && error.message?.includes('Network Error') || error.message?.includes('Failed to fetch');
                 if (!isNetworkError) {

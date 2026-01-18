@@ -18,6 +18,9 @@ export const APPWRITE_CONFIG = {
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
             USERS: 'users'
+        },
+        WHISPERRNOTE: {
+            USERS: '67ff05c900247b5673d3'
         }
     },
     BUCKETS: {

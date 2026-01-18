@@ -34,9 +34,16 @@ export const Profile = ({ username }: ProfileProps) => {
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const isOwnProfile = currentUser && (
-        username === profile?.username || 
-        (!username && profile?.$id === currentUser.$id)
+    const normalizeUsername = (value?: string | null) => {
+        if (!value) return null;
+        return value.toString().trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '') || null;
+    };
+
+    const normalizedUsername = normalizeUsername(username);
+
+    const isOwnProfile = currentUser && !profile?.__external && (
+        normalizedUsername === profile?.username || 
+        (!normalizedUsername && profile?.$id === currentUser.$id)
     );
 
     useEffect(() => {
@@ -49,6 +56,20 @@ export const Profile = ({ username }: ProfileProps) => {
             let data;
             if (username) {
                 data = await UsersService.getProfile(username);
+                if (!data) {
+                    const externalUser = await UsersService.getWhisperrnoteUserByUsername(username);
+                    if (externalUser) {
+                        const fallbackUsername = normalizeUsername(externalUser.username || externalUser.name || externalUser.email);
+                        data = {
+                            $id: externalUser.$id,
+                            username: fallbackUsername || username,
+                            displayName: externalUser.name || externalUser.displayName || fallbackUsername || 'User',
+                            avatarUrl: externalUser.avatarUrl || null,
+                            bio: externalUser.bio || null,
+                            __external: true
+                        };
+                    }
+                }
             } else if (currentUser) {
                 data = await UsersService.getProfileById(currentUser.$id);
             }
