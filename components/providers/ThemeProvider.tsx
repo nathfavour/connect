@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect } from '
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { useEcosystemNode } from '@/hooks/useEcosystemNode';
 
 type ColorModeContextType = {
   toggleColorMode: () => void;
@@ -17,6 +18,8 @@ export const useColorMode = () => useContext(ColorModeContext);
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [mode, setMode] = useState<'light' | 'dark'>('light');
+
+  useEcosystemNode('connect');
 
   useEffect(() => {
     // Load saved preference
