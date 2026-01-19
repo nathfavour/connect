@@ -18,14 +18,16 @@ import {
     Typography,
     IconButton
 } from '@mui/material';
-import ChatIcon from '@mui/icons-material/Chat';
-import HomeIcon from '@mui/icons-material/Home';
-import CallIcon from '@mui/icons-material/Call';
-import PersonIcon from '@mui/icons-material/Person';
-import SettingsIcon from '@mui/icons-material/Settings';
-import LogoutIcon from '@mui/icons-material/Logout';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { 
+    Home, 
+    MessageSquare, 
+    Phone, 
+    User as UserIcon, 
+    Settings, 
+    LogOut, 
+    Sun, 
+    Moon 
+} from 'lucide-react';
 import { useColorMode } from '@/components/providers/ThemeProvider';
 import { useAuth } from '@/lib/auth';
 
@@ -38,10 +40,10 @@ export const Navigation = () => {
     const { user, logout } = useAuth();
 
     const navItems = [
-        { label: 'Home', href: '/', icon: <HomeIcon /> },
-        { label: 'Chats', href: '/chats', icon: <ChatIcon /> },
-        { label: 'Calls', href: '/calls', icon: <CallIcon /> },
-        { label: 'Profile', href: '/profile', icon: <PersonIcon /> },
+        { label: 'Home', href: '/', icon: <Home size={20} strokeWidth={1.5} /> },
+        { label: 'Chats', href: '/chats', icon: <MessageSquare size={20} strokeWidth={1.5} /> },
+        { label: 'Calls', href: '/calls', icon: <Phone size={20} strokeWidth={1.5} /> },
+        { label: 'Profile', href: '/profile', icon: <UserIcon size={20} strokeWidth={1.5} /> },
     ];
 
     return (
@@ -101,7 +103,7 @@ export const Navigation = () => {
                         THEME
                     </Typography>
                     <IconButton onClick={colorMode.toggleColorMode} size="small">
-                        {theme.palette.mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+                        {theme.palette.mode === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
                     </IconButton>
                 </Box>
 
@@ -121,7 +123,7 @@ export const Navigation = () => {
                             </Typography>
                         </Box>
                         <IconButton size="small" onClick={() => logout()}>
-                            <LogoutIcon fontSize="small" />
+                            <LogOut size={18} strokeWidth={1.5} />
                         </IconButton>
                     </Box>
                 )}
