@@ -236,7 +236,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": true
                 },
                 {
@@ -245,7 +245,7 @@
                     "required": false,
                     "array": true,
                     "size": 5000,
-                    "default": [],
+                    "default": null,
                     "encrypt": true
                 },
                 {
@@ -254,7 +254,7 @@
                     "required": false,
                     "array": true,
                     "size": 5000,
-                    "default": [],
+                    "default": null,
                     "encrypt": true
                 },
                 {
@@ -263,7 +263,7 @@
                     "required": false,
                     "array": true,
                     "size": 5000,
-                    "default": [],
+                    "default": null,
                     "encrypt": true
                 },
                 {
@@ -377,7 +377,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -526,7 +526,7 @@
                     "required": false,
                     "array": true,
                     "size": 64,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -1892,7 +1892,7 @@
                     "required": false,
                     "array": true,
                     "size": 100,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2052,17 +2052,6 @@
                         "itemType"
                     ],
                     "orders": []
-                },
-                {
-                    "key": "idx_tags",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "tags"
-                    ],
-                    "orders": [
-                        null
-                    ]
                 }
             ]
         },
@@ -2142,7 +2131,7 @@
                     "required": false,
                     "array": true,
                     "size": 50,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2598,7 +2587,7 @@
                     "required": false,
                     "array": true,
                     "size": 100,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2690,21 +2679,10 @@
                     "type": "key",
                     "status": "available",
                     "columns": [
-                        "lastUsedAt"
+                        "lastAccessedAt"
                     ],
                     "orders": [
                         "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_tags",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "tags"
-                    ],
-                    "orders": [
-                        null
                     ]
                 }
             ]
@@ -2867,7 +2845,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2885,7 +2863,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2951,8 +2929,20 @@
                     "elements": [
                         "direct",
                         "group",
-                        "broadcast"
+                        "channel",
+                        "broadcast",
+                        "community"
                     ],
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "creatorId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2962,7 +2952,7 @@
                     "array": true,
                     "size": 256,
                     "encrypt": false,
-                    "default": []
+                    "default": null
                 },
                 {
                     "key": "admins",
@@ -2970,7 +2960,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -2983,11 +2973,71 @@
                     "encrypt": false
                 },
                 {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "avatarUrl",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "format": "url",
+                    "default": null
+                },
+                {
+                    "key": "avatarFileId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "avatar",
                     "type": "string",
                     "required": false,
                     "array": false,
                     "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "participantCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": -2147483648,
+                    "max": 2147483647,
+                    "default": 0
+                },
+                {
+                    "key": "maxParticipants",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": -2147483648,
+                    "max": 2147483647,
+                    "default": 200000
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "encryptionVersion",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
                     "default": null,
                     "encrypt": false
                 },
@@ -3018,18 +3068,125 @@
                     "encrypt": true
                 },
                 {
+                    "key": "isPinned",
+                    "type": "string",
+                    "required": true,
+                    "array": true,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isMuted",
+                    "type": "string",
+                    "required": true,
+                    "array": true,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isArchived",
+                    "type": "string",
+                    "required": true,
+                    "array": true,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "lastMessageText",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 300,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "lastMessageSenderId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "unreadCount",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "settings",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "inviteLink",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "inviteLinkExpiry",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tags",
+                    "type": "string",
+                    "required": true,
+                    "array": true,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "createdAt",
                     "type": "datetime",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "format": ""
+                    "format": "",
+                    "default": null
                 },
                 {
                     "key": "updatedAt",
                     "type": "datetime",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "format": ""
+                    "format": "",
+                    "default": null
                 },
                 {
                     "key": "contextType",
@@ -3052,17 +3209,6 @@
             ],
             "indexes": [
                 {
-                    "key": "idx_participants",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "participants"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
                     "key": "idx_context",
                     "type": "key",
                     "status": "available",
@@ -3072,6 +3218,39 @@
                     ],
                     "orders": [
                         "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_lastMessageAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "lastMessageAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "type"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_creatorId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "creatorId"
+                    ],
+                    "orders": [
                         "ASC"
                     ]
                 }
@@ -3162,7 +3341,7 @@
                     "array": true,
                     "size": 50,
                     "encrypt": false,
-                    "default": []
+                    "default": null
                 },
                 {
                     "key": "lastInteraction",
@@ -3302,7 +3481,7 @@
                     "required": false,
                     "array": true,
                     "size": 50,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -3843,7 +4022,7 @@
                     "required": false,
                     "array": true,
                     "size": 50,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -3852,7 +4031,7 @@
                     "required": false,
                     "array": true,
                     "size": 36,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -3861,7 +4040,7 @@
                     "required": false,
                     "array": true,
                     "size": 36,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -4248,7 +4427,7 @@
                     "required": false,
                     "array": true,
                     "size": 256,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
@@ -4290,7 +4469,7 @@
                     "required": false,
                     "array": true,
                     "size": 50,
-                    "default": [],
+                    "default": null,
                     "encrypt": false
                 },
                 {
