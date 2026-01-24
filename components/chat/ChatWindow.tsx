@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { Messages } from '@/types/appwrite';
 import { useRouter } from 'next/navigation';
+import { realtime } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
     Box,
     Paper,
@@ -27,11 +29,13 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
-import ImageIcon from '@mui/icons-material/Image';
+import ImageIcon from '@mui/icons-material/ImageIcon';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloseIcon from '@mui/icons-material/Close';
+import DoneIcon from '@mui/icons-material/Done';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
@@ -52,10 +56,43 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         if (conversationId) {
             loadMessages();
             loadConversation();
-            const interval = setInterval(loadMessages, 5000);
-            return () => clearInterval(interval);
+            
+            // Subscribe to real-time messages
+            const unsubscribe = realtime.subscribe(
+                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
+                (response) => {
+                    const payload = response.payload as Messages;
+                    if (payload.conversationId === conversationId) {
+                        if (response.events.some(e => e.includes('.create'))) {
+                            setMessages(prev => {
+                                // Avoid duplicates
+                                if (prev.some(m => m.$id === payload.$id)) return prev;
+                                return [...prev, payload];
+                            });
+                            // Mark as read if not from me
+                            if (user && payload.senderId !== user.$id) {
+                                ChatService.markAsRead(payload.$id, user.$id);
+                            }
+                        } else if (response.events.some(e => e.includes('.update'))) {
+                            setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
+                        } else if (response.events.some(e => e.includes('.delete'))) {
+                            setMessages(prev => prev.filter(m => m.$id === payload.$id));
+                        }
+                    }
+                }
+            );
+
+            return () => {
+                unsubscribe();
+            };
         }
-    }, [conversationId]);
+    }, [conversationId, user]);
+
+    useEffect(() => {
+        if (conversationId && user) {
+            ChatService.markConversationAsRead(conversationId, user.$id);
+        }
+    }, [conversationId, user]);
 
     useEffect(() => {
         scrollToBottom();
@@ -90,6 +127,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const loadMessages = async () => {
         try {
             const response = await ChatService.getMessages(conversationId);
+            // Reverse once for display order (bottom is newest)
             setMessages(response.rows.reverse() as unknown as Messages[]);
         } catch (error) {
             console.error('Failed to load messages:', error);
@@ -131,7 +169,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             }
 
             await ChatService.sendMessage(conversationId, user.$id, text, type, attachments);
-            loadMessages();
+            // Message will be added via Realtime subscriber
         } catch (error) {
             console.error('Failed to send message:', error);
             setInputText(text);
@@ -303,9 +341,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             }}
                         >
                             {renderMessageContent(msg)}
-                            <Typography variant="caption" sx={{ display: 'block', textAlign: 'right', opacity: 0.7, mt: 0.5, fontSize: '0.7rem' }}>
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
+                                <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.7rem' }}>
+                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </Typography>
+                                {isMe && (
+                                    msg.readBy && msg.readBy.length > 1 ? (
+                                        <DoneAllIcon sx={{ fontSize: '0.9rem', color: 'primary.contrastText' }} />
+                                    ) : (
+                                        <DoneIcon sx={{ fontSize: '0.9rem', color: 'primary.contrastText', opacity: 0.7 }} />
+                                    )
+                                )}
+                            </Box>
                         </Box>
                     );
                 })}

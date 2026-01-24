@@ -7,10 +7,10 @@ const ACTIVITY_TABLE = APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY;
 
 export interface AppActivity {
     userId: string;
-    appId: 'whisperrnote' | 'whisperrflow' | 'whisperrkeep' | 'id';
+    appId: 'whisperrnote' | 'whisperrflow' | 'whisperrkeep' | 'id' | 'connect';
     action: string;
-    metadata: Record<string, any>;
-    timestamp: string;
+    metadata?: Record<string, any>;
+    timestamp?: string;
 }
 
 /**
@@ -19,13 +19,54 @@ export interface AppActivity {
  */
 export const ActivityService = {
     /**
+     * Presence Management
+     */
+    async updatePresence(userId: string, status: 'online' | 'offline' | 'away' | 'busy', customStatus?: string) {
+        try {
+            // Check if presence record exists
+            const existing = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
+                Query.equal('userId', userId),
+                Query.limit(1)
+            ]);
+
+            const now = new Date().toISOString();
+            if (existing.total > 0) {
+                return await tablesDB.updateRow(DB_ID, ACTIVITY_TABLE, existing.rows[0].$id, {
+                    status,
+                    lastSeen: now,
+                    customStatus
+                });
+            } else {
+                return await tablesDB.createRow(DB_ID, ACTIVITY_TABLE, ID.unique(), {
+                    userId,
+                    status,
+                    lastSeen: now,
+                    customStatus
+                });
+            }
+        } catch (error) {
+            console.error('Failed to update presence:', error);
+        }
+    },
+
+    async getUserPresence(userId: string) {
+        const result = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
+            Query.equal('userId', userId),
+            Query.limit(1)
+        ]);
+        return result.rows[0] || null;
+    },
+
+    /**
      * Log an activity from any app in the ecosystem.
      */
     async logActivity(activity: AppActivity) {
-        return await tablesDB.createRow(DB_ID, ACTIVITY_TABLE, ID.unique(), {
-            ...activity,
-            timestamp: activity.timestamp || new Date().toISOString()
-        });
+        // Here we might use a different table if 'AppActivity' is overloaded for presence.
+        // But based on the schema I saw earlier (userId, status, lastSeen, customStatus), 
+        // it seems AppActivity is primarily for presence. 
+        // If there's another table for logs, we'd use that.
+        // Let's assume for now AppActivity IS the presence table.
+        return this.updatePresence(activity.userId, 'online', activity.action);
     },
 
     /**
