@@ -171,5 +171,13 @@ export const UsersService = {
             Query.search('username', query),
             Query.limit(10)
         ]);
+    },
+
+    async updatePresence(userId: string, status: 'online' | 'away' | 'busy' | 'offline', customStatus?: string) {
+        return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, {
+            presence: status,
+            statusMessage: customStatus,
+            lastSeen: new Date().toISOString()
+        });
     }
 };
