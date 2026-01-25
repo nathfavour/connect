@@ -28,7 +28,7 @@ export const UsersService = {
     async ensureGlobalProfile(user: any, force = false) {
         if (!user?.$id || typeof window === 'undefined') return null;
 
-        // Caching Layers
+        // Caching Layers: Skip if recently synced in this session or within 24h
         if (!force && sessionStorage.getItem(SESSION_SYNC_KEY)) return null;
         const lastSync = localStorage.getItem(SYNC_CACHE_KEY);
         if (!force && lastSync && (Date.now() - parseInt(lastSync)) < 24 * 60 * 60 * 1000) {
@@ -42,6 +42,7 @@ export const UsersService = {
                 tablesDB.getRow(DB_ID, USERS_TABLE, user.$id).catch(() => null)
             ]);
 
+            // Identity Construction: Favor prefs, then name, then email prefix
             let username = prefs?.username || user.name || user.email.split('@')[0];
             username = String(username).toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '').slice(0, 50);
             if (!username) username = `user_${user.$id.slice(0, 8)}`;
@@ -50,26 +51,37 @@ export const UsersService = {
                 username,
                 displayName: user.name || username,
                 updatedAt: new Date().toISOString(),
-                avatarUrl: user.avatarUrl || null,
-                walletAddress: prefs?.walletEth || null,
-                bio: prefs?.bio || ""
+                profilePicId: prefs?.profilePicId || user.profilePicId || null,
+                walletAddress: prefs?.walletEth || prefs?.walletAddress || null,
+                bio: prefs?.bio || profile?.bio || "",
+                privacySettings: JSON.stringify({ public: true, searchable: true })
             };
 
+            const permissions = [
+                Permission.read(Role.any()),
+                Permission.update(Role.user(user.$id)),
+                Permission.delete(Role.user(user.$id))
+            ];
+
             if (!profile) {
+                console.log('[Identity] Initializing global record for:', user.$id);
                 await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, {
                     ...profileData,
                     createdAt: new Date().toISOString()
-                }, [
-                    Permission.read(Role.any()),
-                    Permission.update(Role.user(user.$id)),
-                    Permission.delete(Role.user(user.$id))
-                ]);
+                }, permissions);
             } else {
-                if (profile.username !== username) {
+                // Self-Healing: Fix malformed records or out-of-sync usernames
+                const needsHealing = profile.username !== username || 
+                                   !profile.profilePicId && profileData.profilePicId ||
+                                   !profile.privacySettings;
+                
+                if (needsHealing) {
+                    console.log('[Identity] Healing global record for:', user.$id);
                     await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, profileData);
                 }
             }
 
+            // Sync back to Auth Prefs if ecosystem username is missing
             if (prefs.username !== username) {
                 await account.updatePrefs({ ...prefs, username });
             }
@@ -87,17 +99,11 @@ export const UsersService = {
         const normalized = normalizeUsername(username);
         if (!normalized) return null;
 
-        const cacheKey = `u:${normalized}`;
-        const cached = profileCache.get(cacheKey);
-        if (cached && cached.expires > Date.now()) return cached.data;
-
         const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
             Query.equal('username', normalized),
             Query.limit(1)
         ]);
-        const data = result.rows[0] || null;
-        profileCache.set(cacheKey, { data, expires: Date.now() + CACHE_TTL });
-        return data;
+        return result.rows[0] || null;
     },
 
     async getProfileById(userId: string) {
@@ -117,22 +123,21 @@ export const UsersService = {
         return result.total === 0;
     },
 
-    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; appsActive?: string[] }) {
-        // If updating username, check for availability first
+    async updateProfile(userId: string, data: any) {
         if (data.username) {
-            const normalized = normalizeUsername(data.username);
-            if (!normalized) {
-                throw new Error('Invalid username');
-            }
-            const available = await this.isUsernameAvailable(normalized);
+            data.username = normalizeUsername(data.username);
+            const available = await this.isUsernameAvailable(data.username);
             if (!available) {
-                // Check if it's the current user's own username
                 const currentProfile = await this.getProfileById(userId);
-                if (currentProfile?.username !== normalized) {
+                if (currentProfile?.username !== data.username) {
                     throw new Error('Username already taken');
                 }
             }
-            data.username = normalized;
+        }
+        // Ensure we don't send unknown attributes like avatarUrl if we use profilePicId
+        if (data.avatarUrl) {
+            data.profilePicId = data.profilePicId || data.avatarUrl;
+            delete data.avatarUrl;
         }
         return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, data);
     },
@@ -237,27 +242,37 @@ export const UsersService = {
         const cleaned = query.trim().replace(/^@/, '');
         if (!cleaned) return { rows: [], total: 0 };
 
-        const cacheKey = `s:${cleaned.toLowerCase()}`;
-        const cached = profileCache.get(cacheKey);
-        if (cached && cached.expires > Date.now()) return cached.data;
-
-        // 1. Primary Search: ONLY username (since it's the only one indexed in chat.users)
+        // 1. Primary Search: Global Directory (Connect)
+        // Broaden search to include displayName and potentially email prefix
         let res: any = { rows: [], total: 0 };
         try {
             res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                Query.startsWith('username', cleaned.toLowerCase()),
-                Query.limit(10)
+                Query.or([
+                    Query.startsWith('username', cleaned.toLowerCase()),
+                    Query.startsWith('displayName', cleaned)
+                ]),
+                Query.limit(15)
             ]);
         } catch (e) {
-            console.warn('[UsersService] Global username search failed:', e);
+            console.warn('[UsersService] Global search failed, falling back to username only:', e);
+            try {
+                res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
+                    Query.startsWith('username', cleaned.toLowerCase()),
+                    Query.limit(10)
+                ]);
+            } catch (inner) {
+                return { rows: [], total: 0 };
+            }
         }
 
-        // 2. Fallback to Note Users: Search by 'name' (indexed via fulltext in note database)
+        // 2. Fallback to Note Users: Search by 'name' or 'email'
         if (res.total < 5 && WHISPERRNOTE_USERS_TABLE) {
             try {
-                // Query.search is required for fulltext indexes
                 const noteRes = await tablesDB.listRows(WHISPERRNOTE_DB_ID, WHISPERRNOTE_USERS_TABLE, [
-                    Query.search('name', cleaned),
+                    Query.or([
+                        Query.search('name', cleaned),
+                        Query.startsWith('email', cleaned.toLowerCase())
+                    ]),
                     Query.limit(5)
                 ]);
 
@@ -267,17 +282,17 @@ export const UsersService = {
                             $id: noteUser.$id,
                             username: noteUser.username || noteUser.email?.split('@')[0] || noteUser.$id.slice(0, 8),
                             displayName: noteUser.name,
-                            avatarUrl: noteUser.profilePicId || noteUser.avatar || null
-                        });
+                            profilePicId: noteUser.profilePicId || noteUser.avatar || null,
+                            privacySettings: JSON.stringify({ public: true, searchable: true })
+                        } as any);
                         res.total++;
                     }
                 }
             } catch (e) {
-                console.warn('[UsersService] Note name fallback search failed:', e);
+                console.warn('[UsersService] Note fallback search failed:', e);
             }
         }
 
-        profileCache.set(cacheKey, { data: res, expires: Date.now() + 10000 }); 
         return res;
     },
 
