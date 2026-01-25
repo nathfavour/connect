@@ -9,6 +9,7 @@ import { Messages } from '@/types/appwrite';
 import { useRouter } from 'next/navigation';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { format } from 'date-fns';
 import {
     Box,
     Paper,
