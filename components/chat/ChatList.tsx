@@ -36,28 +36,35 @@ export const ChatList = () => {
 
     const loadConversations = async () => {
         try {
+            console.log('[ChatList] Loading conversations for user:', user!.$id);
             const response = await ChatService.getConversations(user!.$id);
             let rows = [...response.rows];
+            console.log('[ChatList] Fetched rows count:', rows.length);
 
             // Bridge: Ensure self-chat (Saved Messages) exists
             const selfChat = rows.find(c => 
                 c.type === 'direct' && 
+                c.participants && c.participants.length > 0 &&
                 c.participants.every((p: string) => p === user!.$id)
             );
             
+            console.log('[ChatList] Self chat found:', !!selfChat);
+
             if (!selfChat) {
+                console.log('[ChatList] Self chat not found, creating one...');
                 try {
                     const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
+                    console.log('[ChatList] Self chat created:', newSelfChat.$id);
                     rows = [newSelfChat, ...rows];
                 } catch (e) {
-                    console.error('Failed to auto-create self chat', e);
+                    console.error('[ChatList] Failed to auto-create self chat', e);
                 }
             }
 
             // Enrich with other participant's name
             const enriched = await Promise.all(rows.map(async (conv: any) => {
                 if (conv.type === 'direct') {
-                    const isActuallySelf = conv.participants.every((p: string) => p === user!.$id);
+                    const isActuallySelf = conv.participants && conv.participants.length > 0 && conv.participants.every((p: string) => p === user!.$id);
                     
                     if (!isActuallySelf) {
                         const otherId = conv.participants.find((p: string) => p !== user!.$id);
@@ -70,7 +77,7 @@ export const ChatList = () => {
                                     name: profile ? (profile.displayName || profile.username) : ('User ' + otherId.substring(0, 5)) 
                                 };
                             } catch (e) {
-                                return conv;
+                                return { ...conv, name: 'User ' + otherId.substring(0, 5) };
                             }
                         }
                     } else {
@@ -83,8 +90,10 @@ export const ChatList = () => {
                         };
                     }
                 }
-                return conv;
+                return { ...conv, name: conv.name || 'Group Chat' };
             }));
+
+            console.log('[ChatList] Enriched conversations count:', enriched.length);
 
             // Sort: Self chat always on top if no recent activity, otherwise standard sort
             const sorted = enriched.sort((a, b) => {
@@ -95,6 +104,7 @@ export const ChatList = () => {
                 return timeB - timeA;
             });
 
+            console.log('[ChatList] Final sorted list count:', sorted.length);
             setConversations(sorted);
         } catch (error) {
             console.error('Failed to load chats:', error);
