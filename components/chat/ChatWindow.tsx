@@ -29,7 +29,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
-import ImageIcon from '@mui/icons-material/ImageIcon';
+import ImageIcon from '@mui/icons-material/Image';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
@@ -58,32 +58,38 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             loadConversation();
             
             // Subscribe to real-time messages
-            const unsubscribe = realtime.subscribe(
-                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
-                (response) => {
-                    const payload = response.payload as Messages;
-                    if (payload.conversationId === conversationId) {
-                        if (response.events.some(e => e.includes('.create'))) {
-                            setMessages(prev => {
-                                // Avoid duplicates
-                                if (prev.some(m => m.$id === payload.$id)) return prev;
-                                return [...prev, payload];
-                            });
-                            // Mark as read if not from me
-                            if (user && payload.senderId !== user.$id) {
-                                ChatService.markAsRead(payload.$id, user.$id);
+            let unsub: any;
+            const initRealtime = async () => {
+                unsub = await realtime.subscribe(
+                    [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
+                    (response) => {
+                        const payload = response.payload as Messages;
+                        if (payload.conversationId === conversationId) {
+                            if (response.events.some(e => e.includes('.create'))) {
+                                setMessages(prev => {
+                                    // Avoid duplicates
+                                    if (prev.some(m => m.$id === payload.$id)) return prev;
+                                    return [...prev, payload];
+                                });
+                                // Mark as read if not from me
+                                if (user && payload.senderId !== user.$id) {
+                                    ChatService.markAsRead(payload.$id, user.$id);
+                                }
+                            } else if (response.events.some(e => e.includes('.update'))) {
+                                setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
+                            } else if (response.events.some(e => e.includes('.delete'))) {
+                                setMessages(prev => prev.filter(m => m.$id === payload.$id));
                             }
-                        } else if (response.events.some(e => e.includes('.update'))) {
-                            setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
-                        } else if (response.events.some(e => e.includes('.delete'))) {
-                            setMessages(prev => prev.filter(m => m.$id === payload.$id));
                         }
                     }
-                }
-            );
+                );
+            };
+
+            initRealtime();
 
             return () => {
-                unsubscribe();
+                if (typeof unsub === 'function') unsub();
+                else if (unsub?.unsubscribe) unsub.unsubscribe();
             };
         }
     }, [conversationId, user]);

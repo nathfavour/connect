@@ -111,7 +111,7 @@ export const UserSearch = () => {
             </Paper>
 
             <List>
-                {results.map((u) => (
+                {(results as any[]).map((u) => (
                     <Paper key={u.$id} sx={{ mb: 1, overflow: 'hidden' }} variant="outlined">
                         <ListItem
                             secondaryAction={

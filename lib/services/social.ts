@@ -61,5 +61,14 @@ export const SocialService = {
             type: 'like',
             createdAt: new Date().toISOString()
         });
+    },
+
+    async followUser(followerId: string, followingId: string) {
+        return await tablesDB.createRow(DB_ID, FOLLOWS_TABLE, ID.unique(), {
+            followerId,
+            followingId,
+            status: 'accepted',
+            createdAt: new Date().toISOString()
+        });
     }
 };

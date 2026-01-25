@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   compress: true,
   poweredByHeader: false,
+  reactCompiler: true,
   experimental: {
-    reactCompiler: true,
     optimizePackageImports: [
       '@mui/material',
       '@mui/icons-material',
