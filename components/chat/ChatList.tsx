@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 
 export const ChatList = () => {
     const { user } = useAuth();
@@ -34,8 +35,22 @@ export const ChatList = () => {
     const loadConversations = async () => {
         try {
             const response = await ChatService.getConversations(user!.$id);
+            let rows = [...response.rows];
+
+            // Bridge: Ensure self-chat (Saved Messages) exists
+            const selfChat = rows.find(c => c.type === 'direct' && c.participants.length === 1 && c.participants[0] === user!.$id);
+            
+            if (!selfChat) {
+                try {
+                    const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
+                    rows = [newSelfChat, ...rows];
+                } catch (e) {
+                    console.error('Failed to auto-create self chat', e);
+                }
+            }
+
             // Enrich with other participant's name
-            const enriched = await Promise.all(response.rows.map(async (conv: any) => {
+            const enriched = await Promise.all(rows.map(async (conv: any) => {
                 if (conv.type === 'direct') {
                     const otherId = conv.participants.find((p: string) => p !== user!.$id);
                     if (otherId) {
@@ -54,13 +69,24 @@ export const ChatList = () => {
                         return {
                             ...conv,
                             otherUserId: user!.$id,
-                            name: 'Note to Self'
+                            name: 'Saved Messages (Me)',
+                            isSelf: true
                         };
                     }
                 }
                 return conv;
             }));
-            setConversations(enriched);
+
+            // Sort: Self chat always on top if no recent activity, otherwise standard sort
+            const sorted = enriched.sort((a, b) => {
+                if (a.isSelf && !a.lastMessageAt) return -1;
+                if (b.isSelf && !b.lastMessageAt) return 1;
+                const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
+                const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+                return timeB - timeA;
+            });
+
+            setConversations(sorted);
         } catch (error) {
             console.error('Failed to load chats:', error);
         } finally {
@@ -88,8 +114,8 @@ export const ChatList = () => {
                                 <ListItem disablePadding>
                                     <ListItemButton component={Link} href={`/chat/${conv.$id}`}>
                                         <ListItemAvatar>
-                                            <Avatar>
-                                                {conv.type === 'group' ? <GroupIcon /> : <PersonIcon />}
+                                            <Avatar sx={{ bgcolor: conv.isSelf ? 'primary.main' : undefined }}>
+                                                {conv.isSelf ? <BookmarkIcon /> : (conv.type === 'group' ? <GroupIcon /> : <PersonIcon />)}
                                             </Avatar>
                                         </ListItemAvatar>
                                         <ListItemText 

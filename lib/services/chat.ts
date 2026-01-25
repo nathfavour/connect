@@ -9,7 +9,7 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 export const ChatService = {
     async getConversations(userId: string) {
         return await tablesDB.listRows(DB_ID, CONV_TABLE, [
-            Query.search('participants', userId),
+            Query.contains('participants', userId),
             Query.orderDesc('lastMessageAt')
         ]);
     },
