@@ -71,46 +71,38 @@ export const UsersService = {
             if (!profile) {
                 console.log('[Identity] Initializing global record for:', user.$id);
                 try {
-                    await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, {
-                        ...profileData,
-                        createdAt: new Date().toISOString()
-                    }, permissions);
+                    // Try primary attribute: avatarFileId
+                    const data = { ...profileData, createdAt: new Date().toISOString(), avatarFileId: profilePicId };
+                    await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, data, permissions);
                 } catch (e: any) {
-                    if (e.message?.includes('avatarFileId') || e.response?.message?.includes('avatarFileId')) {
-                        delete profileData.avatarFileId;
-                        if (profilePicId) profileData.profilePicId = profilePicId;
+                    const errStr = JSON.stringify(e).toLowerCase();
+                    if (errStr.includes('avatarfileid')) {
                         try {
-                            await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, {
-                                ...profileData,
-                                createdAt: new Date().toISOString()
-                            }, permissions);
-                        } catch (inner: any) {
-                            delete profileData.profilePicId;
-                            await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, {
-                                ...profileData,
-                                createdAt: new Date().toISOString()
-                            }, permissions);
+                            // Try secondary: profilePicId
+                            const data = { ...profileData, createdAt: new Date().toISOString(), profilePicId };
+                            await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, data, permissions);
+                        } catch (e2: any) {
+                            // Final fallback: no avatar
+                            await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, { ...profileData, createdAt: new Date().toISOString() }, permissions);
                         }
                     } else throw e;
                 }
             } else {
-                // Self-Healing: Fix malformed records or out-of-sync usernames
-                const needsHealing = profile.username !== username || 
-                                   (profilePicId && !profile.avatarFileId && !profile.profilePicId) ||
-                                   !profile.privacySettings;
+                // Self-Healing: Fix malformed records
+                const needsHealing = profile.username !== username || !profile.privacySettings;
                 
                 if (needsHealing) {
                     console.log('[Identity] Healing global record for:', user.$id);
                     try {
-                        await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, profileData);
+                        const data = { ...profileData, avatarFileId: profilePicId };
+                        await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, data);
                     } catch (e: any) {
-                        if (e.message?.includes('avatarFileId') || e.response?.message?.includes('avatarFileId')) {
-                            delete profileData.avatarFileId;
-                            if (profilePicId) profileData.profilePicId = profilePicId;
+                        const errStr = JSON.stringify(e).toLowerCase();
+                        if (errStr.includes('avatarfileid')) {
                             try {
-                                await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, profileData);
-                            } catch (inner: any) {
-                                delete profileData.profilePicId;
+                                const data = { ...profileData, profilePicId };
+                                await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, data);
+                            } catch (e2: any) {
                                 await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, profileData);
                             }
                         } else throw e;
@@ -178,35 +170,35 @@ export const UsersService = {
         if (data.bio !== undefined) cleanData.bio = data.bio;
         if (data.walletAddress) cleanData.walletAddress = data.walletAddress;
         
-        // Handle avatar attributes safely
-        const picId = data.avatarFileId || data.profilePicId || data.avatarUrl;
-        if (picId) {
-            // We'll try to set BOTH possible keys to be safe, or just one if we're sure
-            // Based on user feedback, avatarFileId might be the issue despite being in config
-            // So we'll try a fallback approach
-            cleanData.avatarFileId = picId;
-            // If the server rejects avatarFileId, we might need a retry logic or 
-            // a way to detect the correct schema.
-        }
+        const picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
 
         try {
-            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
+            // First attempt: try with avatarFileId
+            const firstAttempt = { ...cleanData };
+            if (picId) firstAttempt.avatarFileId = picId;
+            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, firstAttempt);
         } catch (e: any) {
-            // If the error is about avatarFileId, remove it and try fallback
-            if (e.message?.includes('avatarFileId') || e.response?.message?.includes('avatarFileId')) {
-                console.warn('[UsersService] Falling back from avatarFileId due to unknown attribute error');
-                delete cleanData.avatarFileId;
-                if (picId) cleanData.profilePicId = picId;
-                
+            const errStr = JSON.stringify(e).toLowerCase();
+            if (errStr.includes('avatarfileid')) {
+                // Second attempt: try with profilePicId
                 try {
-                    return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
-                } catch (inner: any) {
-                    if (inner.message?.includes('profilePicId') || inner.response?.message?.includes('profilePicId')) {
-                        console.warn('[UsersService] profilePicId also unknown, stripping avatar fields completely');
-                        delete cleanData.profilePicId;
-                        return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
+                    const secondAttempt = { ...cleanData };
+                    if (picId) secondAttempt.profilePicId = picId;
+                    return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, secondAttempt);
+                } catch (e2: any) {
+                    const errStr2 = JSON.stringify(e2).toLowerCase();
+                    if (errStr2.includes('profilepicid')) {
+                        // Third attempt: try with avatarUrl
+                        try {
+                            const thirdAttempt = { ...cleanData };
+                            if (picId) thirdAttempt.avatarUrl = picId;
+                            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, thirdAttempt);
+                        } catch (e3: any) {
+                            // Final fallback: no avatar fields at all
+                            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
+                        }
                     }
-                    throw inner;
+                    throw e2;
                 }
             }
             throw e;

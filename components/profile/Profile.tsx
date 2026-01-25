@@ -45,20 +45,21 @@ export const Profile = ({ username }: ProfileProps) => {
     const normalizedUsername = normalizeUsername(username);
 
     // Identity check: is this the logged-in user's profile?
-    const isOwnProfile = !!(authUser && !profile?.__external && (
-        normalizedUsername === authUser.prefs?.username || 
-        normalizedUsername === normalizeUsername(authUser.name) ||
-        (!normalizedUsername && profile?.$id === authUser.$id) ||
-        (profile?.$id === authUser.$id)
+    // We check ID first, then fallback to username match if no ID is available yet
+    const isOwnProfile = !!(authUser && (
+        (profile && profile.$id === authUser.$id) ||
+        (!username && !profile) || // Initial load of /profile
+        (normalizedUsername && (authUser.prefs?.username === normalizedUsername || authUser.name === username))
     ));
 
     useEffect(() => {
         loadProfile();
-    }, [username, authUser]);
+    }, [username, authUser?.$id]); // Re-run if username prop changes or user logs in/out
 
     useEffect(() => {
         const fetchAvatar = async () => {
-            // Priority 1: If it's our own profile, fetch exactly like the topbar
+            // Priority 1: If it's our own profile, fetch EXACTLY like the topbar
+            // Topbar uses authUser.prefs.profilePicId or authUser.profilePicId
             if (isOwnProfile && authUser) {
                 const picId = getUserProfilePicId(authUser);
                 if (picId) {
@@ -67,20 +68,20 @@ export const Profile = ({ username }: ProfileProps) => {
                         setAvatarUrl(url as unknown as string);
                         return;
                     } catch (e) {
-                        console.warn('Failed to fetch own profile avatar', e);
+                        console.warn('Profile page failed to fetch own avatar via utility', e);
                     }
                 }
             }
 
-            // Priority 2: Fetch from the profile data (database record)
+            // Priority 2: Fetch from the profile database record
             if (profile) {
-                const picId = profile.avatarFileId || profile.profilePicId || profile.avatarUrl;
-                if (picId) {
+                // Try all possible keys that might hold the file ID
+                const picId = profile.avatarFileId || profile.profilePicId || profile.avatarUrl || profile.avatar;
+                if (picId && typeof picId === 'string' && picId.length > 5) {
                     try {
                         const url = await fetchProfilePreview(picId, 200, 200);
                         setAvatarUrl(url as unknown as string);
                     } catch (e) {
-                        console.warn('Failed to fetch database profile avatar', e);
                         setAvatarUrl(null);
                     }
                 } else {
@@ -92,39 +93,38 @@ export const Profile = ({ username }: ProfileProps) => {
         };
 
         fetchAvatar();
-    }, [profile, authUser, isOwnProfile]);
+    }, [profile?.$id, profile?.avatarFileId, profile?.profilePicId, authUser?.prefs?.profilePicId, isOwnProfile]);
 
     const loadProfile = async () => {
         setLoading(true);
         try {
             let data;
-            if (username) {
+            if (username && normalizedUsername !== authUser?.prefs?.username) {
                 data = await UsersService.getProfile(username);
                 if (!data) {
                     const externalUser = await UsersService.getWhisperrnoteUserByUsername(username);
                     if (externalUser) {
-                        const fallbackUsername = normalizeUsername(externalUser.username || externalUser.name || externalUser.email);
                         data = {
                             $id: externalUser.$id,
-                            username: fallbackUsername || username,
-                            displayName: externalUser.name || externalUser.displayName || fallbackUsername || 'User',
-                            avatarFileId: externalUser.profilePicId || externalUser.avatar || null,
-                            bio: externalUser.bio || null,
+                            username: externalUser.username || externalUser.name,
+                            displayName: externalUser.name || externalUser.displayName,
+                            avatarFileId: externalUser.profilePicId || externalUser.avatar,
+                            bio: externalUser.bio,
                             __external: true
                         };
                     }
                 }
             } else if (authUser) {
-                // For own profile, always ensure identity is synced first
+                // Own profile: always heal/sync first
                 await UsersService.ensureGlobalProfile(authUser, true);
                 data = await UsersService.getProfileById(authUser.$id);
                 
-                // If database fetch failed or is missing fields, merge with authUser
+                // Merge with authUser state for real-time consistency
                 if (data) {
                     data = {
                         ...data,
                         displayName: data.displayName || authUser.name,
-                        username: data.username || authUser.prefs?.username
+                        username: data.username || authUser.prefs?.username || authUser.name
                     };
                 } else {
                     data = {
@@ -136,11 +136,7 @@ export const Profile = ({ username }: ProfileProps) => {
                 }
             }
 
-            if (data) {
-                setProfile(data);
-            } else {
-                setProfile(null);
-            }
+            setProfile(data);
         } catch (error) {
             console.error('Failed to load profile:', error);
         } finally {
