@@ -24,7 +24,9 @@ import {
     MenuItem,
     ListItemIcon,
     Avatar,
-    Stack
+    Stack,
+    useTheme,
+    useMediaQuery
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/SendOutlined';
 import CallIcon from '@mui/icons-material/CallOutlined';
@@ -49,6 +51,8 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [messages, setMessages] = useState<Messages[]>([]);
     const [conversation, setConversation] = useState<any>(null);
     const [inputText, setInputText] = useState('');
