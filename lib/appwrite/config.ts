@@ -8,6 +8,11 @@ export const APPWRITE_CONFIG = {
         WHISPERRFLOW: 'whisperrflow'
     },
     TABLES: {
+        PASSWORD_MANAGER: {
+            KEYCHAIN: 'keychain',
+            IDENTITIES: 'identities',
+            USERS: 'user'
+        },
         CHAT: {
             CONVERSATIONS: 'conversations',
             MESSAGES: 'messages',
