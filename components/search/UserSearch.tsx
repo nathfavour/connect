@@ -23,7 +23,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import MessageIcon from '@mui/icons-material/Message';
 import PersonIcon from '@mui/icons-material/Person';
 import { fetchProfilePreview } from '@/lib/profile-preview';
-import { debounce } from 'lodash';
 
 const SearchResultAvatar = ({ u }: { u: any }) => {
     const [url, setUrl] = useState<string | null>(u.avatarUrl || null);
@@ -55,7 +54,7 @@ export const UserSearch = () => {
     const { user } = useAuth();
     const router = useRouter();
 
-    const fetchResults = useCallback(debounce(async (term: string) => {
+    const fetchResults = async (term: string) => {
         if (!term.trim() || term.length < 2) {
             setResults([]);
             return;
@@ -64,7 +63,7 @@ export const UserSearch = () => {
         setLoading(true);
         try {
             const response = await UsersService.searchUsers(term);
-            const filtered = response.rows.filter((u: any) => {
+            const filtered = (response.rows || []).filter((u: any) => {
                 if (u.privacySettings) {
                     try {
                         const settings = JSON.parse(u.privacySettings);
@@ -79,11 +78,14 @@ export const UserSearch = () => {
         } finally {
             setLoading(false);
         }
-    }, 300), []);
+    };
 
     useEffect(() => {
-        fetchResults(query);
-    }, [query, fetchResults]);
+        const timer = setTimeout(() => {
+            fetchResults(query);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [query]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
