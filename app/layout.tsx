@@ -36,6 +36,7 @@ import { AuthOverlay } from '@/components/auth/AuthOverlay';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PresenceProvider } from '@/components/providers/PresenceProvider';
 import { EcosystemClient } from '@/components/ecosystem/EcosystemClient';
+import { IslandProvider } from '@/components/common/DynamicIsland';
 import { Suspense } from 'react';
 
 export default function RootLayout({
@@ -51,12 +52,14 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <EcosystemClient nodeId="connect" />
         <ThemeProvider>
-          <PresenceProvider>
-            <AuthOverlay />
-            <Suspense fallback={null}>
-              {children}
-            </Suspense>
-          </PresenceProvider>
+          <IslandProvider>
+            <PresenceProvider>
+              <AuthOverlay />
+              <Suspense fallback={null}>
+                {children}
+              </Suspense>
+            </PresenceProvider>
+          </IslandProvider>
         </ThemeProvider>
       </body>
     </html>

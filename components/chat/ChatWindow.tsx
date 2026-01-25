@@ -50,6 +50,8 @@ import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import NoteIcon from '@mui/icons-material/DescriptionOutlined';
 import KeyIcon from '@mui/icons-material/VpnKeyOutlined';
+import { NoteSelectorModal } from './NoteSelectorModal';
+import { SecretSelectorModal } from './SecretSelectorModal';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
@@ -239,9 +241,123 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
     };
 
+    const handleNoteSelect = async (note: any) => {
+        if (!user) return;
+        setSending(true);
+        try {
+            await ChatService.sendMessage(
+                conversationId, 
+                user.$id, 
+                note.title || 'Attached Note', 
+                'note' as any, 
+                [note.$id]
+            );
+        } catch (error) {
+            console.error('Failed to send note:', error);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleSecretSelect = async (item: any, type: 'secret' | 'totp') => {
+        if (!user) return;
+        setSending(true);
+        try {
+            if (type === 'totp') {
+                const content = `TOTP Code for ${item.issuer || 'Unknown'}: ${item.currentCode}`;
+                await ChatService.sendMessage(
+                    conversationId, 
+                    user.$id, 
+                    content, 
+                    'totp' as any, 
+                    [item.$id]
+                );
+            } else {
+                await ChatService.sendMessage(
+                    conversationId, 
+                    user.$id, 
+                    `Shared Secret: ${item.name || 'Unnamed'}`, 
+                    'secret' as any, 
+                    [item.$id]
+                );
+            }
+        } catch (error) {
+            console.error('Failed to send secret/totp:', error);
+        } finally {
+            setSending(false);
+        }
+    };
+
     const renderMessageContent = (msg: Messages) => {
         if (msg.type === 'text') {
             return <Typography variant="body1">{msg.content}</Typography>;
+        }
+
+        if (msg.type === ('note' as any)) {
+            return (
+                <Box 
+                    sx={{ 
+                        p: 1.5, 
+                        bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                        borderRadius: 2, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1.5,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
+                    }}
+                    onClick={() => window.open(`https://note.whisperrnote.space/n/${msg.attachments?.[0]}`, '_blank')}
+                >
+                    <NoteIcon sx={{ color: 'primary.main' }} />
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.6 }}>Attached Note</Typography>
+                    </Box>
+                </Box>
+            );
+        }
+
+        if (msg.type === ('secret' as any)) {
+            return (
+                <Box 
+                    sx={{ 
+                        p: 1.5, 
+                        bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                        borderRadius: 2, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1.5,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
+                    }}
+                    onClick={() => window.open(`https://keep.whisperrnote.space/vault?id=${msg.attachments?.[0]}`, '_blank')}
+                >
+                    <ShieldIcon sx={{ color: 'primary.main' }} />
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.6 }}>Shared Secret</Typography>
+                    </Box>
+                </Box>
+            );
+        }
+
+        if (msg.type === ('totp' as any)) {
+            const codeMatch = msg.content?.match(/(\d{3}\s?\d{3})$/);
+            const code = codeMatch ? codeMatch[1] : '';
+            const label = msg.content?.replace(code, '').trim();
+
+            return (
+                <Box sx={{ p: 1.5, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 240, 255, 0.2)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <KeyIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>TOTP Code Shared</Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>{label}</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-mono)', letterSpacing: 2, color: 'primary.main', textAlign: 'center', py: 1, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
+                        {code}
+                    </Typography>
+                </Box>
+            );
         }
 
         const fileId = msg.attachments && msg.attachments[0];
@@ -388,7 +504,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 color: 'text.primary',
                                 boxShadow: 'none'
                             }}>
-                                <Typography variant="body2" sx={{ lineHeight: 1.5 }}>{msg.content}</Typography>
+                                {renderMessageContent(msg)}
                             </Paper>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
                                 <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
@@ -499,6 +615,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     )}
                 </Paper>
             </Box>
+
+            <NoteSelectorModal 
+                open={noteModalOpen} 
+                onClose={() => setNoteModalOpen(false)} 
+                onSelect={handleNoteSelect} 
+            />
+            <SecretSelectorModal 
+                open={secretModalOpen} 
+                onClose={() => setSecretModalOpen(false)} 
+                onSelect={handleSecretSelect}
+                isSelf={isSelf || false}
+            />
         </Box>
     );
 };
