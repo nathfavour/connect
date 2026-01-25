@@ -52,6 +52,8 @@ import NoteIcon from '@mui/icons-material/DescriptionOutlined';
 import KeyIcon from '@mui/icons-material/VpnKeyOutlined';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { MasterPassModal } from './MasterPassModal';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
@@ -68,10 +70,25 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [attachAnchorEl, setAttachAnchorEl] = useState<null | HTMLElement>(null);
     const [noteModalOpen, setNoteModalOpen] = useState(false);
     const [secretModalOpen, setSecretModalOpen] = useState(false);
+    const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+    const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
+
+    useEffect(() => {
+        const checkUnlock = setInterval(() => {
+            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
+                setIsUnlocked(ecosystemSecurity.status.isUnlocked);
+                if (ecosystemSecurity.status.isUnlocked) {
+                    loadMessages();
+                    loadConversation();
+                }
+            }
+        }, 1000);
+        return () => clearInterval(checkUnlock);
+    }, [isUnlocked]);
 
     useEffect(() => {
         if (conversationId) {
