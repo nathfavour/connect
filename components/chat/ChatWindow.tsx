@@ -501,6 +501,22 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {conversation?.isEncrypted && !isUnlocked && (
+                    <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: '16px', border: '1px solid rgba(0, 240, 255, 0.1)', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'primary.main' }}>
+                            This conversation is end-to-end encrypted.
+                        </Typography>
+                        <Button 
+                            variant="outlined" 
+                            size="small" 
+                            onClick={() => setUnlockModalOpen(true)}
+                            startIcon={<KeyIcon />}
+                            sx={{ borderRadius: '10px', fontWeight: 800 }}
+                        >
+                            Unlock Vault to Read
+                        </Button>
+                    </Box>
+                )}
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
                 ) : (
@@ -643,6 +659,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 onClose={() => setSecretModalOpen(false)} 
                 onSelect={handleSecretSelect}
                 isSelf={isSelf || false}
+            />
+            <MasterPassModal 
+                open={unlockModalOpen}
+                onClose={() => setUnlockModalOpen(false)}
+                onSuccess={() => {
+                    setIsUnlocked(true);
+                    loadMessages();
+                    loadConversation();
+                }}
             />
         </Box>
     );

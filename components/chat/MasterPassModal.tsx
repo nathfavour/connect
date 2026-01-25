@@ -55,6 +55,9 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
 
             const success = await ecosystemSecurity.unlock(password, passwordEntry);
             if (success) {
+                // Ensure Identity is ready for E2E messaging
+                await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                
                 setPassword('');
                 onSuccess();
                 onClose();
