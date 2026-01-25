@@ -20,6 +20,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import ChatIcon from '@mui/icons-material/Chat';
 import { useRouter } from 'next/navigation';
 import { EditProfileModal } from './EditProfileModal';
+import { fetchProfilePreview } from '@/lib/profile-preview';
 
 interface ProfileProps {
     username?: string;
@@ -33,6 +34,7 @@ export const Profile = ({ username }: ProfileProps) => {
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     const normalizeUsername = (value?: string | null) => {
         if (!value) return null;
@@ -50,6 +52,19 @@ export const Profile = ({ username }: ProfileProps) => {
         loadProfile();
     }, [username, currentUser]);
 
+    useEffect(() => {
+        if (profile) {
+            const picId = profile.profilePicId || profile.avatarUrl;
+            if (picId) {
+                fetchProfilePreview(picId, 200, 200).then(url => {
+                    setAvatarUrl(url as unknown as string);
+                });
+            } else {
+                setAvatarUrl(null);
+            }
+        }
+    }, [profile]);
+
     const loadProfile = async () => {
         setLoading(true);
         try {
@@ -64,7 +79,7 @@ export const Profile = ({ username }: ProfileProps) => {
                             $id: externalUser.$id,
                             username: fallbackUsername || username,
                             displayName: externalUser.name || externalUser.displayName || fallbackUsername || 'User',
-                            avatarUrl: externalUser.avatarUrl || null,
+                            profilePicId: externalUser.profilePicId || externalUser.avatar || null,
                             bio: externalUser.bio || null,
                             __external: true
                         };
@@ -76,10 +91,6 @@ export const Profile = ({ username }: ProfileProps) => {
 
             if (data) {
                 setProfile(data);
-                // Check if following if it's someone else's profile
-                if (currentUser && data.$id !== currentUser.$id) {
-                    // Logic to check follow status could go here
-                }
             } else {
                 setProfile(null);
             }
@@ -123,7 +134,7 @@ export const Profile = ({ username }: ProfileProps) => {
             <Paper sx={{ p: 4, borderRadius: 4, mb: 4 }} elevation={0} variant="outlined">
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4 }}>
                     <Avatar 
-                        src={profile.avatarUrl}
+                        src={avatarUrl || undefined}
                         sx={{ width: 120, height: 120, fontSize: 48, bgcolor: 'primary.main' }}
                     >
                         {profile.username?.charAt(0).toUpperCase()}
