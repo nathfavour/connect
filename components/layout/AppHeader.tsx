@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useNotifications } from '@/components/providers/NotificationProvider';
+import { getUserProfilePicId } from '@/lib/user-utils';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import EcosystemPortal from '../common/EcosystemPortal';
 
 export const AppHeader = () => {
@@ -41,6 +43,30 @@ export const AppHeader = () => {
   const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);
   const [anchorElNotifications, setAnchorElNotifications] = useState<null | HTMLElement>(null);
   const [isPortalOpen, setIsPortalOpen] = useState(false);
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const profilePicId = getUserProfilePicId(user);
+    const cached = getCachedProfilePreview(profilePicId || undefined);
+    if (cached !== undefined && mounted) {
+      setProfileUrl(cached ?? null);
+    }
+
+    const fetchPreview = async () => {
+      try {
+        if (profilePicId) {
+          const url = await fetchProfilePreview(profilePicId, 64, 64);
+          if (mounted) setProfileUrl(url as unknown as string);
+        } else if (mounted) setProfileUrl(null);
+      } catch (err) {
+        if (mounted) setProfileUrl(null);
+      }
+    };
+
+    fetchPreview();
+    return () => { mounted = false; };
+  }, [user]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -243,6 +269,7 @@ export const AppHeader = () => {
             }}
           >
             <Avatar 
+              src={profileUrl || undefined}
               sx={{ 
                 width: 38, 
                 height: 38, 
