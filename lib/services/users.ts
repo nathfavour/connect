@@ -159,58 +159,50 @@ export const UsersService = {
     async updateProfile(userId: string, data: any) {
         const cleanData: any = {};
         
-        if (data.username) {
-            cleanData.username = normalizeUsername(data.username);
-            const available = await this.isUsernameAvailable(cleanData.username);
-            if (!available) {
-                const currentProfile = await this.getProfileById(userId);
-                if (currentProfile?.username !== cleanData.username) {
-                    throw new Error('Username already taken');
-                }
-            }
-        }
-
+        if (data.username) cleanData.username = normalizeUsername(data.username);
         if (data.displayName !== undefined) cleanData.displayName = data.displayName;
         if (data.bio !== undefined) cleanData.bio = data.bio;
         if (data.walletAddress !== undefined) cleanData.walletAddress = data.walletAddress;
         
         let picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
+        
+        // Final sanity check: if picId is null but exists in prefs, try to grab it
         if (!picId) {
-            const prefs = await account.getPrefs();
-            const prefPicId = prefs?.profilePicId;
-            if (typeof prefPicId === 'string' && prefPicId.trim()) {
-                picId = prefPicId.trim();
-            }
+            try {
+                const prefs = await account.getPrefs();
+                picId = prefs?.profilePicId || prefs?.avatarFileId;
+            } catch (e) {}
         }
 
-        // Probing sequence for avatar attributes
-        const attempts = [
-            { avatarFileId: picId },
-            { profilePicId: picId },
-            { avatarUrl: picId },
-            {} // Final fallback: no avatar field
-        ];
+        // Ordered candidates for the avatar attribute name
+        const avatarFieldCandidates = ['avatarFileId', 'profilePicId', 'avatarUrl'];
+        let lastException = null;
 
-        let lastError = null;
-        for (const attempt of attempts) {
+        // Strategy: Try the first candidate. if it fails with "Unknown attribute", try next.
+        // If it fails with ANY other error, throw immediately.
+        for (const field of avatarFieldCandidates) {
+            if (!picId) break; // If no picture, skip candidates and just do a base update
+            
             try {
-                // If picId is null/undefined, we don't want to send the key at all in the fallback attempts
-                const payload = { ...cleanData };
-                const key = Object.keys(attempt)[0];
-                if (key && picId) payload[key] = picId;
-                
+                const payload = { ...cleanData, [field]: picId };
                 return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, payload);
             } catch (e: any) {
-                lastError = e;
-                const errStr = (e.message || JSON.stringify(e)).toLowerCase();
-                // If it's an "unknown attribute" error, try the next attempt
-                if (errStr.includes('unknown attribute') || errStr.includes('invalid document structure')) {
-                    continue;
+                lastException = e;
+                const msg = (e.message || "").toLowerCase();
+                if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
+                    continue; // Target field doesn't exist, try next candidate
                 }
-                throw e; // Rethrow other errors (permissions, etc.)
+                throw e; // Real error (permissions, etc.), stop and throw
             }
         }
-        throw lastError;
+
+        // Final fallback: update without any avatar field
+        try {
+            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
+        } catch (e: any) {
+            console.error('[UsersService] Final profile update fallback failed:', e);
+            throw e;
+        }
     },
 
     async createProfile(

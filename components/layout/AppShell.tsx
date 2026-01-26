@@ -62,12 +62,6 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const [profileUrl, setProfileUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user) {
-            UsersService.ensureGlobalProfile(user);
-        }
-    }, [user]);
-
-    useEffect(() => {
         let mounted = true;
         const profilePicId = getUserProfilePicId(user);
         const cached = getCachedProfilePreview(profilePicId || undefined);

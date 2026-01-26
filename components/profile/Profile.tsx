@@ -118,8 +118,7 @@ export const Profile = ({ username }: ProfileProps) => {
                     }
                 }
             } else if (authUser) {
-                // Own profile: always heal/sync first
-                await UsersService.ensureGlobalProfile(authUser, true);
+                // Own profile: fetch the record directly without aggressive background sync
                 data = await UsersService.getProfileById(authUser.$id);
                 
                 // Merge with authUser state for real-time consistency
