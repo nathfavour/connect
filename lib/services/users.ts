@@ -1,5 +1,5 @@
 import { ID, Query, Permission, Role } from 'appwrite';
-import { tablesDB, account } from '../appwrite/client';
+import { databases, account, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -150,6 +150,7 @@ export const UsersService = {
     },
 
     async updateProfile(userId: string, data: any) {
+        console.log('[UsersService] updateProfile triggered for:', userId, 'with:', Object.keys(data));
         const cleanData: any = {};
         
         if (data.username) cleanData.username = normalizeUsername(data.username);
@@ -159,7 +160,6 @@ export const UsersService = {
         
         let picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
         
-        // Final sanity check: if picId is null but exists in prefs, try to grab it
         if (!picId) {
             try {
                 const prefs = await account.getPrefs();
@@ -167,35 +167,36 @@ export const UsersService = {
             } catch (e) {}
         }
 
-        // Ordered candidates for the avatar attribute name
-        const avatarFieldCandidates = ['avatarFileId', 'profilePicId', 'avatarUrl'];
-        let lastException = null;
+        // Strategy: First try a "Bio-Only" update to guarantee core data is saved.
+        // This bypasses any avatar-related schema issues immediately.
+        try {
+            console.log('[UsersService] Attempting primary bio update...');
+            await databases.updateDocument(DB_ID, USERS_TABLE, userId, cleanData);
+        } catch (e: any) {
+            console.error('[UsersService] Primary bio update failed:', e.message);
+            throw e; 
+        }
 
-        // Strategy: Try the first candidate. if it fails with "Unknown attribute", try next.
-        // If it fails with ANY other error, throw immediately.
-        for (const field of avatarFieldCandidates) {
-            if (!picId) break; // If no picture, skip candidates and just do a base update
-            
-            try {
-                const payload = { ...cleanData, [field]: picId };
-                return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, payload);
-            } catch (e: any) {
-                lastException = e;
-                const msg = (e.message || "").toLowerCase();
-                if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
-                    continue; // Target field doesn't exist, try next candidate
+        // Strategy: Now try to sync the avatar field separately and defensively.
+        if (picId) {
+            const avatarFields = ['avatarFileId', 'profilePicId', 'avatarUrl'];
+            for (const field of avatarFields) {
+                try {
+                    console.log(`[UsersService] Probing avatar field: ${field}`);
+                    await databases.updateDocument(DB_ID, USERS_TABLE, userId, { [field]: picId });
+                    console.log(`[UsersService] Successfully synced avatar via: ${field}`);
+                    break; 
+                } catch (e: any) {
+                    const msg = (e.message || "").toLowerCase();
+                    if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
+                        continue; 
+                    }
+                    console.warn(`[UsersService] Avatar sync deferred for field ${field}:`, e.message);
                 }
-                throw e; // Real error (permissions, etc.), stop and throw
             }
         }
 
-        // Final fallback: update without any avatar field
-        try {
-            return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, cleanData);
-        } catch (e: any) {
-            console.error('[UsersService] Final profile update fallback failed:', e);
-            throw e;
-        }
+        return { success: true };
     },
 
     async createProfile(
@@ -311,7 +312,6 @@ export const UsersService = {
         if (!cleaned) return { rows: [], total: 0 };
 
         // 1. Primary Search: Global Directory (Connect)
-        // Broaden search to include displayName and potentially email prefix
         let res: any = { rows: [], total: 0 };
         try {
             res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
@@ -333,7 +333,7 @@ export const UsersService = {
             }
         }
 
-        // 2. Fallback to Note Users: Search by 'name' or 'email'
+        // 2. Fallback to Note Users
         if (res.total < 5 && WHISPERRNOTE_USERS_TABLE) {
             try {
                 const noteRes = await tablesDB.listRows(WHISPERRNOTE_DB_ID, WHISPERRNOTE_USERS_TABLE, [
