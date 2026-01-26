@@ -21,7 +21,8 @@ export const APPWRITE_CONFIG = {
             CONTACTS: 'contacts'
         },
         WHISPERRNOTE: {
-            USERS: '67ff05c900247b5673d3'
+            USERS: '67ff05c900247b5673d3',
+            ACTIVITY_LOG: 'activityLog'
         },
         PASSWORD_MANAGER: {
             KEYCHAIN: 'keychain',

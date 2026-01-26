@@ -36,16 +36,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  const APPWRITE_TABLE_ID_ACTIVITYLOG = "activityLog";
-
   const fetchNotifications = useCallback(async () => {
     if (!user?.$id) return;
     
     setIsLoading(true);
     try {
       const res = await databases.listDocuments(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_TABLE_ID_ACTIVITYLOG,
+        APPWRITE_CONFIG.DATABASES.WHISPERRNOTE,
+        APPWRITE_CONFIG.TABLES.WHISPERRNOTE.ACTIVITY_LOG,
         [Query.equal('userId', user.$id), Query.orderDesc('timestamp'), Query.limit(50)]
       );
       const logs = res.documents as unknown as ActivityLog[];
@@ -65,7 +63,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.$id) return;
 
-    const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_TABLE_ID_ACTIVITYLOG}.documents`;
+    const channel = `databases.${APPWRITE_CONFIG.DATABASES.WHISPERRNOTE}.collections.${APPWRITE_CONFIG.TABLES.WHISPERRNOTE.ACTIVITY_LOG}.documents`;
     
     const unsub = realtime.subscribe(channel, (response) => {
       const payload = response.payload as ActivityLog;
