@@ -59,19 +59,11 @@ export function useAuth() {
 
     const checkSession = async (retryCount = 0) => {
         try {
-            // Step 1: Check session storage hint for instant app feel
-            const hint = typeof window !== 'undefined' ? sessionStorage.getItem('whisperr_auth_hint') : null;
-            if (hint === 'true' && !retryCount) {
-                console.log('Optimistic connect hint detected');
-            }
-
             const session = await account.get();
             setUser(session);
-            sessionStorage.setItem('whisperr_auth_hint', 'true');
-
             await UsersService.ensureProfileForUser(session as any);
             setLoading(false);
-
+            
             // Clear the auth=success param from URL if it exists
             if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
                 const url = new URL(window.location.href);
@@ -79,10 +71,9 @@ export function useAuth() {
                 window.history.replaceState({}, '', url.toString());
             }
         } catch (error: any) {
-            sessionStorage.removeItem('whisperr_auth_hint');
             // Check for auth=success signal in URL
             const hasAuthSignal = typeof window !== 'undefined' && window.location.search.includes('auth=success');
-
+            
             if (hasAuthSignal && retryCount < 3) {
                 console.log(`Auth signal detected but session not found in connect. Retrying... (${retryCount + 1})`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -95,7 +86,6 @@ export function useAuth() {
             try {
                 const retrySession = await account.get();
                 setUser(retrySession);
-                sessionStorage.setItem('whisperr_auth_hint', 'true');
                 await UsersService.ensureProfileForUser(retrySession as any);
             } catch {
                 const isNetworkError = !error.response && error.message?.includes('Network Error') || error.message?.includes('Failed to fetch');

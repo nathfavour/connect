@@ -8,11 +8,6 @@ export const APPWRITE_CONFIG = {
         WHISPERRFLOW: 'whisperrflow'
     },
     TABLES: {
-        PASSWORD_MANAGER: {
-            KEYCHAIN: 'keychain',
-            IDENTITIES: 'identities',
-            USERS: 'user'
-        },
         CHAT: {
             CONVERSATIONS: 'conversations',
             MESSAGES: 'messages',
@@ -22,8 +17,7 @@ export const APPWRITE_CONFIG = {
             FOLLOWS: 'follows',
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
-            USERS: 'users',
-            CONTACTS: 'contacts'
+            USERS: 'users'
         },
         WHISPERRNOTE: {
             USERS: '67ff05c900247b5673d3'

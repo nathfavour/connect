@@ -20,22 +20,19 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import ChatIcon from '@mui/icons-material/Chat';
 import { useRouter } from 'next/navigation';
 import { EditProfileModal } from './EditProfileModal';
-import { fetchProfilePreview } from '@/lib/profile-preview';
-import { getUserProfilePicId } from '@/lib/user-utils';
 
 interface ProfileProps {
     username?: string;
 }
 
 export const Profile = ({ username }: ProfileProps) => {
-    const { user: authUser } = useAuth();
+    const { user: currentUser } = useAuth();
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     const normalizeUsername = (value?: string | null) => {
         if (!value) return null;
@@ -44,101 +41,48 @@ export const Profile = ({ username }: ProfileProps) => {
 
     const normalizedUsername = normalizeUsername(username);
 
-    // Simplified and more robust own-profile check
-    const isOwnProfile = !!(authUser && (
-        (profile && profile.$id === authUser.$id) ||
-        (!username) || 
-        (normalizedUsername && (authUser.prefs?.username === normalizedUsername || authUser.name === username))
-    ));
-
-    useEffect(() => {
-        console.log('[Profile] authUser:', authUser?.$id, 'profile:', profile?.$id, 'isOwnProfile:', isOwnProfile);
-    }, [authUser, profile, isOwnProfile]);
+    const isOwnProfile = currentUser && !profile?.__external && (
+        normalizedUsername === profile?.username || 
+        (!normalizedUsername && profile?.$id === currentUser.$id)
+    );
 
     useEffect(() => {
         loadProfile();
-    }, [username, authUser?.$id]); 
-
-    useEffect(() => {
-        const fetchAvatar = async () => {
-            // Priority 1: If it's our own profile, fetch EXACTLY like the topbar
-            if (isOwnProfile && authUser) {
-                const picId = getUserProfilePicId(authUser);
-                console.log('[Profile] Own profile detected, fetching avatar for ID:', picId);
-                if (picId) {
-                    try {
-                        const url = await fetchProfilePreview(picId, 200, 200);
-                        setAvatarUrl(url as unknown as string);
-                        return;
-                    } catch (e) {
-                        console.warn('Profile page failed to fetch own avatar via utility', e);
-                    }
-                }
-            }
-
-            // Priority 2: Fetch from the profile database record
-            if (profile) {
-                const picId = profile.avatarFileId || profile.profilePicId || profile.avatarUrl || profile.avatar;
-                console.log('[Profile] Fetching avatar from database record ID:', picId);
-                if (picId && typeof picId === 'string' && picId.length > 5) {
-                    try {
-                        const url = await fetchProfilePreview(picId, 200, 200);
-                        setAvatarUrl(url as unknown as string);
-                    } catch (e) {
-                        setAvatarUrl(null);
-                    }
-                } else {
-                    setAvatarUrl(null);
-                }
-            } else {
-                setAvatarUrl(null);
-            }
-        };
-
-        fetchAvatar();
-    }, [profile?.$id, profile?.avatarFileId, profile?.profilePicId, authUser?.prefs?.profilePicId, isOwnProfile]);
+    }, [username, currentUser]);
 
     const loadProfile = async () => {
         setLoading(true);
         try {
             let data;
-            if (username && normalizedUsername !== authUser?.prefs?.username) {
+            if (username) {
                 data = await UsersService.getProfile(username);
                 if (!data) {
                     const externalUser = await UsersService.getWhisperrnoteUserByUsername(username);
                     if (externalUser) {
+                        const fallbackUsername = normalizeUsername(externalUser.username || externalUser.name || externalUser.email);
                         data = {
                             $id: externalUser.$id,
-                            username: externalUser.username || externalUser.name,
-                            displayName: externalUser.name || externalUser.displayName,
-                            avatarFileId: externalUser.profilePicId || externalUser.avatar,
-                            bio: externalUser.bio,
+                            username: fallbackUsername || username,
+                            displayName: externalUser.name || externalUser.displayName || fallbackUsername || 'User',
+                            avatarUrl: externalUser.avatarUrl || null,
+                            bio: externalUser.bio || null,
                             __external: true
                         };
                     }
                 }
-            } else if (authUser) {
-                // Own profile: fetch the record directly without aggressive background sync
-                data = await UsersService.getProfileById(authUser.$id);
-                
-                // Merge with authUser state for real-time consistency
-                if (data) {
-                    data = {
-                        ...data,
-                        displayName: data.displayName || authUser.name,
-                        username: data.username || authUser.prefs?.username || authUser.name
-                    };
-                } else {
-                    data = {
-                        $id: authUser.$id,
-                        displayName: authUser.name,
-                        username: authUser.prefs?.username || authUser.name,
-                        bio: authUser.prefs?.bio || ""
-                    };
-                }
+            } else if (currentUser) {
+                data = await UsersService.getProfileById(currentUser.$id);
             }
 
-            setProfile(data);
+            if (data) {
+                setProfile(data);
+                // Check if following if it's someone else's profile
+                if (currentUser && data.$id !== currentUser.$id) {
+                    // Logic to check follow status could go here
+                }
+            } else {
+                setProfile(null);
+            }
         } catch (error) {
             console.error('Failed to load profile:', error);
         } finally {
@@ -147,10 +91,10 @@ export const Profile = ({ username }: ProfileProps) => {
     };
 
     const handleFollow = async () => {
-        if (!authUser || !profile) return;
+        if (!currentUser) return; // Prompt to login
         setFollowLoading(true);
         try {
-            await SocialService.followUser(authUser.$id, profile.$id);
+            await SocialService.followUser(currentUser.$id, profile.$id);
             setIsFollowing(true);
         } catch (error) {
             console.error('Follow failed:', error);
@@ -179,7 +123,7 @@ export const Profile = ({ username }: ProfileProps) => {
             <Paper sx={{ p: 4, borderRadius: 4, mb: 4 }} elevation={0} variant="outlined">
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4 }}>
                     <Avatar 
-                        src={avatarUrl || undefined}
+                        src={profile.avatarUrl}
                         sx={{ width: 120, height: 120, fontSize: 48, bgcolor: 'primary.main' }}
                     >
                         {profile.username?.charAt(0).toUpperCase()}
@@ -217,7 +161,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                         startIcon={<PersonAddIcon />} 
                                         sx={{ borderRadius: 5 }}
                                         onClick={handleFollow}
-                                        disabled={followLoading || !authUser}
+                                        disabled={followLoading || !currentUser}
                                     >
                                         {isFollowing ? 'Following' : 'Follow'}
                                     </Button>

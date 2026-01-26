@@ -1,5 +1,5 @@
 import { ID, Query, Permission, Role } from 'appwrite';
-import { databases, account, tablesDB } from '../appwrite/client';
+import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -18,113 +18,10 @@ const normalizeUsername = (input: string | null | undefined): string | null => {
     return cleaned || null;
 };
 
-const SYNC_CACHE_KEY = 'whisperr_identity_synced_v2';
-const SESSION_SYNC_KEY = 'whisperr_session_identity_ok';
-
 export const UsersService = {
-    /**
-     * Universal Identity Hook: Efficiently ensures user has a discoverable record in chat.users.
-     */
-    async ensureGlobalProfile(user: any, force = false) {
-        if (!user?.$id || typeof window === 'undefined') return null;
-
-        // Caching Layers: Skip if recently synced in this session or within 24h
-        if (!force && sessionStorage.getItem(SESSION_SYNC_KEY)) return null;
-        const lastSync = localStorage.getItem(SYNC_CACHE_KEY);
-        if (!force && lastSync && (Date.now() - parseInt(lastSync)) < 24 * 60 * 60 * 1000) {
-            sessionStorage.setItem(SESSION_SYNC_KEY, '1');
-            return null;
-        }
-
-        try {
-            const [prefs, profile] = await Promise.all([
-                account.getPrefs(),
-                tablesDB.getRow(DB_ID, USERS_TABLE, user.$id).catch(() => null)
-            ]);
-
-            // Identity Construction: Favor prefs, then name, then email prefix
-            let username = prefs?.username || user.name || user.email.split('@')[0];
-            username = String(username).toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '').slice(0, 50);
-            if (!username) username = `user_${user.$id.slice(0, 8)}`;
-
-            const profilePicId = prefs?.profilePicId || user.profilePicId || null;
-            const baseData: any = {
-                username,
-                displayName: user.name || username,
-                updatedAt: new Date().toISOString(),
-                walletAddress: prefs?.walletEth || prefs?.walletAddress || null,
-                bio: prefs?.bio || (profile ? profile.bio : ""),
-                privacySettings: JSON.stringify({ public: true, searchable: true })
-            };
-
-            const permissions = [
-                Permission.read(Role.any()),
-                Permission.update(Role.user(user.$id)),
-                Permission.delete(Role.user(user.$id))
-            ];
-
-            // Order of preference for avatar field names in the ecosystem
-            const avatarFieldCandidates = ['profilePicId', 'avatarFileId', 'avatarUrl'];
-
-            if (!profile) {
-                console.log('[Identity] Initializing global record for:', user.$id);
-                for (const field of avatarFieldCandidates) {
-                    try {
-                        const payload: any = { ...baseData, createdAt: new Date().toISOString() };
-                        if (profilePicId) payload[field] = profilePicId;
-
-                        await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, payload, permissions);
-                        break; 
-                    } catch (e: any) {
-                        const msg = (e.message || JSON.stringify(e)).toLowerCase();
-                        if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
-                            continue;
-                        }
-                        throw e;
-                    }
-                }
-            } else {
-                // Self-Healing: Fix malformed records
-                const needsHealing = profile.username !== username || !profile.privacySettings;
-                
-                if (needsHealing) {
-                    console.log('[Identity] Healing global record for:', user.$id);
-                    for (const field of avatarFieldCandidates) {
-                        try {
-                            const payload: any = { ...baseData };
-                            if (profilePicId) payload[field] = profilePicId;
-
-                            await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, payload);
-                            break;
-                        } catch (e: any) {
-                            const msg = (e.message || JSON.stringify(e)).toLowerCase();
-                            if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
-                                continue;
-                            }
-                            throw e;
-                        }
-                    }
-                }
-            }
-
-            // Sync back to Auth Prefs if ecosystem username is missing
-            if (prefs.username !== username) {
-                await account.updatePrefs({ ...prefs, username });
-            }
-
-            localStorage.setItem(SYNC_CACHE_KEY, Date.now().toString());
-            sessionStorage.setItem(SESSION_SYNC_KEY, '1');
-            return username;
-        } catch (e) {
-            console.warn('[UsersService] ensureGlobalProfile deferred:', e);
-            return null;
-        }
-    },
-
     async getProfile(username: string) {
         const normalized = normalizeUsername(username);
         if (!normalized) return null;
-
         const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
             Query.equal('username', normalized),
             Query.limit(1)
@@ -149,87 +46,61 @@ export const UsersService = {
         return result.total === 0;
     },
 
-    async updateProfile(userId: string, data: any) {
-        console.log('[UsersService] updateProfile: strictly saving core data only', { userId });
-        
-        const payload: any = {};
-        if (data.bio !== undefined) payload.bio = data.bio;
-        if (data.displayName !== undefined) payload.displayName = data.displayName;
-        if (data.username !== undefined) payload.username = normalizeUsername(data.username);
-        if (data.walletAddress !== undefined) payload.walletAddress = data.walletAddress;
-
-        // Strategy: Perform a clean update with NO avatar fields to avoid schema validation crashes.
-        // If the document on server HAS illegal attributes, bulk update might fail.
-        try {
-            return await databases.updateDocument(DB_ID, USERS_TABLE, userId, payload);
-        } catch (e: any) {
-            console.warn('[UsersService] Bulk profile update failed, trying field-by-field recovery...', e.message);
-            
-            // Field-by-field recovery: skip fields that cause "Unknown attribute" errors
-            let lastResult = null;
-            for (const key of Object.keys(payload)) {
-                try {
-                    lastResult = await databases.updateDocument(DB_ID, USERS_TABLE, userId, { [key]: payload[key] });
-                } catch (inner: any) {
-                    const msg = inner.message.toLowerCase();
-                    if (msg.includes('unknown attribute')) {
-                        console.error(`[UsersService] Skipping attribute "${key}" as it is missing from schema`);
-                        continue;
-                    }
-                    throw inner;
+    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; appsActive?: string[] }) {
+        // If updating username, check for availability first
+        if (data.username) {
+            const normalized = normalizeUsername(data.username);
+            if (!normalized) {
+                throw new Error('Invalid username');
+            }
+            const available = await this.isUsernameAvailable(normalized);
+            if (!available) {
+                // Check if it's the current user's own username
+                const currentProfile = await this.getProfileById(userId);
+                if (currentProfile?.username !== normalized) {
+                    throw new Error('Username already taken');
                 }
             }
-            return lastResult;
+            data.username = normalized;
         }
+        return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, data);
     },
 
     async createProfile(
         userId: string,
         username: string,
         email: string,
-        data: any = {}
+        data: { displayName?: string; bio?: string; avatarUrl?: string; appsActive?: string[] } = {}
     ) {
+        // Double check availability before creation
         const normalized = normalizeUsername(username);
-        if (!normalized) throw new Error('Invalid username');
-        
+        if (!normalized) {
+            throw new Error('Invalid username');
+        }
         const available = await this.isUsernameAvailable(normalized);
-        if (!available) throw new Error('Username already taken');
-
-        const baseData = {
-            username: normalized,
-            displayName: data.displayName || normalized,
-            bio: data.bio || "",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            privacySettings: JSON.stringify({ public: true, searchable: true })
-        };
-
-        const picId = data.profilePicId || data.avatarFileId || data.avatarUrl || data.avatar;
-        const permissions = [
-            Permission.read(Role.any()),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId))
-        ];
-
-        const avatarFieldCandidates = ['profilePicId', 'avatarFileId', 'avatarUrl'];
-
-        for (const field of avatarFieldCandidates) {
-            try {
-                const payload: any = { ...baseData };
-                if (picId) payload[field] = picId;
-                
-                return await tablesDB.createRow(DB_ID, USERS_TABLE, userId, payload, permissions);
-            } catch (e: any) {
-                const msg = (e.message || JSON.stringify(e)).toLowerCase();
-                if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
-                    continue;
-                }
-                throw e;
-            }
+        if (!available) {
+            throw new Error('Username already taken');
         }
 
-        // Final fallback: no avatar field
-        return await tablesDB.createRow(DB_ID, USERS_TABLE, userId, baseData, permissions);
+        return await tablesDB.createRow(
+            DB_ID, 
+            USERS_TABLE, 
+            userId, 
+            {
+                username: normalized,
+                displayName: data.displayName,
+                bio: data.bio,
+                avatarUrl: data.avatarUrl,
+                appsActive: data.appsActive,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            [
+                Permission.read(Role.any()), // Public by default
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId))
+            ]
+        );
     },
 
     async getWhisperrnoteUserById(userId: string) {
@@ -284,7 +155,7 @@ export const UsersService = {
         try {
             return await this.createProfile(user.$id, candidate, user?.email || '', {
                 displayName: externalUser?.name || user?.name,
-                avatarFileId: user.prefs?.profilePicId
+                appsActive: ['connect']
             });
         } catch (e) {
             return null;
@@ -292,67 +163,13 @@ export const UsersService = {
     },
 
     async searchUsers(query: string) {
-        const cleaned = query.trim().replace(/^@/, '');
-        if (!cleaned) return { rows: [], total: 0 };
-
-        // 1. Primary Search: Global Directory (Connect)
-        let res: any = { rows: [], total: 0 };
-        try {
-            res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                Query.or([
-                    Query.startsWith('username', cleaned.toLowerCase()),
-                    Query.startsWith('displayName', cleaned)
-                ]),
-                Query.limit(15)
-            ]);
-        } catch (e) {
-            console.warn('[UsersService] Global search failed, falling back to username only:', e);
-            try {
-                res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                    Query.startsWith('username', cleaned.toLowerCase()),
-                    Query.limit(10)
-                ]);
-            } catch (inner) {
-                return { rows: [], total: 0 };
-            }
-        }
-
-        // 2. Fallback to Note Users
-        if (res.total < 5 && WHISPERRNOTE_USERS_TABLE) {
-            try {
-                const noteRes = await tablesDB.listRows(WHISPERRNOTE_DB_ID, WHISPERRNOTE_USERS_TABLE, [
-                    Query.or([
-                        Query.search('name', cleaned),
-                        Query.startsWith('email', cleaned.toLowerCase())
-                    ]),
-                    Query.limit(5)
-                ]);
-
-                for (const noteUser of noteRes.rows) {
-                    if (!res.rows.find((r: any) => r.$id === noteUser.$id)) {
-                        res.rows.push({
-                            $id: noteUser.$id,
-                            username: noteUser.username || noteUser.email?.split('@')[0] || noteUser.$id.slice(0, 8),
-                            displayName: noteUser.name,
-                            avatarFileId: noteUser.profilePicId || noteUser.avatar || null,
-                            privacySettings: JSON.stringify({ public: true, searchable: true })
-                        } as any);
-                        res.total++;
-                    }
-                }
-            } catch (e) {
-                console.warn('[UsersService] Note fallback search failed:', e);
-            }
-        }
-
-        return res;
-    },
-
-    async updatePresence(userId: string, status: 'online' | 'away' | 'busy' | 'offline', customStatus?: string) {
-        return await tablesDB.updateRow(DB_ID, USERS_TABLE, userId, {
-            presence: status,
-            statusMessage: customStatus,
-            lastSeen: new Date().toISOString()
-        });
+        // Search by username or displayName
+        // Note: Appwrite search queries might need specific indexes.
+        // Assuming 'username' and 'displayName' are indexed (fulltext or key).
+        // For MVP, we'll search username.
+        return await tablesDB.listRows(DB_ID, USERS_TABLE, [
+            Query.search('username', query),
+            Query.limit(10)
+        ]);
     }
 };
