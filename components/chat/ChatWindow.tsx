@@ -29,28 +29,30 @@ import {
     useTheme,
     useMediaQuery
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/SendOutlined';
-import CallIcon from '@mui/icons-material/CallOutlined';
-import ArrowBackIcon from '@mui/icons-material/ArrowBackIosNewOutlined';
-import AttachFileIcon from '@mui/icons-material/AddCircleOutlineOutlined';
-import MicIcon from '@mui/icons-material/MicNoneOutlined';
-import StopIcon from '@mui/icons-material/StopCircleOutlined';
-import ImageIcon from '@mui/icons-material/ImageOutlined';
-import AudiotrackIcon from '@mui/icons-material/AudiotrackOutlined';
-import VideoFileIcon from '@mui/icons-material/VideoCameraFrontOutlined';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import CloseIcon from '@mui/icons-material/CloseOutlined';
-import DoneIcon from '@mui/icons-material/DoneOutlined';
-import DoneAllIcon from '@mui/icons-material/DoneAllOutlined';
-import MoreVertIcon from '@mui/icons-material/MoreVertOutlined';
-import InfoIcon from '@mui/icons-material/InfoOutlined';
-import ShieldIcon from '@mui/icons-material/ShieldOutlined';
-import BookmarkIcon from '@mui/icons-material/BookmarkOutlined';
-import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
-import PersonIcon from '@mui/icons-material/PersonOutlined';
-import DeleteIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import NoteIcon from '@mui/icons-material/DescriptionOutlined';
-import KeyIcon from '@mui/icons-material/VpnKeyOutlined';
+import { 
+    Send, 
+    Phone, 
+    ChevronLeft, 
+    PlusCircle, 
+    Mic, 
+    Square, 
+    Image, 
+    Music, 
+    Video, 
+    File, 
+    X, 
+    Check, 
+    CheckCheck, 
+    MoreVertical, 
+    Info, 
+    Shield, 
+    Bookmark, 
+    Users, 
+    User, 
+    Trash2, 
+    FileText, 
+    Key 
+} from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -416,7 +418,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }}
                     onClick={() => window.open(`https://note.whisperrnote.space/n/${msg.attachments?.[0]}`, '_blank')}
                 >
-                    <NoteIcon sx={{ color: 'primary.main' }} />
+                    <FileText size={20} color="#00F5FF" strokeWidth={1.5} />
                     <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.6 }}>Attached Note</Typography>
@@ -440,7 +442,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }}
                     onClick={() => window.open(`https://keep.whisperrnote.space/vault?id=${msg.attachments?.[0]}`, '_blank')}
                 >
-                    <ShieldIcon sx={{ color: 'primary.main' }} />
+                    <Shield size={20} color="#00F5FF" strokeWidth={1.5} />
                     <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.6 }}>Shared Secret</Typography>
@@ -457,7 +459,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             return (
                 <Box sx={{ p: 1.5, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 240, 255, 0.2)' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <KeyIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                        <Key size={16} color="#00F5FF" strokeWidth={1.5} />
                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>TOTP Code Shared</Typography>
                     </Box>
                     <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>{label}</Typography>
@@ -532,7 +534,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', bgcolor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}>
                 <Toolbar sx={{ gap: 1 }}>
                     <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'text.secondary' }}>
-                        <ArrowBackIcon sx={{ fontSize: 20 }} />
+                        <ChevronLeft size={20} strokeWidth={1.5} />
                     </IconButton>
                     <Box 
                         onClick={(e) => setAnchorEl(e.currentTarget)} 
@@ -544,7 +546,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             bgcolor: isSelf ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
                             border: isSelf ? '1px solid rgba(0, 240, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                            {isSelf ? <BookmarkIcon sx={{ fontSize: 18, color: 'primary.main' }} /> : (conversation?.type === 'group' ? <GroupIcon /> : <PersonIcon sx={{ fontSize: 20 }} />)}
+                            {isSelf ? <Bookmark size={18} color="#00F5FF" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
                         </Avatar>
                         <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.2, color: isSelf ? 'primary.main' : 'text.primary' }}>
@@ -557,10 +559,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     </Box>
                     <Stack direction="row" spacing={0.5}>
                         <IconButton onClick={handleCall} sx={{ color: 'text.secondary' }}>
-                            <CallIcon sx={{ fontSize: 20 }} />
+                            <Phone size={20} strokeWidth={1.5} />
                         </IconButton>
                         <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
-                            <MoreVertIcon sx={{ fontSize: 20 }} />
+                            <MoreVertical size={20} strokeWidth={1.5} />
                         </IconButton>
                     </Stack>
                 </Toolbar>
@@ -583,24 +585,24 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 }}
             >
                 <MenuItem onClick={handleExport} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                    <InsertDriveFileIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Export Chat (.json)
+                    <File size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Export Chat (.json)
                 </MenuItem>
                 
                 <Divider sx={{ my: 1, opacity: 0.1 }} />
 
                 <MenuItem onClick={() => handleClearChat('me')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                    <DeleteIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Clear Chat (For Me)
+                    <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Clear Chat (For Me)
                 </MenuItem>
 
                 {!isSelf && (
                     <MenuItem onClick={() => handleClearChat('everyone')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <ShieldIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Wipe My Footprint
+                        <Shield size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Wipe My Footprint
                     </MenuItem>
                 )}
 
                 {isSelf && (
                     <MenuItem onClick={() => handleClearChat('everyone')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <DeleteIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Nuclear Wipe
+                        <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Nuclear Wipe
                     </MenuItem>
                 )}
             </Menu>
@@ -616,7 +618,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             variant="outlined" 
                             size="small" 
                             onClick={() => setUnlockModalOpen(true)}
-                            startIcon={<KeyIcon />}
+                            startIcon={<Key size={16} strokeWidth={1.5} />}
                             sx={{ borderRadius: '10px', fontWeight: 800 }}
                         >
                             Unlock Vault to Read
@@ -650,7 +652,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                     {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
                                 </Typography>
                                 {msg.senderId === user?.$id && (
-                                    msg.readBy?.length && msg.readBy.length > 1 ? <DoneAllIcon sx={{ fontSize: 12, color: 'primary.main' }} /> : <DoneIcon sx={{ fontSize: 12, opacity: 0.4 }} />
+                                    msg.readBy?.length && msg.readBy.length > 1 ? <CheckCheck size={12} color="#00F5FF" strokeWidth={1.5} /> : <Check size={12} strokeWidth={1.5} style={{ opacity: 0.4 }} />
                                 )}
                             </Box>
                         </Box>
@@ -679,7 +681,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         onClick={(e) => setAttachAnchorEl(e.currentTarget)} 
                         sx={{ color: 'text.secondary', p: 1.2 }}
                     >
-                        <AttachFileIcon sx={{ fontSize: 22 }} />
+                        <PlusCircle size={22} strokeWidth={1.5} />
                     </IconButton>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
 
@@ -702,13 +704,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         }}
                     >
                         <MenuItem onClick={() => { handleFileSelect('*'); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <InsertDriveFileIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Upload File
+                            <File size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Upload File
                         </MenuItem>
                         <MenuItem onClick={() => { setNoteModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <NoteIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Attach Note
+                            <FileText size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Attach Note
                         </MenuItem>
                         <MenuItem onClick={() => { setSecretModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <KeyIcon sx={{ fontSize: 18, opacity: 0.7 }} /> Attach Secret (Keep)
+                            <Key size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Attach Secret (Keep)
                         </MenuItem>
                     </Menu>
                     
@@ -738,7 +740,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.1)' }
                             }}
                         >
-                            {sending ? <CircularProgress size={20} color="inherit" /> : <SendIcon sx={{ fontSize: 20 }} />}
+                            {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={1.5} />}
                         </IconButton>
                     ) : (
                         <IconButton 
@@ -749,7 +751,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 animation: isRecording ? 'pulse 1.5s infinite' : 'none'
                             }}
                         >
-                            {isRecording ? <StopIcon sx={{ fontSize: 24 }} /> : <MicIcon sx={{ fontSize: 24 }} />}
+                            {isRecording ? <Square size={24} strokeWidth={1.5} /> : <Mic size={24} strokeWidth={1.5} />}
                         </IconButton>
                     )}
                 </Paper>

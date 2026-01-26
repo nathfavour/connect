@@ -43,11 +43,6 @@ import { NoteSelectorModal } from './NoteSelectorModal';
 import { NoteViewDrawer } from './NoteViewDrawer';
 import { EventSelectorModal } from './EventSelectorModal';
 import { EventViewDrawer } from './EventViewDrawer';
-import DescriptionIcon from '@mui/icons-material/Description';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import EventIcon from '@mui/icons-material/Event';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 export const Feed = () => {
     const { user } = useAuth();
@@ -598,10 +593,10 @@ export const Feed = () => {
                 }}
             >
                 <MenuItem onClick={() => handleForwardToSaved(selectedMoment)} sx={{ gap: 1.5, py: 1.2, fontWeight: 600 }}>
-                    <BookmarkIcon sx={{ fontSize: 20, opacity: 0.7 }} /> Save to Messages
+                    <Bookmark size={20} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Save to Messages
                 </MenuItem>
                 <MenuItem onClick={() => handleForwardToChat(selectedMoment)} sx={{ gap: 1.5, py: 1.2, fontWeight: 600 }}>
-                    <SendIcon sx={{ fontSize: 20, opacity: 0.7 }} /> Forward to Chat
+                    <Send size={20} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Forward to Chat
                 </MenuItem>
             </Menu>
 
