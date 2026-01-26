@@ -150,48 +150,41 @@ export const UsersService = {
     },
 
     async updateProfile(userId: string, data: any) {
-        console.log('[UsersService] updateProfile triggered for:', userId, 'with:', Object.keys(data));
-        const cleanData: any = {};
+        console.log('[UsersService] updateProfile: START', { userId, dataKeys: Object.keys(data) });
         
-        if (data.username) cleanData.username = normalizeUsername(data.username);
-        if (data.displayName !== undefined) cleanData.displayName = data.displayName;
-        if (data.bio !== undefined) cleanData.bio = data.bio;
-        if (data.walletAddress !== undefined) cleanData.walletAddress = data.walletAddress;
-        
-        let picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
-        
-        if (!picId) {
-            try {
-                const prefs = await account.getPrefs();
-                picId = prefs?.profilePicId || prefs?.avatarFileId;
-            } catch (e) {}
-        }
+        // 1. Construct a strictly filtered payload for the primary bio update
+        const primaryPayload: any = {};
+        if (data.bio !== undefined) primaryPayload.bio = data.bio;
+        if (data.displayName !== undefined) primaryPayload.displayName = data.displayName;
+        if (data.username !== undefined) primaryPayload.username = normalizeUsername(data.username);
+        if (data.walletAddress !== undefined) primaryPayload.walletAddress = data.walletAddress;
 
-        // Strategy: First try a "Bio-Only" update to guarantee core data is saved.
-        // This bypasses any avatar-related schema issues immediately.
+        console.log('[UsersService] Filtered Primary Payload:', JSON.stringify(primaryPayload));
+
+        // Strategy: Attempt the primary update first. 
+        // We use a strictly controlled object to ensure NO unexpected fields are sent.
         try {
-            console.log('[UsersService] Attempting primary bio update...');
-            await databases.updateDocument(DB_ID, USERS_TABLE, userId, cleanData);
+            console.log('[UsersService] Calling databases.updateDocument for primary fields...');
+            await databases.updateDocument(DB_ID, USERS_TABLE, userId, primaryPayload);
+            console.log('[UsersService] Primary update SUCCESS');
         } catch (e: any) {
-            console.error('[UsersService] Primary bio update failed:', e.message);
+            console.error('[UsersService] Primary update FAILED:', e.message);
+            // This is the "Bio save failed" path you're seeing.
             throw e; 
         }
 
-        // Strategy: Now try to sync the avatar field separately and defensively.
+        // 2. Defensive Avatar Sync (Separate call)
+        let picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
         if (picId) {
-            const avatarFields = ['avatarFileId', 'profilePicId', 'avatarUrl'];
-            for (const field of avatarFields) {
+            console.log('[UsersService] Attempting defensive avatar sync for ID:', picId);
+            const candidates = ['avatarFileId', 'profilePicId', 'avatarUrl'];
+            for (const field of candidates) {
                 try {
-                    console.log(`[UsersService] Probing avatar field: ${field}`);
                     await databases.updateDocument(DB_ID, USERS_TABLE, userId, { [field]: picId });
-                    console.log(`[UsersService] Successfully synced avatar via: ${field}`);
-                    break; 
-                } catch (e: any) {
-                    const msg = (e.message || "").toLowerCase();
-                    if (msg.includes('unknown attribute') || msg.includes('invalid document structure')) {
-                        continue; 
-                    }
-                    console.warn(`[UsersService] Avatar sync deferred for field ${field}:`, e.message);
+                    console.log(`[UsersService] Avatar sync SUCCESS via field: ${field}`);
+                    break;
+                } catch (err: any) {
+                    console.warn(`[UsersService] Avatar probe failed for ${field}:`, err.message);
                 }
             }
         }
