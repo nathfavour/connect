@@ -264,6 +264,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setInputText('');
         setAttachment(null);
 
+        let type: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text';
+        let initialAttachments: string[] = [];
+        if (file) {
+            if (file.type.startsWith('image/')) type = 'image';
+            else if (file.type.startsWith('video/')) type = 'video';
+            else if (file.type.startsWith('audio/')) type = 'audio';
+            else type = 'file';
+        }
+
         // Optimistic UI Update: Add the plaintext message to the local state immediately
         const optimisticId = `optimistic-${Date.now()}`;
         const optimisticMessage: any = {
@@ -272,7 +281,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             senderId: user.$id,
             content: text,
             type,
-            attachments,
+            attachments: initialAttachments,
             $createdAt: new Date().toISOString(),
             status: 'sending'
         };
@@ -283,10 +292,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
 
         try {
-            let actualAttachments = attachments;
+            let actualAttachments = initialAttachments;
             if (file) {
-                // ... determined type logic stays same
-                const bucketId = StorageService.getBucketForType(type);
+                const bucketId = StorageService.getBucketForType(type as any);
                 const uploaded = await StorageService.uploadFile(file, bucketId);
                 actualAttachments = [uploaded.$id];
             }

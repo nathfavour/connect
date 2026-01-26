@@ -75,7 +75,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon size={20} />
+                                <SearchIcon sx={{ fontSize: 20 }} />
                             </InputAdornment>
                         ),
                     }}

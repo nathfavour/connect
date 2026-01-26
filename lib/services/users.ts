@@ -70,7 +70,7 @@ export const UsersService = {
                 console.log('[Identity] Initializing global record for:', user.$id);
                 for (const field of avatarFieldCandidates) {
                     try {
-                        const payload = { ...baseData, createdAt: new Date().toISOString() };
+                        const payload: any = { ...baseData, createdAt: new Date().toISOString() };
                         if (profilePicId) payload[field] = profilePicId;
 
                         await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, payload, permissions);
@@ -91,7 +91,7 @@ export const UsersService = {
                     console.log('[Identity] Healing global record for:', user.$id);
                     for (const field of avatarFieldCandidates) {
                         try {
-                            const payload = { ...baseData };
+                            const payload: any = { ...baseData };
                             if (profilePicId) payload[field] = profilePicId;
 
                             await tablesDB.updateRow(DB_ID, USERS_TABLE, user.$id, payload);
@@ -215,7 +215,7 @@ export const UsersService = {
 
         for (const field of avatarFieldCandidates) {
             try {
-                const payload = { ...baseData };
+                const payload: any = { ...baseData };
                 if (picId) payload[field] = picId;
                 
                 return await tablesDB.createRow(DB_ID, USERS_TABLE, userId, payload, permissions);

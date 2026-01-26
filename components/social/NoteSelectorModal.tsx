@@ -75,7 +75,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon size={20} />
+                                <SearchIcon sx={{ fontSize: 20 }} />
                             </InputAdornment>
                         ),
                     }}
