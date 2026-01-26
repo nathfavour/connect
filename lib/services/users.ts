@@ -64,7 +64,7 @@ export const UsersService = {
             ];
 
             // Order of preference for avatar field names in the ecosystem
-            const avatarFieldCandidates = ['avatarFileId', 'profilePicId', 'avatarUrl'];
+            const avatarFieldCandidates = ['profilePicId', 'avatarFileId', 'avatarUrl'];
 
             if (!profile) {
                 console.log('[Identity] Initializing global record for:', user.$id);
@@ -159,11 +159,27 @@ export const UsersService = {
         if (data.walletAddress !== undefined) payload.walletAddress = data.walletAddress;
 
         // Strategy: Perform a clean update with NO avatar fields to avoid schema validation crashes.
+        // If the document on server HAS illegal attributes, bulk update might fail.
         try {
             return await databases.updateDocument(DB_ID, USERS_TABLE, userId, payload);
         } catch (e: any) {
-            console.error('[UsersService] Profile update failed:', e.message);
-            throw e; 
+            console.warn('[UsersService] Bulk profile update failed, trying field-by-field recovery...', e.message);
+            
+            // Field-by-field recovery: skip fields that cause "Unknown attribute" errors
+            let lastResult = null;
+            for (const key of Object.keys(payload)) {
+                try {
+                    lastResult = await databases.updateDocument(DB_ID, USERS_TABLE, userId, { [key]: payload[key] });
+                } catch (inner: any) {
+                    const msg = inner.message.toLowerCase();
+                    if (msg.includes('unknown attribute')) {
+                        console.error(`[UsersService] Skipping attribute "${key}" as it is missing from schema`);
+                        continue;
+                    }
+                    throw inner;
+                }
+            }
+            return lastResult;
         }
     },
 
@@ -188,14 +204,14 @@ export const UsersService = {
             privacySettings: JSON.stringify({ public: true, searchable: true })
         };
 
-        const picId = data.avatarFileId || data.profilePicId || data.avatarUrl || data.avatar;
+        const picId = data.profilePicId || data.avatarFileId || data.avatarUrl || data.avatar;
         const permissions = [
             Permission.read(Role.any()),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId))
         ];
 
-        const avatarFieldCandidates = ['avatarFileId', 'profilePicId', 'avatarUrl'];
+        const avatarFieldCandidates = ['profilePicId', 'avatarFileId', 'avatarUrl'];
 
         for (const field of avatarFieldCandidates) {
             try {
