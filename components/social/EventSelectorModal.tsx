@@ -45,9 +45,9 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
         setLoading(true);
         try {
             const response = await EcosystemService.listEvents(user.$id);
-            // Smart filter: only public events or user's events
-            const relevantEvents = response.rows.filter((e: any) => e.visibility === 'public' || e.userId === user.$id);
-            setEvents(relevantEvents);
+            // Smart filter: ONLY public events from WhisperrFlow
+            const publicEvents = response.rows.filter((e: any) => e.visibility === 'public');
+            setEvents(publicEvents);
         } catch (error) {
             console.error('Failed to load events:', error);
         } finally {
@@ -121,10 +121,10 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                 ) : (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                         <Typography color="text.secondary">
-                            {searchQuery ? 'No matching events found.' : 'No events found.'}
+                            {searchQuery ? 'No matching public events found.' : 'No public events found.'}
                         </Typography>
                         <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                            Only public or your own events from WhisperrFlow can be attached.
+                            Only events marked as "Public" in WhisperrFlow can be shared in the ecosystem feed.
                         </Typography>
                     </Box>
                 )}

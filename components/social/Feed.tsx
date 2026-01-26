@@ -35,8 +35,13 @@ import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { NoteViewDrawer } from './NoteViewDrawer';
+import { EventSelectorModal } from './EventSelectorModal';
+import { EventViewDrawer } from './EventViewDrawer';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import EventIcon from '@mui/icons-material/Event';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 export const Feed = () => {
     const { user } = useAuth();
@@ -55,6 +60,12 @@ export const Feed = () => {
     const [selectedNote, setSelectedNote] = useState<any>(null);
     const [viewingNote, setViewingNote] = useState<any>(null);
     const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+
+    // Event Integration State
+    const [isEventModalOpen, setIsEventSelectorOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<any>(null);
+    const [viewingEvent, setViewingEvent] = useState<any>(null);
+    const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -108,12 +119,13 @@ export const Feed = () => {
     };
 
     const handlePost = async () => {
-        if (!newMoment.trim() && !selectedNote) return;
+        if (!newMoment.trim() && !selectedNote && !selectedEvent) return;
         setPosting(true);
         try {
-            await SocialService.createMoment(user!.$id, newMoment, 'image', [], 'public', selectedNote?.$id);
+            await SocialService.createMoment(user!.$id, newMoment, 'image', [], 'public', selectedNote?.$id, selectedEvent?.$id);
             setNewMoment('');
             setSelectedNote(null);
+            setSelectedEvent(null);
             loadFeed();
         } catch (error) {
             console.error('Failed to post:', error);
@@ -125,6 +137,11 @@ export const Feed = () => {
     const handleOpenNote = (note: any) => {
         setViewingNote(note);
         setIsNoteDrawerOpen(true);
+    };
+
+    const handleOpenEvent = (event: any) => {
+        setViewingEvent(event);
+        setIsEventDrawerOpen(true);
     };
 
     const handleForwardToSaved = async (moment: any) => {
@@ -220,25 +237,73 @@ export const Feed = () => {
                                 </IconButton>
                             </Paper>
                         )}
+
+                        {selectedEvent && (
+                            <Paper 
+                                variant="outlined" 
+                                sx={{ 
+                                    mt: 2, 
+                                    p: 2, 
+                                    borderRadius: 3, 
+                                    display: 'flex', 
+                                    alignItems: 'center',
+                                    bgcolor: 'rgba(0, 163, 255, 0.03)',
+                                    borderColor: 'rgba(0, 163, 255, 0.2)',
+                                    position: 'relative'
+                                }}
+                            >
+                                <EventIcon color="primary" sx={{ mr: 2 }} />
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                        {selectedEvent.title || 'Untitled Event'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                        {new Date(selectedEvent.startTime).toLocaleString()}
+                                    </Typography>
+                                </Box>
+                                <IconButton 
+                                    size="small" 
+                                    onClick={() => setSelectedEvent(null)}
+                                    sx={{ ml: 1 }}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </Paper>
+                        )}
                     </CardContent>
                     <Divider sx={{ opacity: 0.05 }} />
                     <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
-                        <Button
-                            startIcon={<AttachFileIcon />}
-                            onClick={() => setIsNoteSelectorOpen(true)}
-                            sx={{ 
-                                borderRadius: '10px', 
-                                textTransform: 'none', 
-                                fontWeight: 700,
-                                color: 'text.secondary',
-                                '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
-                            }}
-                        >
-                            Attach Note
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                startIcon={<AttachFileIcon />}
+                                onClick={() => setIsNoteSelectorOpen(true)}
+                                sx={{ 
+                                    borderRadius: '10px', 
+                                    textTransform: 'none', 
+                                    fontWeight: 700,
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
+                                }}
+                            >
+                                Note
+                            </Button>
+                            <Button
+                                startIcon={<EventIcon />}
+                                onClick={() => setIsEventSelectorOpen(true)}
+                                sx={{ 
+                                    borderRadius: '10px', 
+                                    textTransform: 'none', 
+                                    fontWeight: 700,
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 245, 255, 0.05)' }
+                                }}
+                            >
+                                Event
+                            </Button>
+                        </Box>
                         <Button 
                             variant="contained" 
-                            disabled={(!newMoment.trim() && !selectedNote) || posting}
+                            disabled={(!newMoment.trim() && !selectedNote && !selectedEvent) || posting}
                             onClick={handlePost}
                             sx={{ 
                                 borderRadius: '12px', 
@@ -393,6 +458,100 @@ export const Feed = () => {
                                 </Box>
                             </Paper>
                         )}
+
+                        {moment.attachedEvent && (
+                            <Paper
+                                variant="outlined"
+                                onClick={() => handleOpenEvent(moment.attachedEvent)}
+                                sx={{
+                                    p: 0,
+                                    borderRadius: 4,
+                                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    overflow: 'hidden',
+                                    '&:hover': {
+                                        borderColor: 'rgba(0, 163, 255, 0.4)',
+                                        transform: 'translateY(-4px)',
+                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 163, 255, 0.1)'
+                                    }
+                                }}
+                            >
+                                <Box sx={{ 
+                                    p: 3, 
+                                    background: 'linear-gradient(135deg, rgba(0, 163, 255, 0.05) 0%, rgba(0, 120, 255, 0.02) 100%)',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                                }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                        <Box 
+                                            sx={{ 
+                                                width: 40, 
+                                                height: 40, 
+                                                borderRadius: 1.5, 
+                                                bgcolor: 'rgba(0, 163, 255, 0.1)', 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                mr: 2,
+                                                boxShadow: '0 4px 12px rgba(0, 163, 255, 0.15)'
+                                            }}
+                                        >
+                                            <EventIcon sx={{ color: '#00A3FF', fontSize: 24 }} />
+                                        </Box>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography 
+                                                variant="subtitle1" 
+                                                fontWeight={900} 
+                                                sx={{ 
+                                                    color: 'white',
+                                                    fontFamily: 'var(--font-space-grotesk)',
+                                                    letterSpacing: '-0.01em',
+                                                    lineHeight: 1.2
+                                                }}
+                                            >
+                                                {moment.attachedEvent.title || 'Untitled Event'}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
+                                                WhisperrFlow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
+                                            <AccessTimeIcon sx={{ fontSize: 16 }} />
+                                            <Typography variant="caption" fontWeight={600}>
+                                                {new Date(moment.attachedEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(moment.attachedEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Typography>
+                                        </Box>
+                                        {moment.attachedEvent.location && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
+                                                <LocationOnIcon sx={{ fontSize: 16 }} />
+                                                <Typography variant="caption" fontWeight={600}>
+                                                    {moment.attachedEvent.location}
+                                                </Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Box>
+                                <Box sx={{ 
+                                    px: 3, 
+                                    py: 1.5, 
+                                    bgcolor: 'rgba(0, 0, 0, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                        Scheduled via Whisperrflow
+                                    </Typography>
+                                    <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.65rem' }}>
+                                        View Details
+                                    </Button>
+                                </Box>
+                            </Paper>
+                        )}
                     </CardContent>
                     <CardActions sx={{ px: 2, pb: 2, gap: 1 }}>
                         <Button 
@@ -457,6 +616,18 @@ export const Feed = () => {
                 open={isNoteDrawerOpen}
                 onClose={() => setIsNoteDrawerOpen(false)}
                 note={viewingNote}
+            />
+
+            <EventSelectorModal
+                open={isEventModalOpen}
+                onClose={() => setIsEventSelectorOpen(false)}
+                onSelect={(event) => setSelectedEvent(event)}
+            />
+
+            <EventViewDrawer
+                open={isEventDrawerOpen}
+                onClose={() => setIsEventDrawerOpen(false)}
+                event={viewingEvent}
             />
         </Box>
     );
