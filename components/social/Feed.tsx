@@ -31,6 +31,10 @@ import BookmarkIcon from '@mui/icons-material/BookmarkBorderOutlined';
 import { useRouter } from 'next/navigation';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
+import { NoteSelectorModal } from './NoteSelectorModal';
+import { NoteViewDrawer } from './NoteViewDrawer';
+import DescriptionIcon from '@mui/icons-material/Description';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 
 export const Feed = () => {
     const { user } = useAuth();
@@ -44,9 +48,15 @@ export const Feed = () => {
     const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedMoment, setSelectedMoment] = useState<any>(null);
 
+    // Note Integration State
+    const [isNoteModalOpen, setIsNoteSelectorOpen] = useState(false);
+    const [selectedNote, setSelectedNote] = useState<any>(null);
+    const [viewingNote, setViewingNote] = useState<any>(null);
+    const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+
     useEffect(() => {
-        loadFeed();
         if (user) {
+            loadFeed();
             fetchUserAvatar();
         }
     }, [user]);
@@ -64,8 +74,9 @@ export const Feed = () => {
     };
 
     const loadFeed = async () => {
+        if (!user?.$id) return;
         try {
-            const response = await SocialService.getFeed(user!.$id);
+            const response = await SocialService.getFeed(user.$id);
             // Enrich with creator details and avatars
             const enriched = await Promise.all(response.rows.map(async (moment: any) => {
                 try {
@@ -73,7 +84,7 @@ export const Feed = () => {
                     const creator = await UsersService.getProfileById(creatorId);
                     
                     let avatarUrl = null;
-                    const picId = creator?.avatarFileId || creator?.profilePicId || creator?.avatarUrl || creator?.avatar;
+                    const picId = creator?.profilePicId || creator?.avatarFileId || creator?.avatarUrl || creator?.avatar;
                     if (picId && typeof picId === 'string' && picId.length > 5) {
                         try {
                             const url = await fetchProfilePreview(picId, 64, 64);
@@ -95,17 +106,23 @@ export const Feed = () => {
     };
 
     const handlePost = async () => {
-        if (!newMoment.trim() || !user) return;
+        if (!newMoment.trim() && !selectedNote) return;
         setPosting(true);
         try {
-            await SocialService.createMoment(user.$id, newMoment);
+            await SocialService.createMoment(user!.$id, newMoment, 'text', [], 'public', selectedNote?.$id);
             setNewMoment('');
+            setSelectedNote(null);
             loadFeed();
         } catch (error) {
             console.error('Failed to post:', error);
         } finally {
             setPosting(false);
         }
+    };
+
+    const handleOpenNote = (note: any) => {
+        setViewingNote(note);
+        setIsNoteDrawerOpen(true);
     };
 
     const handleForwardToSaved = async (moment: any) => {
@@ -121,7 +138,7 @@ export const Feed = () => {
                 await ChatService.sendMessage(
                     savedChat.$id, 
                     user.$id, 
-                    `Forwarded Moment from @${moment.creator?.username}:\n\n${moment.content}`,
+                    `Forwarded Moment from @${moment.creator?.username}:\n\n${moment.caption}`,
                     'text'
                 );
                 alert('Saved to Messages');
@@ -168,12 +185,58 @@ export const Feed = () => {
                                 onChange={(e) => setNewMoment(e.target.value)}
                             />
                         </Box>
+
+                        {selectedNote && (
+                            <Paper 
+                                variant="outlined" 
+                                sx={{ 
+                                    mt: 2, 
+                                    p: 2, 
+                                    borderRadius: 3, 
+                                    display: 'flex', 
+                                    alignItems: 'center',
+                                    bgcolor: 'rgba(0, 240, 255, 0.03)',
+                                    borderColor: 'rgba(0, 240, 255, 0.2)',
+                                    position: 'relative'
+                                }}
+                            >
+                                <DescriptionIcon color="primary" sx={{ mr: 2 }} />
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                        {selectedNote.title || 'Untitled Note'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                        {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
+                                    </Typography>
+                                </Box>
+                                <IconButton 
+                                    size="small" 
+                                    onClick={() => setSelectedNote(null)}
+                                    sx={{ ml: 1 }}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </Paper>
+                        )}
                     </CardContent>
                     <Divider sx={{ opacity: 0.05 }} />
-                    <CardActions sx={{ justifyContent: 'flex-end', p: 2, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
+                    <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
+                        <Button
+                            startIcon={<AttachFileIcon />}
+                            onClick={() => setIsNoteSelectorOpen(true)}
+                            sx={{ 
+                                borderRadius: '10px', 
+                                textTransform: 'none', 
+                                fontWeight: 700,
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
+                            }}
+                        >
+                            Attach Note
+                        </Button>
                         <Button 
                             variant="contained" 
-                            disabled={!newMoment.trim() || posting}
+                            disabled={(!newMoment.trim() && !selectedNote) || posting}
                             onClick={handlePost}
                             sx={{ 
                                 borderRadius: '12px', 
@@ -215,9 +278,56 @@ export const Feed = () => {
                         }
                     />
                     <CardContent sx={{ pt: 0, px: 3 }}>
-                        <Typography variant="body1" sx={{ lineHeight: 1.6, fontSize: '1.05rem' }}>
-                            {moment.content}
-                        </Typography>
+                        {moment.caption && (
+                            <Typography variant="body1" sx={{ lineHeight: 1.6, fontSize: '1.05rem', mb: moment.attachedNote ? 2 : 0 }}>
+                                {moment.caption}
+                            </Typography>
+                        )}
+
+                        {moment.attachedNote && (
+                            <Paper
+                                variant="outlined"
+                                onClick={() => handleOpenNote(moment.attachedNote)}
+                                sx={{
+                                    p: 2.5,
+                                    borderRadius: 4,
+                                    bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(0, 240, 255, 0.05)',
+                                        borderColor: 'rgba(0, 240, 255, 0.3)',
+                                        transform: 'translateY(-2px)'
+                                    }
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                    <DescriptionIcon color="primary" sx={{ mr: 1.5 }} />
+                                    <Typography variant="subtitle1" fontWeight={900}>
+                                        {moment.attachedNote.title || 'Untitled Note'}
+                                    </Typography>
+                                </Box>
+                                <Typography 
+                                    variant="body2" 
+                                    color="text.secondary" 
+                                    sx={{ 
+                                        lineHeight: 1.6,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    {moment.attachedNote.content?.replace(/[#*`]/g, '')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', mt: 2, alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 800 }}>
+                                        Click to read note
+                                    </Typography>
+                                </Box>
+                            </Paper>
+                        )}
                     </CardContent>
                     <CardActions sx={{ px: 2, pb: 2, gap: 1 }}>
                         <Button 
@@ -271,6 +381,18 @@ export const Feed = () => {
                     <Typography variant="body2" sx={{ color: 'text.disabled', mt: 1 }}>Be the first to share an update!</Typography>
                 </Box>
             )}
+
+            <NoteSelectorModal 
+                open={isNoteModalOpen}
+                onClose={() => setIsNoteSelectorOpen(false)}
+                onSelect={(note) => setSelectedNote(note)}
+            />
+
+            <NoteViewDrawer 
+                open={isNoteDrawerOpen}
+                onClose={() => setIsNoteDrawerOpen(false)}
+                note={viewingNote}
+            />
         </Box>
     );
 };
