@@ -425,7 +425,7 @@ export const AppHeader = () => {
                       <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', display: 'block' }}>
                         {notif.action.toUpperCase()}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.75rem', noWrap: true, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <Typography variant="body2" noWrap sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {notif.targetType}: {notif.targetId}
                       </Typography>
                     </Box>

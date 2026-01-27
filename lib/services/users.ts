@@ -150,5 +150,15 @@ export const UsersService = {
             // Handle race condition if profile was created simultaneously
             return await this.getProfileById(user.$id);
         }
+    },
+
+    async searchUsers(query: string) {
+        const queries = [Query.limit(20)];
+        if (query) {
+            queries.push(Query.search('username', query));
+        } else {
+            queries.push(Query.orderDesc('createdAt'));
+        }
+        return await tablesDB.listRows(DB_ID, USERS_TABLE, queries);
     }
 };

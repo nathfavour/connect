@@ -510,7 +510,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             default:
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
-                        <InsertDriveFileIcon />
+                        <File size={18} strokeWidth={1.5} />
                         <Typography
                             variant="body2"
                             component="a"

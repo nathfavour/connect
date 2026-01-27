@@ -56,20 +56,6 @@ export const Profile = ({ username }: ProfileProps) => {
             let data;
             if (username) {
                 data = await UsersService.getProfile(username);
-                if (!data) {
-                    const externalUser = await UsersService.getWhisperrnoteUserByUsername(username);
-                    if (externalUser) {
-                        const fallbackUsername = normalizeUsername(externalUser.username || externalUser.name || externalUser.email);
-                        data = {
-                            $id: externalUser.$id,
-                            username: fallbackUsername || username,
-                            displayName: externalUser.name || externalUser.displayName || fallbackUsername || 'User',
-                            avatarUrl: externalUser.avatarUrl || null,
-                            bio: externalUser.bio || null,
-                            __external: true
-                        };
-                    }
-                }
             } else if (currentUser) {
                 data = await UsersService.getProfileById(currentUser.$id);
             }
@@ -150,7 +136,16 @@ export const Profile = ({ username }: ProfileProps) => {
                                     >
                                         Edit Profile
                                     </Button>
-                                    <Button variant="outlined" startIcon={<SettingsIcon />} sx={{ borderRadius: 5 }}>
+                                    <Button 
+                                        variant="outlined" 
+                                        startIcon={<SettingsIcon />} 
+                                        sx={{ borderRadius: 5 }}
+                                        onClick={() => {
+                                            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+                                            const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'id';
+                                            window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}`;
+                                        }}
+                                    >
                                         Settings
                                     </Button>
                                 </>
