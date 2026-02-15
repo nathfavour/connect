@@ -5,7 +5,7 @@ export const APPWRITE_CONFIG = {
         CHAT: 'chat',
         WHISPERRNOTE: '67ff05a9000296822396',
         PASSWORD_MANAGER: 'passwordManagerDb',
-        WHISPERRFLOW: 'whisperrflow'
+        WHISPERRFLOW: 'kylrixflow'
     },
     TABLES: {
         CHAT: {

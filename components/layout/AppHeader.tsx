@@ -232,7 +232,7 @@ export const AppHeader = () => {
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="Whisperr Portal (Ctrl+Space)">
+          <Tooltip title="Kylrix Portal (Ctrl+Space)">
             <IconButton 
               onClick={() => setIsPortalOpen(true)}
               sx={{ 
@@ -317,7 +317,7 @@ export const AppHeader = () => {
           <Box sx={{ py: 1 }}>
             <MenuItem 
               onClick={() => {
-                const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+                const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
                 const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'id';
                 window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}`;
                 setAnchorElAccount(null);

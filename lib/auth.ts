@@ -17,7 +17,7 @@ export function useAuth() {
     const attemptSilentAuth = useCallback(async () => {
         if (typeof window === 'undefined') return;
 
-        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
         const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
 
         return new Promise<void>((resolve) => {
@@ -34,7 +34,7 @@ export function useAuth() {
                 if (event.origin !== `https://${authSubdomain}.${domain}`) return;
 
                 if (event.data?.type === 'idm:auth-status' && event.data.status === 'authenticated') {
-                    console.log('Silent auth discovered session in whisperrconnect');
+                    console.log('Silent auth discovered session in kylrixconnect');
                     checkSession();
                     cleanup();
                     resolve();
@@ -105,12 +105,12 @@ export function useAuth() {
     // Listen for postMessage from IDM window
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
             const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
             if (event.origin !== `https://${authSubdomain}.${domain}`) return;
 
             if (event.data?.type === 'idm:auth-success') {
-                console.log('Received auth success via postMessage in whisperrconnect');
+                console.log('Received auth success via postMessage in kylrixconnect');
                 checkSession();
                 setIsAuthenticating(false);
             }
@@ -130,7 +130,7 @@ export function useAuth() {
         try {
             const session = await account.get();
             if (session) {
-                console.log('Active session detected in whisperrconnect, skipping IDM window');
+                console.log('Active session detected in kylrixconnect, skipping IDM window');
                 setUser(session);
                 setIsAuthenticating(false);
                 return;
@@ -152,7 +152,7 @@ export function useAuth() {
             // Still no session
         }
 
-        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
         const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
         const currentUri = window.location.href;
 
@@ -172,12 +172,12 @@ export function useAuth() {
 
             const popup = window.open(
                 idmsUrl,
-                'WhisperrAuth',
+                'KylrixAuth',
                 `width=${width},height=${height},top=${top},left=${left}`
             );
 
             if (!popup) {
-                console.warn('Popup blocked, falling back to redirect in whisperrconnect');
+                console.warn('Popup blocked, falling back to redirect in kylrixconnect');
                 window.location.href = redirectUrl.toString();
                 return;
             }

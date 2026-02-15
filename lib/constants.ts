@@ -8,11 +8,11 @@ export interface EcosystemApp {
   description: string;
 }
 
-export const NEXT_PUBLIC_DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'whisperrnote.space';
+export const NEXT_PUBLIC_DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
 
 export const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'note', label: 'Note', subdomain: 'app', type: 'app', icon: '📝', color: '#00F5FF', description: 'Cognitive extension and smart notes.' },
-  { id: 'keep', label: 'Keep', subdomain: 'keep', type: 'app', icon: '🔐', color: '#8b5cf6', description: 'Secure vault and identity vault.' },
+  { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: '🔐', color: '#8b5cf6', description: 'Secure vault and identity vault.' },
   { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: '🚀', color: '#10b981', description: 'Intelligent task orchestration.' },
   { id: 'connect', label: 'Connect', subdomain: 'connect', type: 'app', icon: '💬', color: '#ec4899', description: 'Secure bridge for communication.' },
   { id: 'id', label: 'Identity', subdomain: 'id', type: 'accounts', icon: '🛡️', color: '#ef4444', description: 'Sovereign identity management.' },

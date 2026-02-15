@@ -48,7 +48,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
             const passwordEntry = entries.find((e: any) => e.type === 'password');
 
             if (!passwordEntry) {
-                setError('No master password setup found. Please set it up in WhisperrKeep.');
+                setError('No master password setup found. Please set it up in Kylrix Vault.');
                 setLoading(false);
                 return;
             }

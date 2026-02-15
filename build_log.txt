@@ -1,5 +1,5 @@
 
-> whisperrconnect@0.1.0 build /home/nathfavour/code/whisperrnote/whisperrconnect
+> kylrixconnect@0.1.0 build /home/nathfavour/code/kylrixnote/kylrixconnect
 > next build
 
    ▲ Next.js 16.0.8 (Turbopack)

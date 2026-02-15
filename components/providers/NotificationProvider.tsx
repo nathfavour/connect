@@ -99,7 +99,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           setUnreadCount(prev => prev + 1);
         }
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification(`Whisperr ${payload.targetType}`, { body: payload.action });
+          new Notification(`Kylrix ${payload.targetType}`, { body: payload.action });
         }
       } else if (isUpdate) {
         setNotifications(prev => {

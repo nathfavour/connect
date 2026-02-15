@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Load saved preference
-    const saved = localStorage.getItem('whisperrconnect-theme') as 'light' | 'dark' | null;
+    const saved = localStorage.getItem('kylrixconnect-theme') as 'light' | 'dark' | null;
     if (saved) {
       setMode(saved);
     } else {
@@ -32,7 +32,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   }, [prefersDarkMode]);
 
   useEffect(() => {
-    localStorage.setItem('whisperrconnect-theme', mode);
+    localStorage.setItem('kylrixconnect-theme', mode);
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(mode);
   }, [mode]);

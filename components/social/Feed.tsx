@@ -97,7 +97,7 @@ export const Feed = () => {
                             ...moment, 
                             creator: creator ? { ...creator, avatarUrl } : {
                                 username: `user_${creatorId.slice(0, 5)}`,
-                                displayName: 'Whisperr User',
+                                displayName: 'Kylrix User',
                                 avatarUrl: null,
                                 $id: creatorId
                             }
@@ -162,7 +162,7 @@ export const Feed = () => {
                         ...moment, 
                         creator: { 
                             username: `user_${creatorId.slice(0, 5)}`, 
-                            displayName: 'Whisperr User',
+                            displayName: 'Kylrix User',
                             $id: creatorId 
                         } 
                     };
@@ -493,7 +493,7 @@ export const Feed = () => {
                                     justifyContent: 'space-between'
                                 }}>
                                     <Typography variant="caption" sx={{ color: '#00F5FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                                        Shared via Whisperrnote
+                                        Shared via Kylrix Note
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         {moment.attachedNote.tags?.slice(0, 2).map((tag: string, i: number) => (
@@ -571,7 +571,7 @@ export const Feed = () => {
                                                 {moment.attachedEvent.title || 'Untitled Event'}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                                                WhisperrFlow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
+                                                Kylrix Flow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -602,7 +602,7 @@ export const Feed = () => {
                                     justifyContent: 'space-between'
                                 }}>
                                     <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                                        Scheduled via Whisperrflow
+                                        Scheduled via Kylrixflow
                                     </Typography>
                                     <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.65rem' }}>
                                         View Details

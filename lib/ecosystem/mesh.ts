@@ -1,5 +1,5 @@
 /**
- * Whisperr Ecosystem Mesh Protocol
+ * Kylrix Ecosystem Mesh Protocol
  * Defines the communication and state synchronization between distributed nodes.
  */
 
@@ -31,7 +31,7 @@ const seenMessages = new Set<string>();
 function getChannel() {
   if (typeof window === 'undefined') return null;
   if (!activeChannel) {
-    activeChannel = new BroadcastChannel('whisperr_mesh_v2_core');
+    activeChannel = new BroadcastChannel('kylrix_mesh_v2_core');
   }
   return activeChannel;
 }
@@ -45,7 +45,7 @@ export const MeshProtocol = {
   getNodes: (): NodeIdentity[] => [
     { id: 'id', type: 'control', subdomain: 'id', version: '1.5.0', status: 'online', capabilities: ['auth', 'identity', 'quota'] },
     { id: 'note', type: 'data', subdomain: 'note', version: '1.5.0', status: 'online', capabilities: ['knowledge_graph', 'ai_search'] },
-    { id: 'keep', type: 'secure', subdomain: 'keep', version: '1.5.0', status: 'online', capabilities: ['vault', 'encryption', 'passkeys'] },
+    { id: 'vault', type: 'secure', subdomain: 'vault', version: '1.5.0', status: 'online', capabilities: ['vault', 'encryption', 'passkeys'] },
     { id: 'flow', type: 'logic', subdomain: 'flow', version: '1.5.0', status: 'online', capabilities: ['task_orchestration', 'events'] },
     { id: 'connect', type: 'message', subdomain: 'connect', version: '1.5.0', status: 'online', capabilities: ['realtime_comm', 'p2p_relay'] },
   ],
@@ -54,7 +54,7 @@ export const MeshProtocol = {
     switch (nodeId) {
       case 'id': return 'Fingerprint';
       case 'note': return 'FileText';
-      case 'keep': return 'Shield';
+      case 'vault': return 'Shield';
       case 'flow': return 'Waypoints';
       case 'connect': return 'Zap';
       default: return 'Layers';
@@ -86,7 +86,7 @@ export const MeshProtocol = {
       const frames = document.getElementsByTagName('iframe');
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        if (frame.src.includes('.whisperr.app') || frame.src.includes('localhost')) {
+        if (frame.src.includes('.kylrix.app') || frame.src.includes('localhost')) {
           frame.contentWindow?.postMessage(fullMessage, '*');
         }
       }

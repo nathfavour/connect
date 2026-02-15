@@ -1,6 +1,6 @@
 {
     "projectId": "67fe9627001d97e37ef3",
-    "projectName": "whisperrnote",
+    "projectName": "kylrixnote",
     "endpoint": "https://fra.cloud.appwrite.io/v1",
     "settings": {
         "services": {
@@ -42,7 +42,7 @@
     "tablesDB": [
         {
             "$id": "67ff05a9000296822396",
-            "name": "whisperrnote",
+            "name": "kylrixnote",
             "enabled": true
         },
         {
@@ -56,8 +56,8 @@
             "enabled": true
         },
         {
-            "$id": "whisperrflow",
-            "name": "whisperrflow",
+            "$id": "kylrixflow",
+            "name": "kylrixflow",
             "enabled": true
         }
     ],
@@ -4629,7 +4629,7 @@
             "$permissions": [
                 "create(\"users\")"
             ],
-            "databaseId": "whisperrflow",
+            "databaseId": "kylrixflow",
             "name": "focusSessions",
             "enabled": true,
             "rowSecurity": true,
@@ -4694,7 +4694,7 @@
             "$permissions": [
                 "create(\"users\")"
             ],
-            "databaseId": "whisperrflow",
+            "databaseId": "kylrixflow",
             "name": "eventGuests",
             "enabled": true,
             "rowSecurity": true,
@@ -4752,7 +4752,7 @@
             "$permissions": [
                 "create(\"users\")"
             ],
-            "databaseId": "whisperrflow",
+            "databaseId": "kylrixflow",
             "name": "events",
             "enabled": true,
             "rowSecurity": true,
@@ -4880,7 +4880,7 @@
             "$permissions": [
                 "create(\"users\")"
             ],
-            "databaseId": "whisperrflow",
+            "databaseId": "kylrixflow",
             "name": "calendars",
             "enabled": true,
             "rowSecurity": true,
@@ -4927,7 +4927,7 @@
             "$permissions": [
                 "create(\"users\")"
             ],
-            "databaseId": "whisperrflow",
+            "databaseId": "kylrixflow",
             "name": "tasks",
             "enabled": true,
             "rowSecurity": true,

@@ -1,5 +1,5 @@
 /**
- * Whisperr Ecosystem Security Protocol (WESP)
+ * Kylrix Ecosystem Security Protocol (WESP)
  * Centralized security and encryption logic for the entire ecosystem.
  * Hosted by the ID node (Identity Management System).
  */
@@ -73,7 +73,7 @@ export class EcosystemSecurity {
       );
       this.isUnlocked = true;
       if (typeof sessionStorage !== "undefined") {
-          sessionStorage.setItem("whisperr_vault_unlocked", "true");
+          sessionStorage.setItem("kylrix_vault_unlocked", "true");
       }
       console.log(`[Security] Node ${this.nodeId} successfully synced MasterPass from ID`);
     } catch (e) {
@@ -257,7 +257,7 @@ export class EcosystemSecurity {
     this.decryptionCache.clear();
     this.isUnlocked = false;
     if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem("whisperr_vault_unlocked");
+        sessionStorage.removeItem("kylrix_vault_unlocked");
     }
   }
 

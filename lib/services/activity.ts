@@ -7,14 +7,14 @@ const ACTIVITY_TABLE = APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY;
 
 export interface AppActivity {
     userId: string;
-    appId: 'whisperrnote' | 'whisperrflow' | 'whisperrkeep' | 'id' | 'connect';
+    appId: 'kylrixnote' | 'kylrixflow' | 'kylrixvault' | 'id' | 'connect';
     action: string;
     metadata?: Record<string, any>;
     timestamp?: string;
 }
 
 /**
- * ActivityService: The "Nervous System" of the Whisperr Ecosystem.
+ * ActivityService: The "Nervous System" of the Kylrix Ecosystem.
  * Orchestrates cross-app synergies by observing and reacting to user actions.
  */
 export const ActivityService = {

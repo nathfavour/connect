@@ -42,7 +42,7 @@ export function useWebRTC(userId: string) {
     }
 
     setRoomId(id);
-    const channel = new BroadcastChannel(`whisperr-room-${id}`);
+    const channel = new BroadcastChannel(`kylrix-room-${id}`);
     signalingChannel.current = channel;
 
     channel.onmessage = async (event) => {

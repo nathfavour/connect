@@ -96,14 +96,14 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           {
             type: 'suggestion' as IslandType,
             title: userName || "Quick Sync?",
-            message: "You can instantly attach notes from WhisperrNote in any conversation here.",
+            message: "You can instantly attach notes from Kylrix Note in any conversation here.",
             action: { label: "Learn How", onClick: () => {} },
             personal: !!userName
           },
           {
             type: 'connect' as IslandType,
             title: userName || "Vault Secure",
-            message: "Your messages are end-to-end encrypted with your WhisperrKeep master password.",
+            message: "Your messages are end-to-end encrypted with your Kylrix Vault master password.",
             action: { label: "Security Status", onClick: () => {} },
             majestic: true,
             personal: !!userName

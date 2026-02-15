@@ -55,7 +55,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
         setLoading(true);
         try {
             const response = await EcosystemService.listEvents(user.$id);
-            // Smart filter: ONLY public events from WhisperrFlow
+            // Smart filter: ONLY public events from Kylrix Flow
             const publicEvents = response.rows.filter((e: any) => e.visibility === 'public');
             setEvents(publicEvents);
         } catch (error) {
@@ -112,7 +112,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                             Attach Orchestrated Event
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                            Select a public event from your WhisperrFlow calendar
+                            Select a public event from your Kylrix Flow calendar
                         </Typography>
                     </Box>
                 </Box>
@@ -243,7 +243,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                         <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', lineHeight: 1.6 }}>
                             {searchQuery 
                                 ? `No public events found matching "${searchQuery}".` 
-                                : 'Only events marked as "Public" in WhisperrFlow can be shared in the ecosystem feed.'}
+                                : 'Only events marked as "Public" in Kylrix Flow can be shared in the ecosystem feed.'}
                         </Typography>
                     </Box>
                 )}

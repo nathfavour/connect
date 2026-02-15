@@ -65,7 +65,7 @@ export default function DiscoverPage() {
                         Discover the Ecosystem
                     </Typography>
                     <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
-                        Find and connect with awesome people across Whisperr
+                        Find and connect with awesome people across Kylrix
                     </Typography>
 
                     <Box 
@@ -130,7 +130,7 @@ export default function DiscoverPage() {
                                             overflow: 'hidden',
                                             height: '3em'
                                         }}>
-                                            {user.bio || 'Sharing notes and connecting on Whisperr.'}
+                                            {user.bio || 'Sharing notes and connecting on Kylrix.'}
                                         </Typography>
                                         <Button 
                                             fullWidth 

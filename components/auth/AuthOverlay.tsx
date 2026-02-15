@@ -44,7 +44,7 @@ export const AuthOverlay = () => {
                         fontWeight: '900',
                         letterSpacing: '-0.03em'
                     }}>
-                        WhisperrConnect
+                        Kylrix Connect
                     </h2>
                     <p style={{
                         marginBottom: '32px',
@@ -52,7 +52,7 @@ export const AuthOverlay = () => {
                         fontSize: '1rem',
                         lineHeight: '1.5'
                     }}>
-                        Access the bridge to your private network. Sign in with your Whisperr ID to continue.
+                        Access the bridge to your private network. Sign in with your Kylrix ID to continue.
                     </p>
                     <button
                         onClick={login}

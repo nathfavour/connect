@@ -21,8 +21,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "WhisperrConnect - Premium Communication",
-  description: "Seamless, secure, and professional connections for the Whisperr Premium Suite.",
+  title: "Kylrix Connect - Premium Communication",
+  description: "Seamless, secure, and professional connections for the Kylrix Premium Suite.",
 };
 
 export const viewport = {

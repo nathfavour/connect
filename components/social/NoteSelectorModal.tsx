@@ -112,7 +112,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                             Attach Cognitive Note
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                            Select a public note from your WhisperrNote vault
+                            Select a public note from your Kylrix Note vault
                         </Typography>
                     </Box>
                 </Box>
@@ -230,7 +230,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', lineHeight: 1.6 }}>
                             {searchQuery 
                                 ? `No public notes found matching "${searchQuery}".` 
-                                : 'Only notes marked as "Public" in WhisperrNote can be shared in the ecosystem feed.'}
+                                : 'Only notes marked as "Public" in Kylrix Note can be shared in the ecosystem feed.'}
                         </Typography>
                     </Box>
                 )}
