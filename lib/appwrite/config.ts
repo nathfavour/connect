@@ -40,6 +40,6 @@ export const APPWRITE_CONFIG = {
     },
     AUTH: {
         SUBDOMAIN: 'accounts',
-        DOMAIN: 'kylrixnote.space'
+        DOMAIN: 'kylrix.space'
     }
 };

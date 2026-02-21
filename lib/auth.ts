@@ -18,7 +18,7 @@ export function useAuth() {
     const attemptSilentAuth = useCallback(async () => {
         if (typeof window === 'undefined') return;
 
-        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrix.space';
         const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
 
         return new Promise<void>((resolve) => {
@@ -106,7 +106,7 @@ export function useAuth() {
     // Listen for postMessage from IDM window
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+            const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrix.space';
             const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
             if (event.origin !== `https://${authSubdomain}.${domain}`) return;
 
@@ -153,7 +153,7 @@ export function useAuth() {
             // Still no session
         }
 
-        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrix.space';
         const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
         const currentUri = window.location.href;
 

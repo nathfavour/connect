@@ -141,7 +141,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                         startIcon={<SettingsIcon />} 
                                         sx={{ borderRadius: 5 }}
                                         onClick={() => {
-                                            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
+                                            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
                                             const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'id';
                                             window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}`;
                                         }}

@@ -416,7 +416,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         cursor: 'pointer',
                         '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
                     }}
-                    onClick={() => window.open(`https://note.kylrixnote.space/n/${msg.attachments?.[0]}`, '_blank')}
+                    onClick={() => window.open(`https://note.kylrix.space/n/${msg.attachments?.[0]}`, '_blank')}
                 >
                     <FileText size={20} color="#00F5FF" strokeWidth={1.5} />
                     <Box>
@@ -440,7 +440,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         cursor: 'pointer',
                         '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
                     }}
-                    onClick={() => window.open(`https://keep.kylrixnote.space/vault?id=${msg.attachments?.[0]}`, '_blank')}
+                    onClick={() => window.open(`https://vault.kylrix.space/vault?id=${msg.attachments?.[0]}`, '_blank')}
                 >
                     <Shield size={20} color="#00F5FF" strokeWidth={1.5} />
                     <Box>

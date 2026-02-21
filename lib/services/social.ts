@@ -107,7 +107,7 @@ export const SocialService = {
                     details: JSON.stringify({
                         read: false,
                         originalDetails: `New post shared: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
-                        actionUrl: `https://connect.${process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space'}/`
+                        actionUrl: `https://connect.${process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space'}/`
                     })
                 }
             );
