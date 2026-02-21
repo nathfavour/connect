@@ -37,5 +37,9 @@ export const APPWRITE_CONFIG = {
         VIDEO: 'video',
         PROFILE_PICTURES: 'profile_pictures',
         COVERS: 'covers'
+    },
+    AUTH: {
+        SUBDOMAIN: 'accounts',
+        DOMAIN: 'kylrixnote.space'
     }
 };

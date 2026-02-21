@@ -18,8 +18,8 @@ export function useAuth() {
     const attemptSilentAuth = useCallback(async () => {
         if (typeof window === 'undefined') return;
 
-        const domain = APPWRITE_CONFIG.KYLRIXNOTE ? 'kylrixnote.space' : 'kylrixnote.space'; // fallback logic
-        const authSubdomain = 'accounts';
+        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+        const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
 
         return new Promise<void>((resolve) => {
             const iframe = document.createElement('iframe');
@@ -106,8 +106,8 @@ export function useAuth() {
     // Listen for postMessage from IDM window
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
-            const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
+            const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+            const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
             if (event.origin !== `https://${authSubdomain}.${domain}`) return;
 
             if (event.data?.type === 'idm:auth-success') {
@@ -153,8 +153,8 @@ export function useAuth() {
             // Still no session
         }
 
-        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrixnote.space';
-        const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
+        const domain = APPWRITE_CONFIG.AUTH.DOMAIN || 'kylrixnote.space';
+        const authSubdomain = APPWRITE_CONFIG.AUTH.SUBDOMAIN || 'accounts';
         const currentUri = window.location.href;
 
         const idmsUrl = `https://${authSubdomain}.${domain}/login`;
