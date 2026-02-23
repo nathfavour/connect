@@ -24,8 +24,8 @@ import {
   Zap
 } from "lucide-react";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { AppwriteService } from "@/lib/appwrite";
-import { useAuth } from "@/hooks/useAuth"; // Assuming connect has a similar hook
+import { KeychainService } from "@/lib/appwrite/keychain";
+import { useAuth } from "@/lib/auth"; 
 import toast from "react-hot-toast";
 
 interface SudoModalProps {
@@ -52,7 +52,7 @@ export default function SudoModal({
     useEffect(() => {
         if (isOpen && user?.$id) {
             // Check for passkey keychain entry
-            AppwriteService.listKeychainEntries(user.$id).then(entries => {
+            KeychainService.listKeychainEntries(user.$id).then(entries => {
                 setHasPasskey(entries.some((e: any) => e.type === 'passkey'));
             });
             
@@ -82,7 +82,7 @@ export default function SudoModal({
         setLoading(true);
         try {
             // Find password keychain entry
-            const entries = await AppwriteService.listKeychainEntries(user.$id);
+            const entries = await KeychainService.listKeychainEntries(user.$id);
             const passwordEntry = entries.find((e: any) => e.type === 'password');
             
             if (!passwordEntry) {
