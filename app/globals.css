@@ -1,4 +1,8 @@
 :root {
+  --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clash: "Clash Display", "Satoshi", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
   /* THE VOID (Backgrounds) */
   --color-void: #000000;
   /* Pure OLED Black */
@@ -57,7 +61,7 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 0.3s ease, color 0.3s ease;
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-satoshi), sans-serif;
   height: 100%;
   margin: 0;
   padding: 0;
@@ -69,7 +73,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-mono), monospace;
+  font-family: var(--font-clash), sans-serif;
   font-weight: 700;
   letter-spacing: -0.02em;
 }

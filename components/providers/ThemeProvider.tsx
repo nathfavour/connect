@@ -74,27 +74,27 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           borderRadius: 12,
         },
         typography: {
-          fontFamily: '"Satoshi", "Inter", sans-serif',
+          fontFamily: 'var(--font-satoshi), "Satoshi", sans-serif',
           h1: {
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: 'var(--font-clash), "Clash Display", sans-serif',
             fontSize: '32px',
             fontWeight: 700,
             letterSpacing: '-0.02em',
             color: '#F2F2F2',
           },
           h2: {
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: 'var(--font-clash), "Clash Display", sans-serif',
             fontSize: '24px',
             fontWeight: 600,
             letterSpacing: '-0.02em',
           },
           h3: {
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: 'var(--font-clash), "Clash Display", sans-serif',
             fontSize: '20px',
             fontWeight: 600,
           },
           button: {
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: 'var(--font-clash), "Clash Display", sans-serif',
             textTransform: 'none',
             fontWeight: 600,
           },
