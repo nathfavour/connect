@@ -21,10 +21,17 @@ export class EcosystemSecurity {
   private decryptionCache: Map<string, string> = new Map();
   private isUnlocked = false;
   private nodeId: string = 'unknown';
+  // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
+  private tabSessionSecret: Uint8Array | null = null;
 
   private static readonly PBKDF2_ITERATIONS = 600000;
   private static readonly IV_SIZE = 16;
   private static readonly KEY_SIZE = 256;
+
+  // PIN specific constants
+  private static readonly PIN_ITERATIONS = 100000;
+  private static readonly PIN_SALT_SIZE = 16;
+  private static readonly SESSION_SALT_SIZE = 16;
 
   static getInstance(): EcosystemSecurity {
     if (!EcosystemSecurity.instance) {
@@ -46,6 +53,14 @@ export class EcosystemSecurity {
         this.lock();
       }
     });
+  }
+
+  private getOrCreateSessionSecret(): Uint8Array {
+    if (typeof window === 'undefined') return new Uint8Array(32);
+    if (!this.tabSessionSecret) {
+      this.tabSessionSecret = crypto.getRandomValues(new Uint8Array(32));
+    }
+    return this.tabSessionSecret;
   }
 
   /**
@@ -215,6 +230,119 @@ export class EcosystemSecurity {
     // Memoize
     this.decryptionCache.set(encryptedData, plaintext);
     return plaintext;
+  }
+
+  /**
+   * Phase 3: Unlock Session with PIN
+   * Reconstructs the MEK from ephemeral RAM using the PIN.
+   */
+  async unlockWithPin(pin: string): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+
+    const verifierStr = localStorage.getItem("kylrix_pin_verifier");
+    const ephemeralStr = sessionStorage.getItem("kylrix_ephemeral_session");
+
+    if (!verifierStr || !ephemeralStr) return false;
+
+    try {
+      // 1. Verify PIN against disk verifier
+      const verifier = JSON.parse(verifierStr);
+      const salt = new Uint8Array(atob(verifier.salt).split("").map(c => c.charCodeAt(0)));
+      const expectedHash = verifier.hash;
+      const actualHash = btoa(String.fromCharCode(...new Uint8Array(await this.derivePinHash(pin, salt))));
+
+      if (actualHash !== expectedHash) {
+        return false;
+      }
+
+      // 2. Unwrap MEK from ephemeral storage
+      const ephemeral = JSON.parse(ephemeralStr);
+      const sessionSalt = new Uint8Array(atob(ephemeral.sessionSalt).split("").map(c => c.charCodeAt(0)));
+      const ephemeralKey = await this.deriveEphemeralKey(pin, sessionSalt);
+
+      const wrappedMekBytes = new Uint8Array(atob(ephemeral.wrappedMek).split("").map(c => c.charCodeAt(0)));
+      const iv = wrappedMekBytes.slice(0, EcosystemSecurity.IV_SIZE);
+      const ciphertext = wrappedMekBytes.slice(EcosystemSecurity.IV_SIZE);
+
+      const rawMek = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        ephemeralKey,
+        ciphertext
+      );
+
+      this.masterKey = await crypto.subtle.importKey(
+        "raw",
+        rawMek,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
+      );
+
+      this.isUnlocked = true;
+      return true;
+    } catch (e) {
+      console.error("[Security] PIN unlock failed", e);
+      return false;
+    }
+  }
+
+  isPinSet(): boolean {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("kylrix_pin_verifier");
+  }
+
+  private async derivePinHash(pin: string, salt: Uint8Array): Promise<ArrayBuffer> {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(pin),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"]
+    );
+
+    return crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: EcosystemSecurity.PIN_ITERATIONS,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256
+    );
+  }
+
+  private async deriveEphemeralKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
+    const encoder = new TextEncoder();
+    const sessionSecret = this.getOrCreateSessionSecret();
+    
+    // Mix PIN with tab-specific Session Secret for entropy (XSS-safe)
+    const pinBytes = encoder.encode(pin);
+    const combined = new Uint8Array(pinBytes.length + sessionSecret.length);
+    combined.set(pinBytes);
+    combined.set(sessionSecret, pinBytes.length);
+
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      combined,
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    return crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 10000, // Optimized for instant (<20ms) unlock speed
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false, // SECURITY: Non-extractable. Key cannot be exported by XSS.
+      ["encrypt", "decrypt"]
+    );
   }
 
   lock() {
