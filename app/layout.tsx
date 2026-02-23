@@ -38,6 +38,7 @@ import { PresenceProvider } from '@/components/providers/PresenceProvider';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
 import { EcosystemClient } from '@/components/ecosystem/EcosystemClient';
 import { IslandProvider } from '@/components/common/DynamicIsland';
+import { SudoProvider } from '@/context/SudoContext';
 import { Suspense } from 'react';
 
 export default function RootLayout({
@@ -55,12 +56,14 @@ export default function RootLayout({
         <ThemeProvider>
           <IslandProvider>
             <NotificationProvider>
-              <PresenceProvider>
-                <AuthOverlay />
-                <Suspense fallback={null}>
-                  {children}
-                </Suspense>
-              </PresenceProvider>
+              <SudoProvider>
+                <PresenceProvider>
+                  <AuthOverlay />
+                  <Suspense fallback={null}>
+                    {children}
+                  </Suspense>
+                </PresenceProvider>
+              </SudoProvider>
             </NotificationProvider>
           </IslandProvider>
         </ThemeProvider>
