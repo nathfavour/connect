@@ -14,7 +14,7 @@
    Creating an optimized production build ...
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
- ✓ Compiled successfully in 8.0s
+ ✓ Compiled successfully in 6.0s
    Skipping validation of types
    Collecting page data using 7 workers ...
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
@@ -30,7 +30,7 @@
  ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
    Generating static pages using 7 workers (5/11) 
    Generating static pages using 7 workers (8/11) 
- ✓ Generating static pages using 7 workers (11/11) in 828.8ms
+ ✓ Generating static pages using 7 workers (11/11) in 1425.1ms
    Finalizing page optimization ...
 
 Route (app)
