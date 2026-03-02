@@ -36,6 +36,7 @@ import { useNotifications } from '@/components/providers/NotificationProvider';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import EcosystemPortal from '../common/EcosystemPortal';
+import Logo from '../common/Logo';
 
 export const AppHeader = () => {
   const { user, logout } = useAuth();
@@ -103,33 +104,13 @@ export const AppHeader = () => {
         minHeight: '72px' 
       }}>
         {/* Left: Logo */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <Box sx={{ 
-            width: 42, 
-            height: 42, 
-            bgcolor: 'rgba(255, 255, 255, 0.03)', 
-            border: '1px solid rgba(255, 255, 255, 0.1)', 
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden'
-          }}>
-            <Box sx={{ color: '#00F5FF', fontWeight: 900, fontSize: '1.2rem' }}>C</Box>
-          </Box>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              display: { xs: 'none', sm: 'block' },
-              fontWeight: 900, 
-              letterSpacing: '-0.05em',
-              fontFamily: 'var(--font-space-grotesk)',
-              color: 'white'
-            }}
-          >
-            KYLRIX<Box component="span" sx={{ color: '#00F5FF' }}>CONNECT</Box>
-          </Typography>
-        </Box>
+        <Logo 
+          app="connect" 
+          size={32} 
+          sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+          component="a"
+          href="/"
+        />
 
         {/* Center: Search */}
         <Box sx={{ flexGrow: 1, maxWidth: 700, display: { xs: 'none', md: 'block' } }}>
