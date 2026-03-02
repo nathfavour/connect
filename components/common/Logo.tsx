@@ -17,7 +17,7 @@ const LogoContainer = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  transition: 'all 0.3s ease',
+  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   textDecoration: 'none'
 });
 
@@ -30,11 +30,11 @@ const Logo: React.FC<LogoProps> = ({
   href
 }) => {
   const configs = {
-    root: { color1: "#00F5FF", color2: "#00A3FF", name: "KYLRIX", desc: "Ecosystem Hub" },
-    vault: { color1: "#00F5FF", color2: "#3B82F6", name: "VAULT", desc: "Zero-Knowledge Storage" },
-    flow: { color1: "#00F5FF", color2: "#00FF94", name: "FLOW", desc: "AI Orchestration" },
-    note: { color1: "#00F5FF", color2: "#A855F7", name: "NOTE", desc: "Structured Intelligence" },
-    connect: { color1: "#00F5FF", color2: "#F43F5E", name: "CONNECT", desc: "P2P Encryption" }
+    root: { color1: "#00F5FF", color2: "#00A3FF", name: "KYLRIX", desc: "Assembly Root" },
+    vault: { color1: "#00F5FF", color2: "#3B82F6", name: "VAULT", desc: "Data Monolith" },
+    flow: { color1: "#00F5FF", color2: "#00FF94", name: "FLOW", desc: "Kinetic Vector" },
+    note: { color1: "#00F5FF", color2: "#A855F7", name: "NOTE", desc: "Synthesis Prism" },
+    connect: { color1: "#00F5FF", color2: "#F43F5E", name: "CONNECT", desc: "Signal Pulse" }
   };
 
   const current = configs[app];
@@ -47,27 +47,32 @@ const Logo: React.FC<LogoProps> = ({
             <stop offset="0%" stopColor={current.color1} />
             <stop offset="100%" stopColor={current.color2} />
           </linearGradient>
-          <filter id="glow-heavy"><feGaussianBlur stdDeviation="4" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter>
         </defs>
 
-        {app === 'connect' && (
-          <>
-            <path d="M30 20V80" stroke={current.color1} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <path d="M70 20L35 50L70 80" stroke={current.color2} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <circle cx="30" cy="20" r="8" fill={current.color1} filter="url(#glow-heavy)" />
-            <circle cx="30" cy="80" r="8" fill={current.color1} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="20" r="8" fill={current.color2} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="80" r="8" fill={current.color2} filter="url(#glow-heavy)" />
-            <circle cx="35" cy="50" r="12" fill="#fff" filter="url(#glow-heavy)" />
-          </>
+        {app === 'root' && (
+          <g stroke={`url(#grad-${app})`} strokeWidth="12" strokeLinecap="round">
+            <path d="M30 20V80" /> <path d="M45 50L80 20" opacity="0.8" /> <path d="M45 50L80 80" opacity="0.6" />
+          </g>
         )}
-        
-        {app !== 'connect' && (
-           <g>
-             <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" />
-             <path d="M70 20L35 50L70 80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-             <circle cx="35" cy="50" r="5" fill="#fff" />
-           </g>
+        {app === 'vault' && (
+          <g fill={`url(#grad-${app})`}>
+            <rect x="25" y="15" width="15" height="70" rx="2" /> <rect x="45" y="15" width="8" height="70" rx="2" opacity="0.7" /> <rect x="58" y="15" width="4" height="70" rx="2" opacity="0.4" />
+          </g>
+        )}
+        {app === 'flow' && (
+          <g stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 20V80" opacity="0.3" /> <path d="M40 30L65 50L40 70" /> <path d="M65 30L90 50L65 70" opacity="0.5" />
+          </g>
+        )}
+        {app === 'note' && (
+          <g stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round">
+            <path d="M30 20V80" /> <path d="M50 25H80" opacity="0.8" /> <path d="M50 50H80" opacity="0.6" /> <path d="M50 75H80" opacity="0.4" />
+          </g>
+        )}
+        {app === 'connect' && (
+          <g stroke={`url(#grad-${app})`} strokeWidth="8" strokeLinecap="round">
+            <path d="M50 20V80" strokeWidth="12" /> <path d="M30 40A25 25 0 0 1 70 40" opacity="0.7" /> <path d="M20 60A40 40 0 0 0 80 60" opacity="0.4" />
+          </g>
         )}
       </svg>
       {variant === 'full' && (
