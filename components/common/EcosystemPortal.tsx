@@ -38,7 +38,7 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
     );
 
     const handleAppClick = (subdomain: string) => {
-        window.location.href = getEcosystemUrl(subdomain);
+        window.location.assign(getEcosystemUrl(subdomain));
         onClose();
     };
 
@@ -116,7 +116,7 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                             placeholder="Jump to app or search actions..."
                             fullWidth
                             value={search}
-                            onChange={(_e) => setSearch(e.target.value)}
+                            onChange={(_e) => setSearch(_e.target.value)}
                             sx={{
                                 color: 'white',
                                 fontFamily: 'var(--font-inter)',
