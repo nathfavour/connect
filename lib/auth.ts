@@ -170,7 +170,7 @@ export function useAuth() {
             const top = (window.screen.height - height) / 2;
 
             const popup = window.open(
-                idmsUrl,
+                redirectUrl.toString(),
                 'KylrixAuth',
                 `width=${width},height=${height},top=${top},left=${left}`
             );
