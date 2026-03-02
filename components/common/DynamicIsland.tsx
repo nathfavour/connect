@@ -60,10 +60,10 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const showIsland = useCallback((notification: Omit<IslandNotification, 'id'>) => {
-    const id = Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
+    const id = Date.now().toString(36) + (notifications.length).toString(36);
     const newNotif = { ...notification, id, duration: notification.duration || (notification.majestic ? 10000 : 6000) };
     setNotifications(prev => [...prev, newNotif]);
-  }, []);
+  }, [notifications.length]);
 
   const dismissIsland = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -148,7 +148,9 @@ const DynamicIslandOverlay: React.FC<{
 
   useEffect(() => {
     if (current) {
-      setIsExpanded(false);
+      requestAnimationFrame(() => {
+        setIsExpanded(false);
+      });
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       
       timeoutRef.current = setTimeout(() => {
