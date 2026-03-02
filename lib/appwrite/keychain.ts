@@ -14,7 +14,7 @@ export const KeychainService = {
                 [Query.equal('userId', userId)]
             );
             return response.rows;
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to list keychain entries:', error);
             return [];
         }

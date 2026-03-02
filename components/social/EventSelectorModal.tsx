@@ -59,7 +59,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
             // Smart filter: ONLY public events from Kylrix Flow
             const publicEvents = response.rows.filter((e: any) => e.visibility === 'public');
             setEvents(publicEvents);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load events:', error);
         } finally {
             setLoading(false);
@@ -147,7 +147,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                         placeholder="Search your events..."
                         fullWidth
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(_e) => setSearchQuery(e.target.value)}
                         sx={{
                             color: 'white',
                             fontSize: '0.95rem',
@@ -169,7 +169,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                     </Box>
                 ) : filteredEvents.length > 0 ? (
                     <List sx={{ pt: 0 }}>
-                        {filteredEvents.map((event) => (
+                        {filteredEvents.map((_event) => (
                             <ListItem 
                                 key={event.$id} 
                                 component="div"

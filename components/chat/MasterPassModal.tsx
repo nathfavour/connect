@@ -80,7 +80,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                 setError('Incorrect PIN. Please try again.');
                 setPin('');
             }
-        } catch (err) {
+        } catch (_err: unknown) {
             console.error('PIN unlock failed:', err);
             setError('An error occurred. Please try again.');
         } finally {
@@ -116,7 +116,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
             } else {
                 setError('Incorrect master password. Please try again.');
             }
-        } catch (err) {
+        } catch (_err: unknown) {
             console.error('Unlock failed:', err);
             setError('An error occurred while unlocking. Please try again.');
         } finally {
@@ -171,7 +171,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                             type="password"
                             placeholder="••••"
                             value={pin}
-                            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            onChange={(_e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             error={Boolean(error)}
                             helperText={error}
                             autoFocus
@@ -198,7 +198,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Master Password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(_e) => setPassword(e.target.value)}
                             error={Boolean(error)}
                             helperText={error}
                             autoFocus

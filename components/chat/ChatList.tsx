@@ -77,7 +77,7 @@ export const ChatList = () => {
                     const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
                     console.log('[ChatList] Self chat created:', newSelfChat.$id);
                     rows = [newSelfChat, ...rows];
-                } catch (e) {
+                } catch (_e: unknown) {
                     console.error('[ChatList] Failed to auto-create self chat', e);
                 }
             }
@@ -97,7 +97,7 @@ export const ChatList = () => {
                                     otherUserId: otherId, 
                                     name: profile ? (profile.displayName || profile.username) : ('User ' + otherId.substring(0, 5)) 
                                 };
-                            } catch (e) {
+                            } catch (_e: unknown) {
                                 return { ...conv, name: 'User ' + otherId.substring(0, 5) };
                             }
                         }
@@ -127,7 +127,7 @@ export const ChatList = () => {
 
             console.log('[ChatList] Final sorted list count:', sorted.length);
             setConversations(sorted);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load chats:', error);
         } finally {
             setLoading(false);
@@ -176,7 +176,7 @@ export const ChatList = () => {
                     <input 
                         placeholder="Search conversations..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(_e) => setSearchQuery(e.target.value)}
                         style={{
                             background: 'none',
                             border: 'none',

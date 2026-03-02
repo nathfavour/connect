@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         // For now, it's just a rich communication system power-up.
 
         return NextResponse.json({ success: true, messageId: message.$id });
-    } catch (error: any) {
+    } catch (_error: unknown) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
         const result = await ChatService.getConversations(user.$id);
         return NextResponse.json({ conversations: result.rows });
-    } catch (error: any) {
+    } catch (_error: unknown) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

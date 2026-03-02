@@ -77,7 +77,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                     const url = await fetchProfilePreview(profilePicId, 64, 64);
                     if (mounted) setProfileUrl(url as unknown as string);
                 } else if (mounted) setProfileUrl(null);
-            } catch (err) {
+            } catch (_err: unknown) {
                 if (mounted) setProfileUrl(null);
             }
         };

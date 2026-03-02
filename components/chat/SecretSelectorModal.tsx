@@ -62,7 +62,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
             ]);
             setSecrets(secretsRes.rows);
             setTotps(totpsRes.rows);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load ecosystem data:', error);
         } finally {
             setLoading(false);
@@ -92,7 +92,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                 onSelect(item, 'secret');
             }
             onClose();
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to process selection:', error);
         }
     };
@@ -132,7 +132,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                         size="small"
                         placeholder={`Search ${tab === 0 ? 'credentials' : 'TOTP'}...`}
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(_e) => setSearchTerm(e.target.value)}
                         sx={{ mb: 2, mt: 2 }}
                         InputProps={{
                             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,
@@ -202,7 +202,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                             }
                             setPendingSelection(null);
                             onClose();
-                        } catch (e) {
+                        } catch (_e: unknown) {
                             console.error('Processing after unlock failed', e);
                         }
                     }

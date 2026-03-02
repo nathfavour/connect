@@ -157,7 +157,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             ...conv,
                             name: profile ? (profile.displayName || profile.username) : 'User'
                         });
-                    } catch (e) {
+                    } catch (_e: unknown) {
                         setConversation({ ...conv, name: 'User' });
                     }
                 } else {
@@ -166,7 +166,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             } else {
                 setConversation(conv);
             }
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load conversation:', error);
         }
     };
@@ -186,12 +186,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     if (myClearedAt) {
                         displayMessages = displayMessages.filter((m: any) => new Date(m.$createdAt) > new Date(myClearedAt));
                     }
-                } catch (e) {}
+                } catch (_e: unknown) {}
             }
 
             // Reverse once for display order (bottom is newest)
             setMessages(displayMessages.reverse() as unknown as Messages[]);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load messages:', error);
         } finally {
             setLoading(false);
@@ -213,7 +213,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             }
             await loadMessages();
             setAnchorEl(null);
-        } catch (e) {
+        } catch (_e: unknown) {
             console.error('Wipe failed:', e);
         } finally {
             setLoading(false);
@@ -246,7 +246,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 // For now, we only support 'delete for everyone' if author.
                 alert("Individual 'Delete for Me' is coming soon. Use 'Clear Chat' for now.");
             }
-        } catch (e) {
+        } catch (_e: unknown) {
             console.error('Delete failed:', e);
         }
     };
@@ -307,7 +307,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             if (type === 'text') {
                 setMessages(prev => prev.filter(m => m.$id !== optimisticId));
             }
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to send message:', error);
             setInputText(text);
             setAttachment(file);
@@ -362,7 +362,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 'note' as any, 
                 [note.$id]
             );
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to send note:', error);
         } finally {
             setSending(false);
@@ -391,7 +391,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     [item.$id]
                 );
             }
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to send secret/totp:', error);
         } finally {
             setSending(false);
@@ -537,7 +537,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <ChevronLeft size={20} strokeWidth={1.5} />
                     </IconButton>
                     <Box 
-                        onClick={(e) => setAnchorEl(e.currentTarget)} 
+                        onClick={(_e) => setAnchorEl(e.currentTarget)} 
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
                         <Avatar sx={{ 
@@ -561,7 +561,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <IconButton onClick={handleCall} sx={{ color: 'text.secondary' }}>
                             <Phone size={20} strokeWidth={1.5} />
                         </IconButton>
-                        <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
+                        <IconButton onClick={(_e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
                             <MoreVertical size={20} strokeWidth={1.5} />
                         </IconButton>
                     </Stack>
@@ -678,7 +678,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 }}>
                     <IconButton 
                         size="small" 
-                        onClick={(e) => setAttachAnchorEl(e.currentTarget)} 
+                        onClick={(_e) => setAttachAnchorEl(e.currentTarget)} 
                         sx={{ color: 'text.secondary', p: 1.2 }}
                     >
                         <PlusCircle size={22} strokeWidth={1.5} />
@@ -720,7 +720,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         maxRows={4}
                         placeholder="Type a message..."
                         value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
+                        onChange={(_e) => setInputText(e.target.value)}
                         variant="standard"
                         InputProps={{
                             disableUnderline: true,

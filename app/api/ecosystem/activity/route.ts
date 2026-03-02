@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         const synergies = await ActivityService.analyzeSynergy(user.$id);
 
         return NextResponse.json({ success: true, synergies });
-    } catch (error: any) {
+    } catch (_error: unknown) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

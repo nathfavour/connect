@@ -62,7 +62,7 @@ export async function getCurrentUserFromRequest(req: { headers: { get(k: string)
         const data = await res.json();
         if (!data || typeof data !== 'object' || !data.$id) return null;
         return data;
-    } catch (e) {
+    } catch (_e: unknown) {
         console.error('getCurrentUserFromRequest error', e);
         return null;
     }

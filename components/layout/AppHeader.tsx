@@ -60,7 +60,7 @@ export const AppHeader = () => {
           const url = await fetchProfilePreview(profilePicId, 64, 64);
           if (mounted) setProfileUrl(url as unknown as string);
         } else if (mounted) setProfileUrl(null);
-      } catch (err) {
+      } catch (_err: unknown) {
         if (mounted) setProfileUrl(null);
       }
     };
@@ -153,7 +153,7 @@ export const AppHeader = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           <Tooltip title="Intelligence Feed">
             <IconButton 
-              onClick={(e) => setAnchorElNotifications(e.currentTarget)}
+              onClick={(_e) => setAnchorElNotifications(e.currentTarget)}
               sx={{ 
                 color: unreadCount > 0 ? '#00F5FF' : 'rgba(255, 255, 255, 0.4)',
                 bgcolor: alpha('#00F5FF', 0.03),
@@ -242,7 +242,7 @@ export const AppHeader = () => {
           </Tooltip>
 
           <IconButton 
-            onClick={(e) => setAnchorElAccount(e.currentTarget)}
+            onClick={(_e) => setAnchorElAccount(e.currentTarget)}
             sx={{ 
               p: 0.5,
               '&:hover': { transform: 'scale(1.05)' },

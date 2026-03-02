@@ -256,8 +256,8 @@ const DynamicIslandOverlay: React.FC<{
                   </Stack>
                   {current.message && <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.6, fontSize: '0.875rem' }}>{current.message}</Typography>}
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Button size="small" onClick={(e) => { e.stopPropagation(); onDismiss(current.id); }} sx={{ color: 'rgba(255, 255, 255, 0.4)', textTransform: 'none', fontWeight: 700 }}>Later</Button>
-                    {current.action && <Button variant="contained" size="small" onClick={(e) => { e.stopPropagation(); current.action?.onClick(); onDismiss(current.id); }}
+                    <Button size="small" onClick={(_e) => { e.stopPropagation(); onDismiss(current.id); }} sx={{ color: 'rgba(255, 255, 255, 0.4)', textTransform: 'none', fontWeight: 700 }}>Later</Button>
+                    {current.action && <Button variant="contained" size="small" onClick={(_e) => { e.stopPropagation(); current.action?.onClick(); onDismiss(current.id); }}
                       sx={{ background: style.color, color: 'black', fontWeight: 900, borderRadius: '10px', textTransform: 'none' }}>{current.action.label}</Button>}
                   </Stack>
                 </Stack>

@@ -58,7 +58,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
             try {
                 const available = await UsersService.isUsernameAvailable(username);
                 setIsAvailable(available);
-            } catch (err) {
+            } catch (_err: unknown) {
                 console.error('Failed to check username:', err);
             } finally {
                 setIsChecking(false);
@@ -102,7 +102,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
 
             onUpdate();
             onClose();
-        } catch (err: any) {
+        } catch (_err: unknown) {
             setError(err.message || 'Failed to update profile');
         } finally {
             setLoading(false);
@@ -118,7 +118,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
                         label="Username"
                         fullWidth
                         value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-0_]/g, ''))}
+                        onChange={(_e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-0_]/g, ''))}
                         error={isAvailable === false && username !== profile?.username}
                         helperText={
                             isAvailable === false && username !== profile?.username 
@@ -141,7 +141,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
                         label="Display Name"
                         fullWidth
                         value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
+                        onChange={(_e) => setDisplayName(e.target.value)}
                     />
 
                     <TextField
@@ -150,7 +150,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
                         multiline
                         rows={4}
                         value={bio}
-                        onChange={(e) => setBio(e.target.value)}
+                        onChange={(_e) => setBio(e.target.value)}
                         placeholder="Tell the world about yourself..."
                     />
                 </Box>

@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
       const parsed = JSON.parse(stored);
       Object.entries(parsed).forEach(([k, v]) => previewCache.set(k, v as string | null));
     }
-  } catch (e) { }
+  } catch (_e: unknown) { }
 }
 
 function persistCache() {
@@ -30,7 +30,7 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
     previewCache.set(fileId, str);
     persistCache();
     return str;
-  } catch (err) {
+  } catch (_err: unknown) {
     previewCache.set(fileId, null);
     persistCache();
     return null;

@@ -74,7 +74,7 @@ export const Feed = () => {
             fetchUserAvatar();
 
             // Real-time subscription for new posts
-            const unsub = SocialService.subscribeToFeed(async (event) => {
+            const unsub = SocialService.subscribeToFeed(async (_event) => {
                 if (event.type === 'create') {
                     const moment = event.payload;
                     
@@ -90,7 +90,7 @@ export const Feed = () => {
                             try {
                                 const url = await fetchProfilePreview(picId, 64, 64);
                                 avatarUrl = url as unknown as string;
-                            } catch (e) {}
+                            } catch (_e: unknown) {}
                         }
 
                         const enrichedMoment = { 
@@ -107,7 +107,7 @@ export const Feed = () => {
                             if (prev.some(m => m.$id === enrichedMoment.$id)) return prev;
                             return [enrichedMoment, ...prev];
                         });
-                    } catch (e) {
+                    } catch (_e: unknown) {
                         console.warn('Failed to enrich real-time moment', e);
                     }
                 } else if (event.type === 'delete') {
@@ -128,7 +128,7 @@ export const Feed = () => {
             try {
                 const url = await fetchProfilePreview(picId, 64, 64);
                 setUserAvatarUrl(url as unknown as string);
-            } catch (e) {
+            } catch (_e: unknown) {
                 console.warn('Feed failed to fetch user avatar', e);
             }
         }
@@ -150,14 +150,14 @@ export const Feed = () => {
                         try {
                             const url = await fetchProfilePreview(picId, 64, 64);
                             avatarUrl = url as unknown as string;
-                        } catch (e) {}
+                        } catch (_e: unknown) {}
                     }
 
                     if (creator) {
                         return { ...moment, creator: { ...creator, avatarUrl } };
                     }
                     throw new Error('Creator not found');
-                } catch (e) {
+                } catch (_e: unknown) {
                     return { 
                         ...moment, 
                         creator: { 
@@ -169,7 +169,7 @@ export const Feed = () => {
                 }
             }));
             setMoments(enriched);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load feed:', error);
         } finally {
             setLoading(false);
@@ -185,7 +185,7 @@ export const Feed = () => {
             setSelectedNote(null);
             setSelectedEvent(null);
             loadFeed();
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to post:', error);
         } finally {
             setPosting(false);
@@ -220,7 +220,7 @@ export const Feed = () => {
                 );
                 alert('Saved to Messages');
             }
-        } catch (e) {
+        } catch (_e: unknown) {
             console.error('Forward failed:', e);
         }
         setShareAnchorEl(null);
@@ -259,7 +259,7 @@ export const Feed = () => {
                                     sx: { fontSize: '1.1rem', fontWeight: 500 }
                                 }}
                                 value={newMoment}
-                                onChange={(e) => setNewMoment(e.target.value)}
+                                onChange={(_e) => setNewMoment(e.target.value)}
                             />
                         </Box>
 
@@ -625,7 +625,7 @@ export const Feed = () => {
                         Reply
                     </Button>
                     <IconButton 
-                        onClick={(e) => { setShareAnchorEl(e.currentTarget); setSelectedMoment(moment); }}
+                        onClick={(_e) => { setShareAnchorEl(e.currentTarget); setSelectedMoment(moment); }}
                         sx={{ ml: 'auto', color: 'text.secondary' }}
                     >
                         <Share2 size={20} strokeWidth={1.5} />
@@ -679,7 +679,7 @@ export const Feed = () => {
             <EventSelectorModal
                 open={isEventModalOpen}
                 onClose={() => setIsEventSelectorOpen(false)}
-                onSelect={(event) => setSelectedEvent(event)}
+                onSelect={(_event) => setSelectedEvent(event)}
             />
 
             <EventViewDrawer

@@ -46,7 +46,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
         try {
             const res = await EcosystemService.listNotes(user.$id);
             setNotes(res.rows);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load notes:', error);
         } finally {
             setLoading(false);
@@ -91,7 +91,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         size="small"
                         placeholder="Search notes..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(_e) => setSearchTerm(e.target.value)}
                         sx={{ mb: 2, mt: 1 }}
                         InputProps={{
                             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,

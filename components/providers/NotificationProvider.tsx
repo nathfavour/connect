@@ -49,7 +49,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (details.startsWith('{')) {
         return JSON.parse(details);
       }
-    } catch (e) {}
+    } catch (_e: unknown) {}
     return { read: false, originalDetails: details };
   };
 
@@ -70,7 +70,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const logs = res.documents as unknown as ActivityLog[];
       setNotifications(logs);
       setUnreadCount(calculateUnread(logs));
-    } catch (error) {
+    } catch (_error: unknown) {
       console.error('Failed to fetch notifications:', error);
     } finally {
       setIsLoading(false);
@@ -130,7 +130,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       await databases.updateDocument(APPWRITE_CONFIG.DATABASES.KYLRIXNOTE, APPWRITE_CONFIG.TABLES.KYLRIXNOTE.ACTIVITY_LOG, id, {
         details: JSON.stringify(newMetadata)
       });
-    } catch (error) {
+    } catch (_error: unknown) {
       console.error('Cloud sync failed:', error);
     }
   };

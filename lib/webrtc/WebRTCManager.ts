@@ -24,7 +24,7 @@ export class WebRTCManager {
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ video, audio });
       return this.localStream;
-    } catch (error) {
+    } catch (_error: unknown) {
       console.error('Error accessing media devices:', error);
       throw error;
     }
@@ -35,7 +35,7 @@ export class WebRTCManager {
 
     this.peerConnection = new RTCPeerConnection(this.config);
 
-    this.peerConnection.onicecandidate = (event) => {
+    this.peerConnection.onicecandidate = (_event) => {
       if (event.candidate) {
         this.events.onSignal({
           type: 'candidate',
@@ -46,7 +46,7 @@ export class WebRTCManager {
       }
     };
 
-    this.peerConnection.ontrack = (event) => {
+    this.peerConnection.ontrack = (_event) => {
       this.remoteStream = event.streams[0];
       this.events.onTrack(this.remoteStream);
     };

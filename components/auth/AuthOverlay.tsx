@@ -71,11 +71,11 @@ export const AuthOverlay = () => {
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                         }}
-                        onMouseEnter={(e) => {
+                        onMouseEnter={(_e) => {
                             e.currentTarget.style.transform = 'translateY(-2px)';
                             e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 240, 255, 0.5)';
                         }}
-                        onMouseLeave={(e) => {
+                        onMouseLeave={(_e) => {
                             e.currentTarget.style.transform = 'translateY(0)';
                             e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 240, 255, 0.3)';
                         }}

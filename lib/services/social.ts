@@ -27,7 +27,7 @@ export const SocialService = {
                             noteId
                         );
                         return { ...moment, attachedNote: note };
-                    } catch (e) {
+                    } catch (_e: unknown) {
                         return moment;
                     }
                 } else if (moment.fileId.startsWith('event:')) {
@@ -39,7 +39,7 @@ export const SocialService = {
                             eventId
                         );
                         return { ...moment, attachedEvent: event };
-                    } catch (e) {
+                    } catch (_e: unknown) {
                         return moment;
                     }
                 }

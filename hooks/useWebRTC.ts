@@ -45,7 +45,7 @@ export function useWebRTC(userId: string) {
     const channel = new BroadcastChannel(`kylrix-room-${id}`);
     signalingChannel.current = channel;
 
-    channel.onmessage = async (event) => {
+    channel.onmessage = async (_event) => {
       const signal: SignalData = event.data;
       
       // Ignore own messages
@@ -60,7 +60,7 @@ export function useWebRTC(userId: string) {
          try {
             const stream = await rtcManager.current.initializeLocalStream(true, true);
             setLocalStream(stream);
-         } catch (e) {
+         } catch (_e: unknown) {
             console.error("Failed to initialize stream on incoming call", e);
          }
       }

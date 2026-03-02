@@ -58,7 +58,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
             // Smart filter: only public notes
             const publicNotes = response.rows.filter((n: any) => n.isPublic === true);
             setNotes(publicNotes);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load notes:', error);
         } finally {
             setLoading(false);
@@ -146,7 +146,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         placeholder="Search your notes..."
                         fullWidth
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(_e) => setSearchQuery(e.target.value)}
                         sx={{
                             color: 'white',
                             fontSize: '0.95rem',

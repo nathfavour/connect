@@ -37,7 +37,7 @@ export default function DiscoverPage() {
             // For discovery, we list recent users or search all
             const res = await UsersService.searchUsers('');
             setUsers(res.rows);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Failed to load users:', error);
         } finally {
             setLoading(false);
@@ -50,7 +50,7 @@ export default function DiscoverPage() {
         try {
             const res = await UsersService.searchUsers(searchQuery);
             setUsers(res.rows);
-        } catch (error) {
+        } catch (_error: unknown) {
             console.error('Search failed:', error);
         } finally {
             setLoading(false);
@@ -77,7 +77,7 @@ export default function DiscoverPage() {
                             fullWidth
                             placeholder="Search by @username..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(_e) => setSearchQuery(e.target.value)}
                             slotProps={{
                                 input: {
                                     startAdornment: (
@@ -137,7 +137,7 @@ export default function DiscoverPage() {
                                             variant="outlined" 
                                             startIcon={<PersonAddIcon />}
                                             sx={{ borderRadius: 5 }}
-                                            onClick={(e) => {
+                                            onClick={(_e) => {
                                                 e.stopPropagation();
                                                 router.push(`/u/${user.username}`);
                                             }}
