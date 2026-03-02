@@ -31,10 +31,10 @@ const Logo: React.FC<LogoProps> = ({
 }) => {
   const configs = {
     root: { color1: "#00F5FF", color2: "#00A3FF", name: "KYLRIX", desc: "Ecosystem Hub" },
-    vault: { color1: "#00F5FF", color2: "#222222", name: "VAULT", desc: "Zero-Knowledge Storage" },
-    flow: { color1: "#00FF94", color2: "#00B2FF", name: "FLOW", desc: "AI Orchestration" },
-    note: { color1: "#6366F1", color2: "#A855F7", name: "NOTE", desc: "Structured Intelligence" },
-    connect: { color1: "#F43F5E", color2: "#FB923C", name: "CONNECT", desc: "P2P Encryption" }
+    vault: { color1: "#00F5FF", color2: "#3B82F6", name: "VAULT", desc: "Zero-Knowledge Storage" },
+    flow: { color1: "#00F5FF", color2: "#00FF94", name: "FLOW", desc: "AI Orchestration" },
+    note: { color1: "#00F5FF", color2: "#A855F7", name: "NOTE", desc: "Structured Intelligence" },
+    connect: { color1: "#00F5FF", color2: "#F43F5E", name: "CONNECT", desc: "P2P Encryption" }
   };
 
   const current = configs[app];
@@ -52,17 +52,17 @@ const Logo: React.FC<LogoProps> = ({
 
         {app === 'connect' && (
           <>
-            <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <path d="M70 20L35 50L70 80" stroke={`url(#grad-${app})`} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <circle cx="30" cy="20" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="30" cy="80" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="20" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="80" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
+            <path d="M30 20V80" stroke={current.color1} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
+            <path d="M70 20L35 50L70 80" stroke={current.color2} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
+            <circle cx="30" cy="20" r="8" fill={current.color1} filter="url(#glow-heavy)" />
+            <circle cx="30" cy="80" r="8" fill={current.color1} filter="url(#glow-heavy)" />
+            <circle cx="70" cy="20" r="8" fill={current.color2} filter="url(#glow-heavy)" />
+            <circle cx="70" cy="80" r="8" fill={current.color2} filter="url(#glow-heavy)" />
             <circle cx="35" cy="50" r="12" fill="#fff" filter="url(#glow-heavy)" />
           </>
         )}
         
-        {(app === 'root' || app === 'vault' || app === 'flow' || app === 'note') && (
+        {app !== 'connect' && (
            <g>
              <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" />
              <path d="M70 20L35 50L70 80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />

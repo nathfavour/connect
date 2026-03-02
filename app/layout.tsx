@@ -11,6 +11,13 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Kylrix Connect - Premium Communication",
   description: "Seamless, secure, and professional connections for the Kylrix Premium Suite.",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+  openGraph: {
+    images: ['/og-image.png'],
+  }
 };
 
 export const viewport = {
