@@ -96,6 +96,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
         { label: 'Chats', href: '/chats', icon: <MessageSquare size={20} strokeWidth={1.5} /> },
         { label: 'Calls', href: '/calls', icon: <Phone size={20} strokeWidth={1.5} /> },
         { label: 'Profile', href: '/profile', icon: <User size={20} strokeWidth={1.5} /> },
+        { label: 'Settings', href: '/settings', icon: <Settings size={20} strokeWidth={1.5} /> },
     ];
 
     if (isEmbedded) {

@@ -104,6 +104,50 @@ export class EcosystemSecurity {
     );
   }
 
+  async setupPin(pin: string): Promise<boolean> {
+    if (!this.masterKey || typeof window === "undefined") return false;
+
+    try {
+      // 1. Create PIN Verifier (for future login verification)
+      const salt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.PIN_SALT_SIZE));
+      const hash = await this.derivePinHash(pin, salt);
+      
+      const verifier = {
+        salt: btoa(String.fromCharCode(...salt)),
+        hash: btoa(String.fromCharCode(...new Uint8Array(hash)))
+      };
+      localStorage.setItem("kylrix_pin_verifier", JSON.stringify(verifier));
+
+      // 2. Create Ephemeral Session (wrap MEK with PIN)
+      const sessionSalt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.SESSION_SALT_SIZE));
+      const ephemeralKey = await this.deriveEphemeralKey(pin, sessionSalt);
+      
+      const rawMek = await crypto.subtle.exportKey("raw", this.masterKey);
+      const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
+      const wrappedMek = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        ephemeralKey,
+        rawMek
+      );
+
+      const combined = new Uint8Array(iv.length + wrappedMek.byteLength);
+      combined.set(iv);
+      combined.set(new Uint8Array(wrappedMek), iv.length);
+
+      const ephemeral = {
+        sessionSalt: btoa(String.fromCharCode(...sessionSalt)),
+        wrappedMek: btoa(String.fromCharCode(...combined))
+      };
+      sessionStorage.setItem("kylrix_ephemeral_session", JSON.stringify(ephemeral));
+      sessionStorage.setItem("kylrix_vault_unlocked", "true");
+
+      return true;
+    } catch (e: unknown) {
+      console.error("[Security] PIN setup failed", e);
+      return false;
+    }
+  }
+
   async unlock(password: string, keyChainEntry?: any): Promise<boolean> {
     try {
       if (!keyChainEntry) return false;
