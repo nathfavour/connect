@@ -147,7 +147,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                         placeholder="Search your events..."
                         fullWidth
                         value={searchQuery}
-                        onChange={(_e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         sx={{
                             color: 'white',
                             fontSize: '0.95rem',

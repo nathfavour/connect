@@ -202,7 +202,7 @@ export default function SudoModal({
                                         type="password"
                                         placeholder="••••"
                                         value={pin}
-                                        onChange={(_e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                        onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                         autoFocus
                                         inputProps={{ 
                                             maxLength: 4, 
@@ -370,7 +370,7 @@ export default function SudoModal({
                                         type="password"
                                         placeholder="Enter your master password"
                                         value={password}
-                                        onChange={(_e) => setPassword(e.target.value)}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         autoFocus
                                         InputProps={{
                                             startAdornment: (

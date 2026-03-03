@@ -132,7 +132,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                         size="small"
                         placeholder={`Search ${tab === 0 ? 'credentials' : 'TOTP'}...`}
                         value={searchTerm}
-                        onChange={(_e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         sx={{ mb: 2, mt: 2 }}
                         InputProps={{
                             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,

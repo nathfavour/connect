@@ -91,7 +91,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         size="small"
                         placeholder="Search notes..."
                         value={searchTerm}
-                        onChange={(_e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         sx={{ mb: 2, mt: 1 }}
                         InputProps={{
                             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />,

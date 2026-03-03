@@ -36,24 +36,10 @@ export const ChatList = () => {
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
 
     useEffect(() => {
-        const checkUnlock = setInterval(() => {
-            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
-                setIsUnlocked(ecosystemSecurity.status.isUnlocked);
-                if (ecosystemSecurity.status.isUnlocked) {
-                    loadConversations();
-                }
-            }
-        }, 1000);
-        return () => clearInterval(checkUnlock);
-    }, [isUnlocked]);
-
-    useEffect(() => {
-        if (user && isUnlocked) {
+        if (user) {
             loadConversations();
-        } else if (!isUnlocked) {
-            setLoading(false);
         }
-    }, [user, isUnlocked]);
+    }, [user]);
 
     const loadConversations = async () => {
         try {
@@ -77,7 +63,7 @@ export const ChatList = () => {
                     const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
                     console.log('[ChatList] Self chat created:', newSelfChat.$id);
                     rows = [newSelfChat, ...rows];
-                } catch (_e: unknown) {
+                } catch (e: unknown) {
                     console.error('[ChatList] Failed to auto-create self chat', e);
                 }
             }
@@ -97,7 +83,7 @@ export const ChatList = () => {
                                     otherUserId: otherId, 
                                     name: profile ? (profile.displayName || profile.username) : ('User ' + otherId.substring(0, 5)) 
                                 };
-                            } catch (_e: unknown) {
+                            } catch (e: unknown) {
                                 return { ...conv, name: 'User ' + otherId.substring(0, 5) };
                             }
                         }
@@ -127,7 +113,7 @@ export const ChatList = () => {
 
             console.log('[ChatList] Final sorted list count:', sorted.length);
             setConversations(sorted);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load chats:', error);
         } finally {
             setLoading(false);
@@ -142,7 +128,7 @@ export const ChatList = () => {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default', position: 'relative' }}>
-            <Box sx={{ p: 3, pb: 2, filter: !isUnlocked ? 'blur(8px)' : 'none', pointerEvents: !isUnlocked ? 'none' : 'auto' }}>
+            <Box sx={{ p: 3, pb: 2 }}>
                 <Typography 
                     variant="h5" 
                     sx={{ 
@@ -176,7 +162,7 @@ export const ChatList = () => {
                     <input 
                         placeholder="Search conversations..."
                         value={searchQuery}
-                        onChange={(_e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
                             background: 'none',
                             border: 'none',
@@ -193,9 +179,7 @@ export const ChatList = () => {
             <Box sx={{ 
                 overflowY: 'auto', 
                 flex: 1, 
-                px: 1, 
-                filter: !isUnlocked ? 'blur(12px)' : 'none',
-                pointerEvents: !isUnlocked ? 'none' : 'auto'
+                px: 1
             }}>
                 {filteredConversations.length === 0 ? (
                     <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
@@ -256,54 +240,6 @@ export const ChatList = () => {
                     </List>
                 )}
             </Box>
-
-            {!isUnlocked && (
-                <Box sx={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    right: 0, 
-                    bottom: 0, 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    zIndex: 10,
-                    p: 3,
-                    textAlign: 'center',
-                    bgcolor: 'rgba(0,0,0,0.2)'
-                }}>
-                    <Box sx={{ 
-                        p: 2, 
-                        borderRadius: '20px', 
-                        bgcolor: 'rgba(15, 15, 15, 0.8)', 
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
-                    }}>
-                        <LockIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Chats Locked</Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3, maxWidth: 240 }}>
-                            Unlock your ecosystem vault to access your end-to-end encrypted conversations.
-                        </Typography>
-                        <Button 
-                            variant="contained" 
-                            onClick={() => setUnlockModalOpen(true)}
-                            sx={{ 
-                                borderRadius: '12px', 
-                                px: 4, 
-                                py: 1.2, 
-                                fontWeight: 800,
-                                bgcolor: 'primary.main',
-                                color: 'black',
-                                '&:hover': { bgcolor: alpha('#00F0FF', 0.8) }
-                            }}
-                        >
-                            Unlock Vault
-                        </Button>
-                    </Box>
-                </Box>
-            )}
 
             <MasterPassModal 
                 open={unlockModalOpen} 

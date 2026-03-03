@@ -537,7 +537,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <ChevronLeft size={20} strokeWidth={1.5} />
                     </IconButton>
                     <Box 
-                        onClick={(_e) => setAnchorEl(e.currentTarget)} 
+                        onClick={(e) => setAnchorEl(e.currentTarget)} 
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
                         <Avatar sx={{ 
@@ -561,7 +561,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <IconButton onClick={handleCall} sx={{ color: 'text.secondary' }}>
                             <Phone size={20} strokeWidth={1.5} />
                         </IconButton>
-                        <IconButton onClick={(_e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
+                        <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
                             <MoreVertical size={20} strokeWidth={1.5} />
                         </IconButton>
                     </Stack>
@@ -678,7 +678,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 }}>
                     <IconButton 
                         size="small" 
-                        onClick={(_e) => setAttachAnchorEl(e.currentTarget)} 
+                        onClick={(e) => setAttachAnchorEl(e.currentTarget)} 
                         sx={{ color: 'text.secondary', p: 1.2 }}
                     >
                         <PlusCircle size={22} strokeWidth={1.5} />
@@ -720,7 +720,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         maxRows={4}
                         placeholder="Type a message..."
                         value={inputText}
-                        onChange={(_e) => setInputText(e.target.value)}
+                        onChange={(e) => setInputText(e.target.value)}
                         variant="standard"
                         InputProps={{
                             disableUnderline: true,

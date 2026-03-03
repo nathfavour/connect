@@ -146,7 +146,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         placeholder="Search your notes..."
                         fullWidth
                         value={searchQuery}
-                        onChange={(_e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         sx={{
                             color: 'white',
                             fontSize: '0.95rem',

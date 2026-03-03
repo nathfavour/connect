@@ -75,7 +75,7 @@ export const MiniChat = () => {
                     fullWidth
                     placeholder="Reply..."
                     value={message}
-                    onChange={(_e) => setMessage(e.target.value)}
+                    onChange={(e) => setMessage(e.target.value)}
                     variant="standard"
                     InputProps={{
                         disableUnderline: true,

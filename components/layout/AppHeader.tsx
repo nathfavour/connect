@@ -153,7 +153,7 @@ export const AppHeader = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           <Tooltip title="Intelligence Feed">
             <IconButton 
-              onClick={(_e) => setAnchorElNotifications(e.currentTarget)}
+              onClick={(e) => setAnchorElNotifications(e.currentTarget)}
               sx={{ 
                 color: unreadCount > 0 ? '#00F5FF' : 'rgba(255, 255, 255, 0.4)',
                 bgcolor: alpha('#00F5FF', 0.03),
@@ -242,7 +242,7 @@ export const AppHeader = () => {
           </Tooltip>
 
           <IconButton 
-            onClick={(_e) => setAnchorElAccount(e.currentTarget)}
+            onClick={(e) => setAnchorElAccount(e.currentTarget)}
             sx={{ 
               p: 0.5,
               '&:hover': { transform: 'scale(1.05)' },

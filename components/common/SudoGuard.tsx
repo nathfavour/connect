@@ -39,36 +39,36 @@ export default function SudoGuard({ children }: SudoGuardProps) {
                     sx={{
                         p: 2,
                         borderRadius: "16px",
-                        bgcolor: alpha("#E2B714", 0.1),
-                        color: "#E2B714",
+                        bgcolor: alpha("#00F5FF", 0.1),
+                        color: "#00F5FF",
                         mb: 3,
                     }}
                 >
                     <Shield size={48} />
                 </Box>
                 <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                    Connect Security Check
+                    Security Verification
                 </Typography>
                 <Typography
                     variant="body2"
                     sx={{ color: "rgba(255, 255, 255, 0.5)", mb: 4, maxWidth: "300px" }}
                 >
-                    You must verify your identity to access your private conversations and E2E keys in this node.
+                    Please verify your identity to access end-to-end encrypted data.
                 </Typography>
                 <Button
                     variant="contained"
                     onClick={() => requestSudo({ onSuccess: () => {} })}
                     sx={{
-                        bgcolor: "#E2B714",
+                        bgcolor: "#00F5FF",
                         color: "#000",
                         fontWeight: 700,
                         px: 4,
                         py: 1.5,
                         borderRadius: "12px",
-                        '&:hover': { bgcolor: alpha("#E2B714", 0.8) }
+                        '&:hover': { bgcolor: alpha("#00F5FF", 0.8) }
                     }}
                 >
-                    Unlock Conversations
+                    Verify Identity
                 </Button>
             </Box>
         );

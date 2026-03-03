@@ -259,7 +259,7 @@ export const Feed = () => {
                                     sx: { fontSize: '1.1rem', fontWeight: 500 }
                                 }}
                                 value={newMoment}
-                                onChange={(_e) => setNewMoment(e.target.value)}
+                                onChange={(e) => setNewMoment(e.target.value)}
                             />
                         </Box>
 
@@ -625,7 +625,7 @@ export const Feed = () => {
                         Reply
                     </Button>
                     <IconButton 
-                        onClick={(_e) => { setShareAnchorEl(e.currentTarget); setSelectedMoment(moment); }}
+                        onClick={(e) => { setShareAnchorEl(e.currentTarget); setSelectedMoment(moment); }}
                         sx={{ ml: 'auto', color: 'text.secondary' }}
                     >
                         <Share2 size={20} strokeWidth={1.5} />

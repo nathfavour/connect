@@ -171,7 +171,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                             type="password"
                             placeholder="••••"
                             value={pin}
-                            onChange={(_e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             error={Boolean(error)}
                             helperText={error}
                             autoFocus
@@ -198,7 +198,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Master Password"
                             value={password}
-                            onChange={(_e) => setPassword(e.target.value)}
+                            onChange={(e) => setPassword(e.target.value)}
                             error={Boolean(error)}
                             helperText={error}
                             autoFocus

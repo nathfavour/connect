@@ -77,7 +77,7 @@ export default function DiscoverPage() {
                             fullWidth
                             placeholder="Search by @username..."
                             value={searchQuery}
-                            onChange={(_e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             slotProps={{
                                 input: {
                                     startAdornment: (
@@ -137,7 +137,7 @@ export default function DiscoverPage() {
                                             variant="outlined" 
                                             startIcon={<PersonAddIcon />}
                                             sx={{ borderRadius: 5 }}
-                                            onClick={(_e) => {
+                                            onClick={(e) => {
                                                 e.stopPropagation();
                                                 router.push(`/u/${user.username}`);
                                             }}

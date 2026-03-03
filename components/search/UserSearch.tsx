@@ -152,7 +152,7 @@ export const UserSearch = () => {
                     placeholder="Search username..."
                     variant="standard"
                     value={query}
-                    onChange={(_e) => setQuery(e.target.value)}
+                    onChange={(e) => setQuery(e.target.value)}
                     InputProps={{ disableUnderline: true }}
                 />
                 <IconButton type="submit" sx={{ p: '10px' }} aria-label="search" disabled={loading}>
