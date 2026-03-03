@@ -53,13 +53,13 @@ export const CallHistory = () => {
                         otherUser: profile || { username: 'Unknown', $id: otherId },
                         direction: isCaller ? 'outgoing' : 'incoming'
                     };
-                } catch (_e: unknown) {
+                } catch (e: unknown) {
                     return { ...call, otherUser: { username: 'Unknown', $id: otherId }, direction: isCaller ? 'outgoing' : 'incoming' };
                 }
             }));
             
             setCalls(enriched);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load call history:', error);
         } finally {
             setLoading(false);

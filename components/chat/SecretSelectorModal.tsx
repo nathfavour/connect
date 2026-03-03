@@ -62,7 +62,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
             ]);
             setSecrets(secretsRes.rows);
             setTotps(totpsRes.rows);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load ecosystem data:', error);
         } finally {
             setLoading(false);
@@ -92,7 +92,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                 onSelect(item, 'secret');
             }
             onClose();
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to process selection:', error);
         }
     };
@@ -202,7 +202,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                             }
                             setPendingSelection(null);
                             onClose();
-                        } catch (_e: unknown) {
+                        } catch (e: unknown) {
                             console.error('Processing after unlock failed', e);
                         }
                     }

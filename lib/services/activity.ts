@@ -44,7 +44,7 @@ export const ActivityService = {
                     customStatus
                 });
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to update presence:', error);
         }
     },

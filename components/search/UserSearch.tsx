@@ -37,7 +37,7 @@ const SearchResultAvatar = ({ u }: { u: any }) => {
             try {
                 const previewUrl = await fetchProfilePreview(fileId, 64, 64);
                 if (mounted && previewUrl) setUrl(previewUrl as unknown as string);
-            } catch (_e: unknown) {
+            } catch (e: unknown) {
                 console.warn('Failed to fetch search avatar preview', e);
             }
         };
@@ -76,12 +76,12 @@ export const UserSearch = () => {
                     try {
                         const settings = JSON.parse(u.privacySettings);
                         if (settings.public === false || settings.searchable === false) return false;
-                    } catch (_e: unknown) { }
+                    } catch (e: unknown) { }
                 }
                 return true;
             }) as unknown as Users[];
             setResults(filtered);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Search failed:', error);
             setResults([]);
         } finally {
@@ -135,7 +135,7 @@ export const UserSearch = () => {
                 const newConv = await ChatService.createConversation(participants, 'direct');
                 router.push(`/chat/${newConv.$id}`);
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to start chat:', error);
         }
     };

@@ -73,7 +73,7 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
                             if (signal.target === user.$id) {
                                 rtcManager.current?.handleSignal(signal);
                             }
-                        } catch (_e: unknown) {
+                        } catch (e: unknown) {
                             console.error('Failed to parse signal:', e);
                         }
                     }

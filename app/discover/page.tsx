@@ -37,7 +37,7 @@ export default function DiscoverPage() {
             // For discovery, we list recent users or search all
             const res = await UsersService.searchUsers('');
             setUsers(res.rows);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load users:', error);
         } finally {
             setLoading(false);
@@ -50,7 +50,7 @@ export default function DiscoverPage() {
         try {
             const res = await UsersService.searchUsers(searchQuery);
             setUsers(res.rows);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Search failed:', error);
         } finally {
             setLoading(false);

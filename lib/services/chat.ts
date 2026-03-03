@@ -39,7 +39,7 @@ export const ChatService = {
                 
                 // For now, we store the conversation key in the 'encryptionKey' field.
                 // In a multi-user chat, this field would contain a JSON map of userId -> wrappedKey.
-            } catch (_e: unknown) {
+            } catch (e: unknown) {
                 console.error('Failed to wrap key for user:', doc.userId, e);
             }
         }
@@ -61,7 +61,7 @@ export const ChatService = {
             if (conv.lastMessageText && conv.lastMessageText.length > 40) {
                 conv.lastMessageText = await ecosystemSecurity.decrypt(conv.lastMessageText);
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             // Might not be encrypted or key missing
         }
         return conv;
@@ -162,7 +162,7 @@ export const ChatService = {
             if (msg.type === 'text' && msg.content && msg.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                 try {
                     msg.content = await ecosystemSecurity.decrypt(msg.content);
-                } catch (_e: unknown) {
+                } catch (e: unknown) {
                     msg.content = "[Encrypted Message]";
                 }
             }
@@ -208,7 +208,7 @@ export const ChatService = {
                 const decryptedSettings = await ecosystemSecurity.decrypt(conv.settings);
                 settings = JSON.parse(decryptedSettings);
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             // Settings might be empty or unencrypted
         }
 
@@ -299,7 +299,7 @@ export const ChatService = {
                 });
             }
             return message;
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to mark message as read:', error);
             return null;
         }

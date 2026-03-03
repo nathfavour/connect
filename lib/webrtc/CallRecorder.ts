@@ -43,7 +43,7 @@ export class CallRecorder {
       this.mediaRecorder = new MediaRecorder(this.mixedStream, {
         mimeType: 'video/webm;codecs=vp8,opus'
       });
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       // Fallback for Safari/others
       this.mediaRecorder = new MediaRecorder(this.mixedStream);
     }

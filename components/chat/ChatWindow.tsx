@@ -157,7 +157,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             ...conv,
                             name: profile ? (profile.displayName || profile.username) : 'User'
                         });
-                    } catch (_e: unknown) {
+                    } catch (e: unknown) {
                         setConversation({ ...conv, name: 'User' });
                     }
                 } else {
@@ -166,7 +166,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             } else {
                 setConversation(conv);
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load conversation:', error);
         }
     };
@@ -186,12 +186,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     if (myClearedAt) {
                         displayMessages = displayMessages.filter((m: any) => new Date(m.$createdAt) > new Date(myClearedAt));
                     }
-                } catch (_e: unknown) {}
+                } catch (e: unknown) {}
             }
 
             // Reverse once for display order (bottom is newest)
             setMessages(displayMessages.reverse() as unknown as Messages[]);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load messages:', error);
         } finally {
             setLoading(false);
@@ -213,7 +213,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             }
             await loadMessages();
             setAnchorEl(null);
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             console.error('Wipe failed:', e);
         } finally {
             setLoading(false);
@@ -246,7 +246,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 // For now, we only support 'delete for everyone' if author.
                 alert("Individual 'Delete for Me' is coming soon. Use 'Clear Chat' for now.");
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             console.error('Delete failed:', e);
         }
     };
@@ -307,7 +307,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             if (type === 'text') {
                 setMessages(prev => prev.filter(m => m.$id !== optimisticId));
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to send message:', error);
             setInputText(text);
             setAttachment(file);
@@ -362,7 +362,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 'note' as any, 
                 [note.$id]
             );
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to send note:', error);
         } finally {
             setSending(false);
@@ -391,7 +391,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     [item.$id]
                 );
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to send secret/totp:', error);
         } finally {
             setSending(false);

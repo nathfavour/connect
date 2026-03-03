@@ -60,7 +60,7 @@ export function useWebRTC(userId: string) {
          try {
             const stream = await rtcManager.current.initializeLocalStream(true, true);
             setLocalStream(stream);
-         } catch (_e: unknown) {
+         } catch (e: unknown) {
             console.error("Failed to initialize stream on incoming call", e);
          }
       }

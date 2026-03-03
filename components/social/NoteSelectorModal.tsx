@@ -58,7 +58,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
             // Smart filter: only public notes
             const publicNotes = response.rows.filter((n: any) => n.isPublic === true);
             setNotes(publicNotes);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load notes:', error);
         } finally {
             setLoading(false);

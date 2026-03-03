@@ -90,7 +90,7 @@ export const Feed = () => {
                             try {
                                 const url = await fetchProfilePreview(picId, 64, 64);
                                 avatarUrl = url as unknown as string;
-                            } catch (_e: unknown) {}
+                            } catch (e: unknown) {}
                         }
 
                         const enrichedMoment = { 
@@ -107,7 +107,7 @@ export const Feed = () => {
                             if (prev.some(m => m.$id === enrichedMoment.$id)) return prev;
                             return [enrichedMoment, ...prev];
                         });
-                    } catch (_e: unknown) {
+                    } catch (e: unknown) {
                         console.warn('Failed to enrich real-time moment', e);
                     }
                 } else if (event.type === 'delete') {
@@ -128,7 +128,7 @@ export const Feed = () => {
             try {
                 const url = await fetchProfilePreview(picId, 64, 64);
                 setUserAvatarUrl(url as unknown as string);
-            } catch (_e: unknown) {
+            } catch (e: unknown) {
                 console.warn('Feed failed to fetch user avatar', e);
             }
         }
@@ -150,14 +150,14 @@ export const Feed = () => {
                         try {
                             const url = await fetchProfilePreview(picId, 64, 64);
                             avatarUrl = url as unknown as string;
-                        } catch (_e: unknown) {}
+                        } catch (e: unknown) {}
                     }
 
                     if (creator) {
                         return { ...moment, creator: { ...creator, avatarUrl } };
                     }
                     throw new Error('Creator not found');
-                } catch (_e: unknown) {
+                } catch (e: unknown) {
                     return { 
                         ...moment, 
                         creator: { 
@@ -169,7 +169,7 @@ export const Feed = () => {
                 }
             }));
             setMoments(enriched);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load feed:', error);
         } finally {
             setLoading(false);
@@ -185,7 +185,7 @@ export const Feed = () => {
             setSelectedNote(null);
             setSelectedEvent(null);
             loadFeed();
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to post:', error);
         } finally {
             setPosting(false);
@@ -220,7 +220,7 @@ export const Feed = () => {
                 );
                 alert('Saved to Messages');
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             console.error('Forward failed:', e);
         }
         setShareAnchorEl(null);

@@ -58,7 +58,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
             try {
                 const available = await UsersService.isUsernameAvailable(username);
                 setIsAvailable(available);
-            } catch (_err: unknown) {
+            } catch (err: unknown) {
                 console.error('Failed to check username:', err);
             } finally {
                 setIsChecking(false);
@@ -102,7 +102,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
 
             onUpdate();
             onClose();
-        } catch (_err: unknown) {
+        } catch (err: unknown) {
             setError(err.message || 'Failed to update profile');
         } finally {
             setLoading(false);

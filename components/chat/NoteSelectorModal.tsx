@@ -46,7 +46,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
         try {
             const res = await EcosystemService.listNotes(user.$id);
             setNotes(res.rows);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load notes:', error);
         } finally {
             setLoading(false);

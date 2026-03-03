@@ -74,7 +74,7 @@ export class EcosystemSecurity {
         Query.limit(1)
       ]);
       return res.rows[0] || null;
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       console.error('[Security] Failed to fetch keychain:', e);
       return null;
     }
@@ -127,7 +127,7 @@ export class EcosystemSecurity {
 
       this.isUnlocked = true;
       return true;
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       console.error("[Security] Unlock failed", e);
       return false;
     }
@@ -181,7 +181,7 @@ export class EcosystemSecurity {
 
       this.identityKeyPair = pair;
       return pubBase64;
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       console.error('[Security] Identity sync failed:', e);
       return null;
     }
@@ -280,7 +280,7 @@ export class EcosystemSecurity {
 
       this.isUnlocked = true;
       return true;
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       console.error("[Security] PIN unlock failed", e);
       return false;
     }

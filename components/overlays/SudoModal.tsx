@@ -98,7 +98,7 @@ export default function SudoModal({
             } else {
                 toast.error("Incorrect master password");
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error(error);
             toast.error("Verification failed");
         } finally {
@@ -120,7 +120,7 @@ export default function SudoModal({
                 toast.error("Incorrect PIN");
                 setPin("");
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error(error);
             toast.error("PIN verification failed");
         } finally {

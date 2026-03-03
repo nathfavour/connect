@@ -80,7 +80,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
                 setError('Incorrect PIN. Please try again.');
                 setPin('');
             }
-        } catch (_err: unknown) {
+        } catch (err: unknown) {
             console.error('PIN unlock failed:', err);
             setError('An error occurred. Please try again.');
         } finally {
@@ -116,7 +116,7 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
             } else {
                 setError('Incorrect master password. Please try again.');
             }
-        } catch (_err: unknown) {
+        } catch (err: unknown) {
             console.error('Unlock failed:', err);
             setError('An error occurred while unlocking. Please try again.');
         } finally {

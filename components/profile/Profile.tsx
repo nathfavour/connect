@@ -69,7 +69,7 @@ export const Profile = ({ username }: ProfileProps) => {
             } else {
                 setProfile(null);
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load profile:', error);
         } finally {
             setLoading(false);
@@ -82,7 +82,7 @@ export const Profile = ({ username }: ProfileProps) => {
         try {
             await SocialService.followUser(currentUser.$id, profile.$id);
             setIsFollowing(true);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Follow failed:', error);
         } finally {
             setFollowLoading(false);

@@ -59,7 +59,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
             // Smart filter: ONLY public events from Kylrix Flow
             const publicEvents = response.rows.filter((e: any) => e.visibility === 'public');
             setEvents(publicEvents);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Failed to load events:', error);
         } finally {
             setLoading(false);

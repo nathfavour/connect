@@ -24,7 +24,7 @@ export class WebRTCManager {
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ video, audio });
       return this.localStream;
-    } catch (_error: unknown) {
+    } catch (error: unknown) {
       console.error('Error accessing media devices:', error);
       throw error;
     }

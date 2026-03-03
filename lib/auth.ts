@@ -71,7 +71,7 @@ export function useAuth() {
                 url.searchParams.delete('auth');
                 window.history.replaceState({}, '', url.toString());
             }
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             // Check for auth=success signal in URL
             const hasAuthSignal = typeof window !== 'undefined' && window.location.search.includes('auth=success');
             
@@ -135,7 +135,7 @@ export function useAuth() {
                 setIsAuthenticating(false);
                 return;
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             // No session, proceed to silent check
         }
 
@@ -148,7 +148,7 @@ export function useAuth() {
                 setIsAuthenticating(false);
                 return;
             }
-        } catch (_e: unknown) {
+        } catch (e: unknown) {
             // Still no session
         }
 
@@ -191,7 +191,7 @@ export function useAuth() {
             await account.deleteSession('current');
             setUser(null);
             setIsAuthenticating(false);
-        } catch (_error: unknown) {
+        } catch (error: unknown) {
             console.error('Logout failed:', error);
             // Even if session delete fails, clear local state
             setUser(null);
