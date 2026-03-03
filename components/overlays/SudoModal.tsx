@@ -106,13 +106,12 @@ export default function SudoModal({
         }
     };
 
-    const handlePinVerify = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        if (pin.length !== 4) return;
+    const handlePinVerify = async (pinValue: string) => {
+        if (pinValue.length !== 4 || loading) return;
 
         setLoading(true);
         try {
-            const success = await ecosystemSecurity.unlockWithPin(pin);
+            const success = await ecosystemSecurity.unlockWithPin(pinValue);
             if (success) {
                 toast.success("Verified via PIN");
                 onSuccess();
@@ -125,6 +124,14 @@ export default function SudoModal({
             toast.error("PIN verification failed");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+        setPin(val);
+        if (val.length === 4) {
+            handlePinVerify(val);
         }
     };
 
