@@ -121,8 +121,8 @@ export function PasskeySetup({
       const registrationOptions = {
         challenge: challengeBase64,
         rp: {
-          name: "WhisperAuth",
-          id: window.location.hostname,
+          name: "Kylrix",
+          id: "kylrix.space",
         },
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
@@ -179,7 +179,7 @@ export function PasskeySetup({
           counter: 0,
           transports: regResp.response.transports || [],
           created: new Date().toISOString(),
-          rpId: window.location.hostname,
+          rpId: "kylrix.space",
         }),
         isBackup: false
       });
