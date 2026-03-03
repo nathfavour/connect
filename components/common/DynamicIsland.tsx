@@ -171,7 +171,7 @@ const DynamicIslandOverlay: React.FC<{
     switch (current.type) {
       case 'success': return { color: '#00F5FF', icon: <SuccessIcon fontSize="small" /> };
       case 'error': return { color: '#FF3B30', icon: <ErrorIcon fontSize="small" /> };
-      case 'pro': return { color: '#FFD700', icon: <ProIcon fontSize="small" /> };
+      case 'pro': return { color: '#00F5FF', icon: <ProIcon fontSize="small" /> };
       case 'warning': return { color: '#FF9500', icon: <WarningIcon fontSize="small" /> };
       case 'suggestion': return { color: '#A855F7', icon: <IdeaIcon fontSize="small" /> };
       case 'connect': return { color: '#00F5FF', icon: <ConnectIcon fontSize="small" /> };

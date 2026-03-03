@@ -165,7 +165,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                                         }}
                                     >
                                         <ListItemIcon>
-                                            {tab === 0 ? <ShieldIcon sx={{ color: 'primary.main' }} /> : <KeyIcon sx={{ color: '#FFD700' }} />}
+                                            {tab === 0 ? <ShieldIcon sx={{ color: 'primary.main' }} /> : <KeyIcon sx={{ color: '#00F5FF' }} />}
                                         </ListItemIcon>
                                         <ListItemText
                                             primary={tab === 0 ? (item.name || 'Unnamed') : (item.issuer || 'Unknown')}
