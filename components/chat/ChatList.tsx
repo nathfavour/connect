@@ -36,6 +36,19 @@ export const ChatList = () => {
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
 
     useEffect(() => {
+        const checkUnlock = setInterval(() => {
+            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
+                const newStatus = ecosystemSecurity.status.isUnlocked;
+                setIsUnlocked(newStatus);
+                if (newStatus) {
+                    loadConversations();
+                }
+            }
+        }, 1000);
+        return () => clearInterval(checkUnlock);
+    }, [isUnlocked]);
+
+    useEffect(() => {
         if (user) {
             loadConversations();
         }
@@ -46,6 +59,13 @@ export const ChatList = () => {
             console.log('[ChatList] Loading conversations for user:', user!.$id);
             const response = await ChatService.getConversations(user!.$id);
             let rows = [...response.rows];
+            
+            // Check if we need to prompt for unlock
+            const hasEncrypted = rows.some(c => c.isEncrypted);
+            if (hasEncrypted && !ecosystemSecurity.status.isUnlocked) {
+                setUnlockModalOpen(true);
+            }
+
             console.log('[ChatList] Fetched rows count:', rows.length);
 
             // Bridge: Ensure self-chat (Saved Messages) exists
@@ -216,7 +236,14 @@ export const ChatList = () => {
                                     </ListItemAvatar>
                                     <ListItemText 
                                         primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
-                                        secondary={conv.lastMessageText || 'No messages yet'}
+                                        secondary={
+                                            (conv.isEncrypted && !isUnlocked && conv.lastMessageText) ? (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <LockIcon sx={{ fontSize: 12, opacity: 0.5 }} />
+                                                    <span>Encrypted message</span>
+                                                </Box>
+                                            ) : (conv.lastMessageText || 'No messages yet')
+                                        }
                                         primaryTypographyProps={{ 
                                             fontWeight: 700, 
                                             fontSize: '0.95rem',
