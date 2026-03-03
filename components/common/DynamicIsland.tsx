@@ -57,7 +57,8 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [lastActivity, setLastActivity] = useState(0);
 
   useEffect(() => {
-    setLastActivity(Date.now());
+    const timer = setTimeout(() => setLastActivity(Date.now()), 0);
+    return () => clearTimeout(timer);
   }, []);
   const { user } = useAuth();
   const theme = useTheme();
