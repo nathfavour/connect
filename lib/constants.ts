@@ -13,11 +13,11 @@ export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
 export const KYLRIX_AUTH_URI = `https://${KYLRIX_AUTH_SUBDOMAIN}.${KYLRIX_DOMAIN}`;
 
 export const ECOSYSTEM_APPS: EcosystemApp[] = [
-  { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: '📝', color: '#00F5FF', description: 'Cognitive extension and smart notes.' },
-  { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: '🔐', color: '#8b5cf6', description: 'Secure vault and identity vault.' },
-  { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: '🚀', color: '#10b981', description: 'Intelligent task orchestration.' },
-  { id: 'connect', label: 'Connect', subdomain: 'connect', type: 'app', icon: '💬', color: '#ec4899', description: 'Secure bridge for communication.' },
-  { id: 'accounts', label: 'Accounts', subdomain: KYLRIX_AUTH_SUBDOMAIN, type: 'accounts', icon: '🛡️', color: '#ef4444', description: 'Sovereign identity management.' },
+  { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: '📝', color: '#F59E0B', description: 'Cognitive extension and smart notes.' },
+  { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: '🔐', color: '#A855F7', description: 'Secure vault and identity vault.' },
+  { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: '🚀', color: '#10B981', description: 'Intelligent task orchestration.' },
+  { id: 'connect', label: 'Connect', subdomain: 'connect', type: 'app', icon: '💬', color: '#F43F5E', description: 'Secure bridge for communication.' },
+  { id: 'accounts', label: 'Accounts', subdomain: KYLRIX_AUTH_SUBDOMAIN, type: 'accounts', icon: '🛡️', color: '#00F5FF', description: 'Sovereign identity management.' },
 ];
 
 export function getEcosystemUrl(subdomain: string) {

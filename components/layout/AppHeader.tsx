@@ -159,17 +159,17 @@ export const AppHeader = () => {
             <IconButton 
               onClick={(e) => setAnchorElNotifications(e.currentTarget)}
               sx={{ 
-                color: unreadCount > 0 ? '#00F5FF' : 'rgba(255, 255, 255, 0.4)',
-                bgcolor: alpha('#00F5FF', 0.03),
+                color: unreadCount > 0 ? '#F43F5E' : 'rgba(255, 255, 255, 0.4)',
+                bgcolor: alpha('#F43F5E', 0.03),
                 border: '1px solid',
-                borderColor: unreadCount > 0 ? alpha('#00F5FF', 0.3) : alpha('#00F5FF', 0.1),
+                borderColor: unreadCount > 0 ? alpha('#F43F5E', 0.3) : alpha('#F43F5E', 0.1),
                 borderRadius: '12px',
                 width: 42,
                 height: 42,
                 position: 'relative',
                 '&:hover': { 
-                  bgcolor: alpha('#00F5FF', 0.08), 
-                  boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)' 
+                  bgcolor: alpha('#F43F5E', 0.08), 
+                  boxShadow: '0 0 15px rgba(244, 63, 94, 0.2)' 
                 }
               }}
             >
@@ -179,7 +179,7 @@ export const AppHeader = () => {
                   position: 'absolute',
                   top: -4,
                   right: -4,
-                  bgcolor: '#FF4D4D',
+                  bgcolor: '#F43F5E',
                   color: 'white',
                   fontSize: '0.65rem',
                   fontWeight: 900,

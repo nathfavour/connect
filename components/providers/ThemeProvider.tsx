@@ -59,7 +59,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             contrastText: '#000000',
           },
           secondary: {
-            main: '#F2F2F2', // Titanium
+            main: '#F43F5E', // Sunset Crimson
           },
           background: {
             default: '#000000', // The Void

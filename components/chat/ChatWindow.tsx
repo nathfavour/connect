@@ -543,13 +543,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <Avatar sx={{ 
                             width: 36, 
                             height: 36, 
-                            bgcolor: isSelf ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                            border: isSelf ? '1px solid rgba(0, 240, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
+                            bgcolor: isSelf ? 'rgba(244, 63, 94, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                            border: isSelf ? '1px solid rgba(244, 63, 94, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                            {isSelf ? <Bookmark size={18} color="#00F5FF" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
+                            {isSelf ? <Bookmark size={18} color="#F43F5E" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.2, color: isSelf ? 'primary.main' : 'text.primary' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.2, color: isSelf ? '#F43F5E' : 'text.primary' }}>
                                 {isSelf ? 'Saved Messages' : conversation?.name || 'Loading...'}
                             </Typography>
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.6 }}>
@@ -640,8 +640,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.5,
                                 px: 2,
                                 borderRadius: msg.senderId === user?.$id ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                bgcolor: msg.senderId === user?.$id ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                                border: msg.senderId === user?.$id ? '1px solid rgba(0, 240, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
+                                bgcolor: msg.senderId === user?.$id ? 'rgba(244, 63, 94, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                                border: msg.senderId === user?.$id ? '1px solid rgba(244, 63, 94, 0.25)' : '1px solid rgba(255, 255, 255, 0.05)',
                                 color: 'text.primary',
                                 boxShadow: 'none'
                             }}>
@@ -652,7 +652,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                     {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
                                 </Typography>
                                 {msg.senderId === user?.$id && (
-                                    msg.readBy?.length && msg.readBy.length > 1 ? <CheckCheck size={12} color="#00F5FF" strokeWidth={1.5} /> : <Check size={12} strokeWidth={1.5} style={{ opacity: 0.4 }} />
+                                    msg.readBy?.length && msg.readBy.length > 1 ? <CheckCheck size={12} color="#F43F5E" strokeWidth={1.5} /> : <Check size={12} strokeWidth={1.5} style={{ opacity: 0.4 }} />
                                 )}
                             </Box>
                         </Box>

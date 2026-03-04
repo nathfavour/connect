@@ -224,9 +224,9 @@ export const ChatList = () => {
                                     <ListItemAvatar>
                                         <Avatar 
                                             sx={{ 
-                                                bgcolor: conv.isSelf ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                                                color: conv.isSelf ? 'primary.main' : 'text.secondary',
-                                                border: conv.isSelf ? '1px solid rgba(0, 240, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
+                                                bgcolor: conv.isSelf ? 'rgba(244, 63, 94, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                                                color: conv.isSelf ? '#F43F5E' : 'text.secondary',
+                                                border: conv.isSelf ? '1px solid rgba(244, 63, 94, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
                                                 width: 44,
                                                 height: 44
                                             }}
@@ -247,7 +247,7 @@ export const ChatList = () => {
                                         primaryTypographyProps={{ 
                                             fontWeight: 700, 
                                             fontSize: '0.95rem',
-                                            color: conv.isSelf ? 'primary.main' : 'text.primary',
+                                            color: conv.isSelf ? '#F43F5E' : 'text.primary',
                                             fontFamily: 'var(--font-space-grotesk)'
                                         }}
                                         secondaryTypographyProps={{ 
