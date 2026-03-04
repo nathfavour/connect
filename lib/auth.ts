@@ -19,7 +19,7 @@ export function useAuth() {
     const attemptSilentAuth = useCallback(async () => {
         if (typeof window === 'undefined') return;
 
-        const authBaseUrl = getEcosystemUrl('accounts');
+        const authBaseUrl = 'https://accounts.kylrix.space';
 
         return new Promise<void>((resolve) => {
             const iframe = document.createElement('iframe');
@@ -107,7 +107,7 @@ export function useAuth() {
     // Listen for postMessage from IDM window
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            const authBaseUrl = getEcosystemUrl('accounts');
+            const authBaseUrl = 'https://accounts.kylrix.space';
             if (event.origin !== authBaseUrl) return;
 
             if (event.data?.type === 'idm:auth-success') {
@@ -153,7 +153,7 @@ export function useAuth() {
             // Still no session
         }
 
-        const authBaseUrl = getEcosystemUrl('accounts');
+        const authBaseUrl = 'https://accounts.kylrix.space';
         const currentUri = window.location.href;
 
         const idmsUrl = `${authBaseUrl}/login`;
