@@ -154,7 +154,7 @@ export const AppHeader = () => {
         </Box>
 
         {/* Right: Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 }, flexShrink: 0 }}>
           <Tooltip title="Intelligence Feed">
             <IconButton 
               onClick={(e) => setAnchorElNotifications(e.currentTarget)}
@@ -164,8 +164,8 @@ export const AppHeader = () => {
                 border: '1px solid',
                 borderColor: unreadCount > 0 ? alpha('#F43F5E', 0.3) : alpha('#F43F5E', 0.1),
                 borderRadius: '12px',
-                width: 42,
-                height: 42,
+                width: { xs: 36, sm: 42 },
+                height: { xs: 36, sm: 42 },
                 position: 'relative',
                 '&:hover': { 
                   bgcolor: alpha('#F43F5E', 0.08), 
@@ -173,7 +173,7 @@ export const AppHeader = () => {
                 }
               }}
             >
-              <Bell size={20} strokeWidth={1.5} />
+              <Bell size={18} strokeWidth={1.5} />
               {unreadCount > 0 && (
                 <Box sx={{
                   position: 'absolute',
@@ -183,8 +183,8 @@ export const AppHeader = () => {
                   color: 'white',
                   fontSize: '0.65rem',
                   fontWeight: 900,
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -205,15 +205,15 @@ export const AppHeader = () => {
                 border: '1px solid',
                 borderColor: alpha('#6366F1', 0.1),
                 borderRadius: '12px',
-                width: 42,
-                height: 42,
+                width: { xs: 36, sm: 42 },
+                height: { xs: 36, sm: 42 },
                 '&:hover': { 
                   bgcolor: alpha('#6366F1', 0.08), 
                   boxShadow: '0 0 15px rgba(99, 102, 241, 0.2)' 
                 }
               }}
             >
-              <Sparkles size={20} strokeWidth={1.5} />
+              <Sparkles size={18} strokeWidth={1.5} />
             </IconButton>
           </Tooltip>
 
@@ -226,9 +226,10 @@ export const AppHeader = () => {
                 border: '1px solid',
                 borderColor: alpha('#6366F1', 0.1),
                 borderRadius: '12px',
-                width: 42,
-                height: 42,
+                width: { xs: 36, sm: 42 },
+                height: { xs: 36, sm: 42 },
                 animation: 'pulse-slow 4s infinite ease-in-out',
+                display: { xs: 'none', sm: 'flex' },
                 '@keyframes pulse-slow': {
                   '0%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0.2)' },
                   '70%': { boxShadow: '0 0 0 10px rgba(99, 102, 241, 0)' },
@@ -241,7 +242,7 @@ export const AppHeader = () => {
                 }
               }}
             >
-              <LayoutGrid size={22} strokeWidth={1.5} />
+              <LayoutGrid size={20} strokeWidth={1.5} />
             </IconButton>
           </Tooltip>
 
@@ -257,14 +258,14 @@ export const AppHeader = () => {
               <Avatar 
                 src={profileUrl || undefined}
                 sx={{ 
-                  width: 38, 
-                  height: 38, 
+                  width: { xs: 32, sm: 38 }, 
+                  height: { xs: 32, sm: 38 }, 
                   bgcolor: '#6366F1',
-                  fontSize: '0.875rem',
+                  fontSize: '0.75rem',
                   fontWeight: 800,
                   color: '#000',
                   border: '2px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px'
+                  borderRadius: '10px'
                 }}
               >
                 {user?.name ? user.name[0].toUpperCase() : 'U'}
