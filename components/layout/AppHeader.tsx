@@ -95,17 +95,17 @@ export const AppHeader = () => {
       elevation={0}
       sx={{ 
         zIndex: 1201,
-        bgcolor: 'rgba(10, 10, 10, 0.95)',
+        bgcolor: 'rgba(5, 5, 5, 0.01)',
         backdropFilter: 'blur(25px) saturate(180%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         backgroundImage: 'none'
       }}
     >
       <Toolbar sx={{ 
         gap: 2, 
         '@media (min-width: 900px)': { gap: 4 },
-        px: { xs: 2, md: 3 }, 
-        minHeight: '72px' 
+        px: { xs: 2, md: 4 }, 
+        minHeight: '88px' 
       }}>
         {/* Left: Logo */}
         <Logo 
