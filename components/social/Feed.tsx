@@ -277,7 +277,7 @@ export const Feed = () => {
                                     position: 'relative'
                                 }}
                             >
-                                <FileText size={20} color="#00F5FF" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography variant="subtitle2" fontWeight={800} noWrap>
                                         {selectedNote.title || 'Untitled Note'}
@@ -353,7 +353,7 @@ export const Feed = () => {
                                     textTransform: 'none', 
                                     fontWeight: 700,
                                     color: 'text.secondary',
-                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 245, 255, 0.05)' }
+                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(99, 102, 241, 0.05)' }
                                 }}
                             >
                                 Event
@@ -422,15 +422,15 @@ export const Feed = () => {
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     overflow: 'hidden',
                                     '&:hover': {
-                                        borderColor: 'rgba(0, 245, 255, 0.4)',
+                                        borderColor: 'rgba(99, 102, 241, 0.4)',
                                         transform: 'translateY(-4px)',
-                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 245, 255, 0.1)'
+                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.1)'
                                     }
                                 }}
                             >
                                 <Box sx={{ 
                                     p: 3, 
-                                    background: 'linear-gradient(135deg, rgba(0, 245, 255, 0.05) 0%, rgba(0, 163, 255, 0.02) 100%)',
+                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(0, 163, 255, 0.02) 100%)',
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
                                 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -439,15 +439,15 @@ export const Feed = () => {
                                                 width: 40, 
                                                 height: 40, 
                                                 borderRadius: 1.5, 
-                                                bgcolor: 'rgba(0, 245, 255, 0.1)', 
+                                                bgcolor: 'rgba(99, 102, 241, 0.1)', 
                                                 display: 'flex', 
                                                 alignItems: 'center', 
                                                 justifyContent: 'center',
                                                 mr: 2,
-                                                boxShadow: '0 4px 12px rgba(0, 245, 255, 0.15)'
+                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)'
                                             }}
                                         >
-                                            <FileText size={20} color="#00F5FF" strokeWidth={1.5} />
+                                            <FileText size={20} color="#6366F1" strokeWidth={1.5} />
                                         </Box>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography 
@@ -492,7 +492,7 @@ export const Feed = () => {
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
                                 }}>
-                                    <Typography variant="caption" sx={{ color: '#00F5FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
                                         Shared via Kylrix Note
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>

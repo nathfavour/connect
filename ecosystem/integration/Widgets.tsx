@@ -8,7 +8,7 @@ const QuickNote = () => {
     return (
         <Paper elevation={0} sx={{ p: 2, borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: alpha('#00F5FF', 0.1), color: '#00F5FF' }}><NoteIcon sx={{ fontSize: 20 }} /></Box>
+                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: alpha('#6366F1', 0.1), color: '#6366F1' }}><NoteIcon sx={{ fontSize: 20 }} /></Box>
                 <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', color: 'white' }}>Quick Note</Typography>
             </Box>
             <TextField fullWidth placeholder="Save from chat..." variant="standard" InputProps={{ disableUnderline: true, sx: { color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.8125rem' } }} />

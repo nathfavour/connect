@@ -101,8 +101,8 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                     <Box sx={{ 
                         p: 1, 
                         borderRadius: '12px', 
-                        bgcolor: alpha('#00F5FF', 0.1), 
-                        color: '#00F5FF',
+                        bgcolor: alpha('#6366F1', 0.1), 
+                        color: '#6366F1',
                         display: 'flex'
                     }}>
                         <FileText size={24} strokeWidth={1.5} />
@@ -134,7 +134,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                         mb: 3,
                         transition: 'all 0.2s ease',
                         '&:focus-within': {
-                            borderColor: alpha('#00F5FF', 0.5),
+                            borderColor: alpha('#6366F1', 0.5),
                             bgcolor: 'rgba(255, 255, 255, 0.05)',
                         }
                     }}
@@ -161,7 +161,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                 
                 {loading ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
-                        <CircularProgress size={32} sx={{ color: '#00F5FF' }} />
+                        <CircularProgress size={32} sx={{ color: '#6366F1' }} />
                         <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, letterSpacing: '0.1em' }}>
                             ACCESSING VAULT...
                         </Typography>
@@ -186,7 +186,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                     '&:hover': { 
                                         bgcolor: 'rgba(255, 255, 255, 0.04)',
-                                        borderColor: alpha('#00F5FF', 0.3),
+                                        borderColor: alpha('#6366F1', 0.3),
                                         transform: 'translateX(4px)'
                                     }
                                 }}
@@ -200,7 +200,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#00F5FF'
+                                        color: '#6366F1'
                                     }}>
                                         <FileCheck size={20} strokeWidth={1.5} />
                                     </Box>

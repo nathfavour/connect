@@ -418,7 +418,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }}
                     onClick={() => window.open(`https://note.kylrix.space/n/${msg.attachments?.[0]}`, '_blank')}
                 >
-                    <FileText size={20} color="#00F5FF" strokeWidth={1.5} />
+                    <FileText size={20} color="#6366F1" strokeWidth={1.5} />
                     <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.6 }}>Attached Note</Typography>
@@ -442,7 +442,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }}
                     onClick={() => window.open(`https://vault.kylrix.space/vault?id=${msg.attachments?.[0]}`, '_blank')}
                 >
-                    <Shield size={20} color="#00F5FF" strokeWidth={1.5} />
+                    <Shield size={20} color="#6366F1" strokeWidth={1.5} />
                     <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{msg.content}</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.6 }}>Shared Secret</Typography>
@@ -459,7 +459,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             return (
                 <Box sx={{ p: 1.5, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 240, 255, 0.2)' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Key size={16} color="#00F5FF" strokeWidth={1.5} />
+                        <Key size={16} color="#6366F1" strokeWidth={1.5} />
                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>TOTP Code Shared</Typography>
                     </Box>
                     <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>{label}</Typography>

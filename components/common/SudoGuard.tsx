@@ -40,8 +40,8 @@ export default function SudoGuard({ children }: SudoGuardProps) {
                     sx={{
                         p: 2,
                         borderRadius: "16px",
-                        bgcolor: alpha("#00F5FF", 0.1),
-                        color: "#00F5FF",
+                        bgcolor: alpha("#6366F1", 0.1),
+                        color: "#6366F1",
                         mb: 3,
                     }}
                 >
@@ -60,13 +60,13 @@ export default function SudoGuard({ children }: SudoGuardProps) {
                     variant="contained"
                     onClick={() => requestSudo({ onSuccess: () => {} })}
                     sx={{
-                        bgcolor: "#00F5FF",
+                        bgcolor: "#6366F1",
                         color: "#000",
                         fontWeight: 700,
                         px: 4,
                         py: 1.5,
                         borderRadius: "12px",
-                        '&:hover': { bgcolor: alpha("#00F5FF", 0.8) }
+                        '&:hover': { bgcolor: alpha("#6366F1", 0.8) }
                     }}
                 >
                     Verify Identity

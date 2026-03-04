@@ -200,16 +200,16 @@ export const AppHeader = () => {
           <Tooltip title="Cognitive Link (AI)">
             <IconButton 
               sx={{ 
-                color: '#00F5FF',
-                bgcolor: alpha('#00F5FF', 0.03),
+                color: '#6366F1',
+                bgcolor: alpha('#6366F1', 0.03),
                 border: '1px solid',
-                borderColor: alpha('#00F5FF', 0.1),
+                borderColor: alpha('#6366F1', 0.1),
                 borderRadius: '12px',
                 width: 42,
                 height: 42,
                 '&:hover': { 
-                  bgcolor: alpha('#00F5FF', 0.08), 
-                  boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)' 
+                  bgcolor: alpha('#6366F1', 0.08), 
+                  boxShadow: '0 0 15px rgba(99, 102, 241, 0.2)' 
                 }
               }}
             >
@@ -221,23 +221,23 @@ export const AppHeader = () => {
             <IconButton 
               onClick={() => setIsPortalOpen(true)}
               sx={{ 
-                color: '#00F5FF',
-                bgcolor: alpha('#00F5FF', 0.05),
+                color: '#6366F1',
+                bgcolor: alpha('#6366F1', 0.05),
                 border: '1px solid',
-                borderColor: alpha('#00F5FF', 0.1),
+                borderColor: alpha('#6366F1', 0.1),
                 borderRadius: '12px',
                 width: 42,
                 height: 42,
                 animation: 'pulse-slow 4s infinite ease-in-out',
                 '@keyframes pulse-slow': {
-                  '0%': { boxShadow: '0 0 0 0 rgba(0, 245, 255, 0.2)' },
-                  '70%': { boxShadow: '0 0 0 10px rgba(0, 245, 255, 0)' },
-                  '100%': { boxShadow: '0 0 0 0 rgba(0, 245, 255, 0)' },
+                  '0%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0.2)' },
+                  '70%': { boxShadow: '0 0 0 10px rgba(99, 102, 241, 0)' },
+                  '100%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0)' },
                 },
                 '&:hover': { 
-                  bgcolor: alpha('#00F5FF', 0.1), 
-                  borderColor: '#00F5FF',
-                  boxShadow: '0 0 15px rgba(0, 245, 255, 0.3)' 
+                  bgcolor: alpha('#6366F1', 0.1), 
+                  borderColor: '#6366F1',
+                  boxShadow: '0 0 15px rgba(99, 102, 241, 0.3)' 
                 }
               }}
             >
@@ -259,7 +259,7 @@ export const AppHeader = () => {
                 sx={{ 
                   width: 38, 
                   height: 38, 
-                  bgcolor: '#00F5FF',
+                  bgcolor: '#6366F1',
                   fontSize: '0.875rem',
                   fontWeight: 800,
                   color: '#000',
@@ -277,11 +277,11 @@ export const AppHeader = () => {
               size="small"
               sx={{
                 ml: 1,
-                bgcolor: '#00F5FF',
+                bgcolor: '#6366F1',
                 color: '#000',
                 fontWeight: 800,
                 borderRadius: '10px',
-                '&:hover': { bgcolor: alpha('#00F5FF', 0.8) }
+                '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
               }}
             >
               Connect
@@ -374,7 +374,7 @@ export const AppHeader = () => {
               <Typography 
                 variant="caption" 
                 onClick={() => { markAllAsRead(); setAnchorElNotifications(null); }}
-                sx={{ cursor: 'pointer', fontWeight: 800, color: '#00F5FF', '&:hover': { textDecoration: 'underline' } }}
+                sx={{ cursor: 'pointer', fontWeight: 800, color: '#6366F1', '&:hover': { textDecoration: 'underline' } }}
               >
                 MARK ALL READ
               </Typography>
@@ -403,8 +403,8 @@ export const AppHeader = () => {
                       py: 2, 
                       px: 3, 
                       gap: 2,
-                      borderLeft: isRead ? 'none' : '3px solid #00F5FF',
-                      bgcolor: isRead ? 'transparent' : alpha('#00F5FF', 0.03),
+                      borderLeft: isRead ? 'none' : '3px solid #6366F1',
+                      bgcolor: isRead ? 'transparent' : alpha('#6366F1', 0.03),
                       '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' } 
                     }}
                   >
@@ -421,7 +421,7 @@ export const AppHeader = () => {
                       {notif.action.toLowerCase().includes('delete') ? (
                         <XCircle size={20} color="#FF4D4D" />
                       ) : (
-                        <CheckCircle size={20} color="#00F5FF" />
+                        <CheckCircle size={20} color="#6366F1" />
                       )}
                     </Box>
                     <Box sx={{ minWidth: 0 }}>

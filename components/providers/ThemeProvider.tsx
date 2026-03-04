@@ -55,7 +55,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         palette: {
           mode: 'dark',
           primary: {
-            main: '#00F5FF', // Electric Teal
+            main: '#6366F1', // Electric Teal
             contrastText: '#000000',
           },
           secondary: {
@@ -144,12 +144,12 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
                 },
               },
               containedPrimary: {
-                backgroundColor: '#00F5FF',
+                backgroundColor: '#6366F1',
                 color: '#000000',
                 border: 'none',
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 245, 255, 0.8)',
-                  boxShadow: '0 0 15px rgba(0, 245, 255, 0.3)',
+                  backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                  boxShadow: '0 0 15px rgba(99, 102, 241, 0.3)',
                 },
               },
             }
