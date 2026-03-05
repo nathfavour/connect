@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,6 +19,8 @@ import {
 import { startRegistration } from "@simplewebauthn/browser";
 import { KeychainService } from "@/lib/appwrite/keychain";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
+import { databases } from "@/generated/appwrite/databases";
+import { Query } from "appwrite";
 import toast from "react-hot-toast";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
@@ -56,6 +58,23 @@ export function PasskeySetup({
   const [passkeyName, setPasskeyName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+      try {
+        const { rows } = await databases.use('chat').use('connectUsers').list({
+          queries: (q) => [q.equal('userId', userId), q.limit(1)]
+        });
+        if (rows.length > 0 && (rows[0] as any).username) {
+          setUsername((rows[0] as any).username);
+        }
+      } catch (error) {
+        console.error("Failed to fetch username:", error);
+      }
+    };
+    fetchUsername();
+  }, [userId]);
 
   const verifyMasterPassword = async () => {
     if (!masterPassword.trim()) {
@@ -126,8 +145,8 @@ export function PasskeySetup({
         },
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
-          name: userId,
-          displayName: userId,
+          name: username || ecosystemSecurity.getVault()?.userEmail || userId,
+          displayName: username || ecosystemSecurity.getVault()?.userEmail || userId,
         },
         pubKeyCredParams: [{ alg: -7, type: "public-key" as const }, { alg: -257, type: "public-key" as const }],
         authenticatorSelection: {

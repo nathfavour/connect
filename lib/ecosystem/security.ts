@@ -454,6 +454,12 @@ export class EcosystemSecurity {
       hasIdentity: !!this.identityKeyPair
     };
   }
+
+  getVault() {
+    return {
+      userEmail: null as string | null,
+    };
+  }
 }
 
 export const ecosystemSecurity = EcosystemSecurity.getInstance();
