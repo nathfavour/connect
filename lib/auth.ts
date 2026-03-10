@@ -57,7 +57,7 @@ export function useAuth() {
         });
     }, []);
 
-    const checkSession = useCallback(async (retryCount = 0) => {
+    const checkSession = useCallback(async (retryCount = 0): Promise<void> => {
         try {
             const session = await account.get();
             setUser(session);
@@ -77,6 +77,7 @@ export function useAuth() {
             if (hasAuthSignal && retryCount < 3) {
                 console.log(`Auth signal detected but session not found in connect. Retrying... (${retryCount + 1})`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
+                // eslint-disable-next-line react-hooks/exhaustive-deps
                 return checkSession(retryCount + 1);
             }
 

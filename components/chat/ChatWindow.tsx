@@ -468,7 +468,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <img
                             src={previewUrl}
                             alt="attachment"
-                            style={{ maxWidth: '100%', borderRadius: 8, cursor: 'pointer' }}
+                            width={300}
+                            height={300}
+                            style={{ maxWidth: '100%', borderRadius: 8, cursor: 'pointer', height: 'auto' }}
                             onClick={() => window.open(viewUrl, '_blank')}
                         />
                         {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
