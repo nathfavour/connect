@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        const { conversationId, content, type, attachments, appId } = body;
+        const { conversationId, content, type, attachments, appId: _appId } = body;
 
         if (!conversationId || !content) {
             return NextResponse.json({ error: 'Missing conversationId or content' }, { status: 400 });

@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import CallMissedIcon from '@mui/icons-material/CallMissed';
+import _CallMissedIcon from '@mui/icons-material/CallMissed';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import AddIcCallIcon from '@mui/icons-material/AddIcCall';
@@ -32,13 +32,7 @@ export const CallHistory = () => {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        if (user) {
-            loadCalls();
-        }
-    }, [user]);
-
-    const loadCalls = async () => {
+    const loadCalls = React.useCallback(async () => {
         try {
             const history = await CallService.getCallHistory(user!.$id);
             
@@ -53,7 +47,7 @@ export const CallHistory = () => {
                         otherUser: profile || { username: 'Unknown', $id: otherId },
                         direction: isCaller ? 'outgoing' : 'incoming'
                     };
-                } catch (e: unknown) {
+                } catch (_e: unknown) {
                     return { ...call, otherUser: { username: 'Unknown', $id: otherId }, direction: isCaller ? 'outgoing' : 'incoming' };
                 }
             }));
@@ -64,9 +58,15 @@ export const CallHistory = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
 
-    const startCall = (userId: string) => {
+    useEffect(() => {
+        if (user) {
+            loadCalls();
+        }
+    }, [user, loadCalls]);
+
+    const startCall = (_userId: string) => {
         alert("Please go to the chat with this user to start a call.");
     };
 

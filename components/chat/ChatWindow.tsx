@@ -612,7 +612,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
                 ) : (
-                    messages.map((msg, index) => (
+                    messages.map((msg, _index) => (
                         <Box key={msg.$id} sx={{
                             alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start',
                             maxWidth: '80%',

@@ -17,7 +17,7 @@ export const ChatService = {
         const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
 
         const wrappedKeys: Record<string, string> = {};
-        const exportedKey = await crypto.subtle.exportKey("raw", convKey);
+        const _exportedKey = await crypto.subtle.exportKey("raw", convKey);
 
         // Fetch public keys for all participants
         const res = await tablesDB.listRows(PW_DB, IDENTITIES_TABLE, [
@@ -28,7 +28,7 @@ export const ChatService = {
         for (const doc of res.rows) {
             try {
                 const pubKeyBytes = new Uint16Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
-                const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
+                const _pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
                 
                 // For simplicity in this V1, we use the MasterPass encryption logic to "wrap" 
                 // but ideally we'd use ECDH to derive a wrapper key.
@@ -61,7 +61,7 @@ export const ChatService = {
             if (conv.lastMessageText && conv.lastMessageText.length > 40) {
                 conv.lastMessageText = await ecosystemSecurity.decrypt(conv.lastMessageText);
             }
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // Might not be encrypted or key missing
         }
         return conv;
@@ -146,8 +146,8 @@ export const ChatService = {
     },
 
     async getMessages(conversationId: string, limit = 50, offset = 0) {
-        const conv = await this.getConversationById(conversationId);
-        const userId = (await ecosystemSecurity.fetchKeychain('') as any)?.userId; // Get current user ID context if possible, or pass it in. 
+        const _conv = await this.getConversationById(conversationId);
+        const _userId = (await ecosystemSecurity.fetchKeychain('') as any)?.userId; // Get current user ID context if possible, or pass it in. 
         // Better: let the component pass the userId or handle filtering there to keep service clean.
         
         const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
@@ -162,7 +162,7 @@ export const ChatService = {
             if (msg.type === 'text' && msg.content && msg.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                 try {
                     msg.content = await ecosystemSecurity.decrypt(msg.content);
-                } catch (e: unknown) {
+                } catch (_e: unknown) {
                     msg.content = "[Encrypted Message]";
                 }
             }
@@ -208,7 +208,7 @@ export const ChatService = {
                 const decryptedSettings = await ecosystemSecurity.decrypt(conv.settings);
                 settings = JSON.parse(decryptedSettings);
             }
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // Settings might be empty or unencrypted
         }
 

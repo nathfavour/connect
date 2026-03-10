@@ -7,7 +7,7 @@ import { ChatService } from '@/lib/services/chat';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useRouter } from 'next/navigation';
-import { Box, IconButton, Typography, Fab, Stack } from '@mui/material';
+import { Box, IconButton, Typography, Fab, Stack as _Stack } from '@mui/material';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';

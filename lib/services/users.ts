@@ -29,7 +29,7 @@ export const UsersService = {
                 Query.limit(1)
             ]);
             return result.rows[0] || null;
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             return null;
         }
     },
@@ -43,7 +43,7 @@ export const UsersService = {
         try {
             // Document ID ($id) in the users table is mapped to the Appwrite Account ID
             return await tablesDB.getRow(DB_ID, USERS_TABLE, userId);
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // If getRow fails, try a list search as a robust backup
             try {
                 const res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
@@ -51,7 +51,7 @@ export const UsersService = {
                     Query.limit(1)
                 ]);
                 return res.rows[0] || null;
-            } catch (inner) {
+            } catch (_inner) {
                 return null;
             }
         }
@@ -65,7 +65,7 @@ export const UsersService = {
                 Query.equal('username', normalized)
             ]);
             return result.total === 0;
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             return true; // Assume available on error to avoid blocking
         }
     },
@@ -146,7 +146,7 @@ export const UsersService = {
                 displayName: user?.name || candidate,
                 appsActive: ['connect']
             });
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // Handle race condition if profile was created simultaneously
             return await this.getProfileById(user.$id);
         }

@@ -11,35 +11,25 @@ import {
     ListItemButton, 
     ListItemIcon, 
     ListItemText, 
-    Typography, 
     useMediaQuery, 
     useTheme,
     Paper,
     BottomNavigation,
     BottomNavigationAction,
-    AppBar,
-    Toolbar,
-    IconButton,
-    InputBase,
-    alpha
 } from '@mui/material';
 import { 
     MessageSquare, 
     Home, 
     Phone, 
     User, 
-    Search, 
     Settings, 
-    LogOut,
-    Activity
 } from 'lucide-react';
 import { useColorMode } from '@/components/providers/ThemeProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useEffect, useState } from 'react';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { useAuth } from '@/lib/auth';
-import { UsersService } from '@/lib/services/users';
 import {
     Avatar,
     Menu,
@@ -53,15 +43,15 @@ import { AppHeader } from './AppHeader';
 const drawerWidth = 280;
 
 export const AppShell = ({ children }: { children: React.ReactNode }) => {
-    const { user, logout } = useAuth();
+    const { user, logout: _logout } = useAuth();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const theme = useTheme();
-    const colorMode = useColorMode();
+    const _colorMode = useColorMode();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const router = useRouter();
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [profileUrl, setProfileUrl] = useState<string | null>(null);
+    const _router = useRouter();
+    const [_anchorEl, _setAnchorEl] = useState<null | HTMLElement>(null);
+    const [_profileUrl, setProfileUrl] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -79,7 +69,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                     const url = await fetchProfilePreview(profilePicId, 64, 64);
                     if (mounted) setProfileUrl(url as unknown as string);
                 } else if (mounted) setProfileUrl(null);
-            } catch (err: unknown) {
+            } catch (_err: unknown) {
                 if (mounted) setProfileUrl(null);
             }
         };
