@@ -2,30 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Typography,
-  Button,
-  TextField,
-  Box,
-  IconButton,
-  CircularProgress,
-  Stack,
-  Fade,
-  alpha,
-  InputAdornment,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    Typography,
+    Button,
+    TextField,
+    Box,
+    IconButton,
+    CircularProgress,
+    Stack,
+    Fade,
+    alpha,
+    InputAdornment,
 } from "@mui/material";
 import {
-  Lock,
-  Fingerprint,
-  X,
-  Shield,
-  Zap
+    Lock,
+    Fingerprint,
+    X,
+    Shield,
+    Zap
 } from "lucide-react";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
 import { KeychainService } from "@/lib/appwrite/keychain";
-import { useAuth } from "@/lib/auth"; 
+import { useAuth } from "@/lib/auth";
 import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
@@ -51,6 +51,7 @@ export default function SudoModal({
     const [hasPasskey, setHasPasskey] = useState(false);
     const [hasPin, setHasPin] = useState(false);
     const [mode, setMode] = useState<"passkey" | "password" | "pin">("password");
+    const [isDetecting, setIsDetecting] = useState(true);
     const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
 
     const handlePinChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +122,7 @@ export default function SudoModal({
                 const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
                 const passwordPresent = entries.some((e: any) => e.type === 'password');
                 setHasPasskey(passkeyPresent);
-                
+
                 // Enforce Master Password first
                 if (!passwordPresent && isOpen) {
                     toast.error("Master password required for security actions");
@@ -138,25 +139,30 @@ export default function SudoModal({
                 } else {
                     setMode("password");
                 }
+                setIsDetecting(false);
+            }).catch(() => {
+                setIsDetecting(false);
+                setMode("password");
             });
-            
+
             // Reset state on open
             setPassword("");
             setPin("");
             setLoading(false);
             setPasskeyLoading(false);
+            setIsDetecting(true);
         }
     }, [isOpen, user, handlePasskeyVerify, onCancel, router]);
 
     if (showPasskeyIncentive && user) {
         return (
-            <PasskeySetup 
-                isOpen={true} 
+            <PasskeySetup
+                isOpen={true}
                 onClose={() => {
                     setShowPasskeyIncentive(false);
                     onSuccess();
-                }} 
-                userId={user.$id} 
+                }}
+                userId={user.$id}
                 onSuccess={() => {
                     setShowPasskeyIncentive(false);
                     onSuccess();
@@ -199,18 +205,18 @@ export default function SudoModal({
                     <X size={20} />
                 </IconButton>
 
-                <Box sx={{ 
-                    display: 'inline-flex', 
-                    p: 1.5, 
-                    borderRadius: '16px', 
+                <Box sx={{
+                    display: 'inline-flex',
+                    p: 1.5,
+                    borderRadius: '16px',
                     bgcolor: alpha('#E2B714', 0.1),
                     color: '#E2B714',
                     mb: 2
                 }}>
                     <Shield size={32} />
                 </Box>
-                <Typography variant="h5" sx={{ 
-                    fontWeight: 900, 
+                <Typography variant="h5" sx={{
+                    fontWeight: 900,
                     letterSpacing: '-0.03em',
                     fontFamily: 'var(--font-space-grotesk)',
                     color: 'white'
@@ -223,7 +229,14 @@ export default function SudoModal({
             </DialogTitle>
 
             <DialogContent sx={{ pb: 4 }}>
-                {mode === "pin" ? (
+                {isDetecting ? (
+                    <Stack spacing={3} sx={{ mt: 4, mb: 2, alignItems: 'center' }}>
+                        <CircularProgress size={48} sx={{ color: '#E2B714' }} />
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 600 }}>
+                            PREPARING SECURITY CHECK...
+                        </Typography>
+                    </Stack>
+                ) : mode === "pin" ? (
                     <Stack spacing={3} sx={{ mt: 2 }}>
                         <Box>
                             <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, mb: 1, display: 'block', textAlign: 'center' }}>
@@ -236,10 +249,10 @@ export default function SudoModal({
                                 value={pin}
                                 onChange={handlePinChange}
                                 autoFocus
-                                inputProps={{ 
-                                    maxLength: 4, 
+                                inputProps={{
+                                    maxLength: 4,
                                     inputMode: 'numeric',
-                                    style: { textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em' } 
+                                    style: { textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em' }
                                 }}
                                 InputProps={{
                                     startAdornment: (
@@ -263,11 +276,11 @@ export default function SudoModal({
 
                         <Box sx={{ width: '100%', position: 'relative', py: 1 }}>
                             <Box sx={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-                            <Typography variant="caption" sx={{ 
-                                position: 'relative', 
-                                bgcolor: 'rgba(10, 10, 10, 1)', 
-                                px: 2, 
-                                mx: 'auto', 
+                            <Typography variant="caption" sx={{
+                                position: 'relative',
+                                bgcolor: 'rgba(10, 10, 10, 1)',
+                                px: 2,
+                                mx: 'auto',
                                 display: 'table',
                                 color: 'rgba(255, 255, 255, 0.3)',
                                 textTransform: 'uppercase',
@@ -311,7 +324,7 @@ export default function SudoModal({
                         >
                             <Fingerprint size={40} color={passkeyLoading ? '#E2B714' : 'rgba(255, 255, 255, 0.4)'} />
                         </Box>
-                        
+
                         <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
                                 Use Face ID / Touch ID
@@ -334,19 +347,28 @@ export default function SudoModal({
                                 fontWeight: 700,
                                 '&:hover': {
                                     bgcolor: alpha('#E2B714', 0.8),
+                                },
+                                '&.Mui-disabled': {
+                                    bgcolor: alpha('#E2B714', 0.1),
+                                    color: 'rgba(255, 255, 255, 0.3)'
                                 }
                             }}
                         >
-                            {passkeyLoading ? <CircularProgress size={24} color="inherit" /> : "Verify with Passkey"}
+                            {passkeyLoading ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <CircularProgress size={20} color="inherit" />
+                                    <span>Waiting for Passkey...</span>
+                                </Stack>
+                            ) : "Verify with Passkey"}
                         </Button>
 
                         <Box sx={{ width: '100%', position: 'relative', py: 1 }}>
                             <Box sx={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-                            <Typography variant="caption" sx={{ 
-                                position: 'relative', 
-                                bgcolor: 'rgba(10, 10, 10, 1)', 
-                                px: 2, 
-                                mx: 'auto', 
+                            <Typography variant="caption" sx={{
+                                position: 'relative',
+                                bgcolor: 'rgba(10, 10, 10, 1)',
+                                px: 2,
+                                mx: 'auto',
                                 display: 'table',
                                 color: 'rgba(255, 255, 255, 0.3)',
                                 textTransform: 'uppercase',
@@ -427,11 +449,11 @@ export default function SudoModal({
                         {(hasPasskey || hasPin) && (
                             <Box sx={{ width: '100%', position: 'relative', py: 1 }}>
                                 <Box sx={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-                                <Typography variant="caption" sx={{ 
-                                    position: 'relative', 
-                                    bgcolor: 'rgba(10, 10, 10, 1)', 
-                                    px: 2, 
-                                    mx: 'auto', 
+                                <Typography variant="caption" sx={{
+                                    position: 'relative',
+                                    bgcolor: 'rgba(10, 10, 10, 1)',
+                                    px: 2,
+                                    mx: 'auto',
                                     display: 'table',
                                     color: 'rgba(255, 255, 255, 0.3)',
                                     textTransform: 'uppercase',
