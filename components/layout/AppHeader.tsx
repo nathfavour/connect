@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { 
   AppBar, 
   Toolbar, 
@@ -63,7 +62,7 @@ export const AppHeader = () => {
           const url = await fetchProfilePreview(profilePicId, 64, 64);
           if (mounted) setProfileUrl(url as unknown as string);
         } else if (mounted) setProfileUrl(null);
-      } catch (err: unknown) {
+      } catch (_err: unknown) {
         if (mounted) setProfileUrl(null);
       }
     };

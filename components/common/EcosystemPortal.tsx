@@ -15,11 +15,9 @@ import {
 import {
     Search as SearchIcon,
     Close as CloseIcon,
-    AutoAwesome as PulseIcon,
-    MonitorHeart as ActivityIcon,
+    AutoAwesome as PulseIcon
 } from '@mui/icons-material';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '../../lib/constants';
-import { EcosystemWidgets } from '../../ecosystem/integration/Widgets';
 
 interface EcosystemPortalProps {
     open: boolean;

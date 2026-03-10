@@ -13,7 +13,6 @@ import {
     ListItemText, 
     useTheme,
     alpha,
-    Divider,
     Avatar,
     Typography,
     IconButton
@@ -23,9 +22,7 @@ import {
     MessageSquare, 
     Phone, 
     User, 
-    Settings, 
-    LogOut,
-    Activity
+    LogOut
 } from 'lucide-react';
 import { useColorMode } from '@/components/providers/ThemeProvider';
 import { useAuth } from '@/lib/auth';
@@ -35,7 +32,7 @@ const drawerWidth = 280;
 export const Navigation = () => {
     const pathname = usePathname();
     const theme = useTheme();
-    const colorMode = useColorMode();
+    const _colorMode = useColorMode();
     const { user, logout } = useAuth();
 
     const navItems = [

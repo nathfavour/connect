@@ -17,6 +17,7 @@ import {
     BottomNavigation,
     BottomNavigationAction,
 } from '@mui/material';
+
 import { 
     MessageSquare, 
     Home, 
@@ -24,19 +25,11 @@ import {
     User, 
     Settings, 
 } from 'lucide-react';
-import { useColorMode } from '@/components/providers/ThemeProvider';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useMemo, useEffect, useState } from 'react';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { useAuth } from '@/lib/auth';
-import {
-    Avatar,
-    Menu,
-    MenuItem,
-    Divider,
-    Stack
-} from '@mui/material';
 
 import { AppHeader } from './AppHeader';
 

@@ -13,14 +13,12 @@ import {
   Box,
   Stack,
   CircularProgress,
-  alpha,
   useTheme
 } from "@mui/material";
 import { startRegistration } from "@simplewebauthn/browser";
 import { KeychainService } from "@/lib/appwrite/keychain";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
 import { databases } from "@/generated/appwrite/databases";
-import { Query } from "appwrite";
 import toast from "react-hot-toast";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";

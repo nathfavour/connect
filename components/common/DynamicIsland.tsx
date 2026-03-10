@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
-import { Box, Typography, Stack, IconButton, useTheme, useMediaQuery, Button } from '@mui/material';
-import { motion, AnimatePresence, useSpring, useTransform, useAnimation } from 'framer-motion';
+import { Box, Typography, Stack, useTheme, useMediaQuery, Button } from '@mui/material';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { 
@@ -10,14 +10,9 @@ import {
   Error as ErrorIcon, 
   Info as InfoIcon, 
   Warning as WarningIcon,
-  Close as CloseIcon,
   Star as ProIcon,
-  AutoAwesome as SparklesIcon,
   EmojiObjects as IdeaIcon,
-  Message as ConnectIcon,
-  Assignment as TaskIcon,
-  Description as NoteIcon,
-  Shield as ShieldIcon
+  Message as ConnectIcon
 } from '@mui/icons-material';
 
 export type IslandType = 'success' | 'error' | 'warning' | 'info' | 'pro' | 'system' | 'suggestion' | 'connect';
