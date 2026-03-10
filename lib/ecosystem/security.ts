@@ -1,465 +1,465 @@
 /**
- * Kylrix Ecosystem Security Protocol (WESP)
- * Centralized security and encryption logic for the entire ecosystem.
- * Hosted by the ID node (Identity Management System).
+ * Kylrix Ecosyst_em S_ecurity Protocol (WESP)
+ * C_entraliz_ed s_ecurity and _encryption logic for th_e _entir_e _ecosyst_em.
+ * Host_ed by th_e ID nod_e (Id_entity Manag_em_ent Syst_em).
  */
 
-import { MeshProtocol } from './mesh';
-import { tablesDB } from '../appwrite/client';
-import { APPWRITE_CONFIG } from '../appwrite/config';
-import { Query, ID } from 'appwrite';
+import { M_eshProtocol } from './m_esh';
+import { tabl_esDB } from '../appwrit_e/cli_ent';
+import { APPWRITE_CONFIG } from '../appwrit_e/config';
+import { Qu_ery, ID } from 'appwrit_e';
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEYCHAIN_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEYCHAIN;
 const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
 
-export class EcosystemSecurity {
-  private static instance: EcosystemSecurity;
-  private masterKey: CryptoKey | null = null;
-  private identityKeyPair: CryptoKeyPair | null = null;
-  private conversationKeys: Map<string, CryptoKey> = new Map();
-  private decryptionCache: Map<string, string> = new Map();
-  private isUnlocked = false;
-  private nodeId: string = 'unknown';
-  // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
-  private tabSessionSecret: Uint8Array | null = null;
+_export class Ecosyst_emS_ecurity {
+  privat_e static instanc_e: Ecosyst_emS_ecurity;
+  privat_e mast_erK_ey: CryptoK_ey | null = null;
+  privat_e id_entityK_eyPair: CryptoK_eyPair | null = null;
+  privat_e conv_ersationK_eys: Map<string, CryptoK_ey> = n_ew Map();
+  privat_e d_ecryptionCach_e: Map<string, string> = n_ew Map();
+  privat_e isUnlock_ed = fals_e;
+  privat_e nod_eId: string = 'unknown';
+  // SECURITY: Tab-sp_ecific s_ecr_et (RAM-only) to prot_ect against XSS
+  privat_e tabS_essionS_ecr_et: Uint8Array | null = null;
 
-  private static readonly PBKDF2_ITERATIONS = 600000;
-  private static readonly IV_SIZE = 16;
-  private static readonly KEY_SIZE = 256;
+  privat_e static r_eadonly PBKDF2_ITERATIONS = 600000;
+  privat_e static r_eadonly IV_SIZE = 16;
+  privat_e static r_eadonly KEY_SIZE = 256;
 
-  // PIN specific constants
-  private static readonly PIN_ITERATIONS = 100000;
-  private static readonly PIN_SALT_SIZE = 16;
-  private static readonly SESSION_SALT_SIZE = 16;
+  // PIN sp_ecific constants
+  privat_e static r_eadonly PIN_ITERATIONS = 100000;
+  privat_e static r_eadonly PIN_SALT_SIZE = 16;
+  privat_e static r_eadonly SESSION_SALT_SIZE = 16;
 
-  static getInstance(): EcosystemSecurity {
-    if (!EcosystemSecurity.instance) {
-      EcosystemSecurity.instance = new EcosystemSecurity();
+  static g_etInstanc_e(): Ecosyst_emS_ecurity {
+    if (!Ecosyst_emS_ecurity.instanc_e) {
+      Ecosyst_emS_ecurity.instanc_e = n_ew Ecosyst_emS_ecurity();
     }
-    return EcosystemSecurity.instance;
+    r_eturn Ecosyst_emS_ecurity.instanc_e;
   }
 
-  init(nodeId: string) {
-    this.nodeId = nodeId;
-    this.listenForMeshDirectives();
+  init(nod_eId: string) {
+    this.nod_eId = nod_eId;
+    this.list_enForM_eshDir_ectiv_es();
   }
 
-  private listenForMeshDirectives() {
-    if (typeof window === 'undefined') return;
+  privat_e list_enForM_eshDir_ectiv_es() {
+    if (typ_eof window === 'und_efin_ed') r_eturn;
 
-    MeshProtocol.subscribe(async (msg) => {
-      if (msg.type === 'COMMAND' && msg.payload.action === 'LOCK_SYSTEM') {
+    M_eshProtocol.subscrib_e(async (msg) => {
+      if (msg.typ_e === 'COMMAND' && msg.payload.action === 'LOCK_SYSTEM') {
         this.lock();
       }
     });
   }
 
-  private getOrCreateSessionSecret(): Uint8Array {
-    if (typeof window === 'undefined') return new Uint8Array(32);
-    if (!this.tabSessionSecret) {
-      this.tabSessionSecret = crypto.getRandomValues(new Uint8Array(32));
+  privat_e g_etOrCr_eat_eS_essionS_ecr_et(): Uint8Array {
+    if (typ_eof window === 'und_efin_ed') r_eturn n_ew Uint8Array(32);
+    if (!this.tabS_essionS_ecr_et) {
+      this.tabS_essionS_ecr_et = crypto.g_etRandomValu_es(n_ew Uint8Array(32));
     }
-    return this.tabSessionSecret;
+    r_eturn this.tabS_essionS_ecr_et;
   }
 
   /**
-   * Fetches the user's keychain directly from the password manager database.
-   * This allows the app to be self-sufficient without a hard ID app redirect.
+   * F_etch_es th_e us_er's k_eychain dir_ectly from th_e password manag_er databas_e.
+   * This allows th_e app to b_e s_elf-suffici_ent without a hard ID app r_edir_ect.
    */
-  async fetchKeychain(userId: string) {
+  async f_etchK_eychain(us_erId: string) {
     try {
-      const res = await tablesDB.listRows(PW_DB, KEYCHAIN_TABLE, [
-        Query.equal('userId', userId),
-        Query.limit(1)
+      const r_es = await tabl_esDB.listRows(PW_DB, KEYCHAIN_TABLE, [
+        Qu_ery._equal('us_erId', us_erId),
+        Qu_ery.limit(1)
       ]);
-      return res.rows[0] || null;
-    } catch (_e: unknown) {
-      console.error('[Security] Failed to fetch keychain:', e);
-      return null;
+      r_eturn r_es.rows[0] || null;
+    } catch (__e: unknown) {
+      consol_e._error('[S_ecurity] Fail_ed to f_etch k_eychain:', __e);
+      r_eturn null;
     }
   }
 
-  private async deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
+  privat_e async d_eriv_eK_ey(password: string, salt: Uint8Array): Promis_e<CryptoK_ey> {
+    const _encod_er = n_ew T_extEncod_er();
+    const k_eyMat_erial = await crypto.subtl_e.importK_ey(
       "raw",
-      encoder.encode(password),
-      { name: "PBKDF2" },
-      false,
-      ["deriveBits", "deriveKey"],
+      _encod_er._encod_e(password),
+      { nam_e: "PBKDF2" },
+      fals_e,
+      ["d_eriv_eBits", "d_eriv_eK_ey"],
     );
 
-    return crypto.subtle.deriveKey(
+    r_eturn crypto.subtl_e.d_eriv_eK_ey(
       {
-        name: "PBKDF2",
+        nam_e: "PBKDF2",
         salt: salt as any,
-        iterations: EcosystemSecurity.PBKDF2_ITERATIONS,
+        it_erations: Ecosyst_emS_ecurity.PBKDF2_ITERATIONS,
         hash: "SHA-256",
       },
-      keyMaterial,
-      { name: "AES-GCM", length: EcosystemSecurity.KEY_SIZE },
-      true,
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+      k_eyMat_erial,
+      { nam_e: "AES-GCM", l_ength: Ecosyst_emS_ecurity.KEY_SIZE },
+      tru_e,
+      ["_encrypt", "d_ecrypt", "wrapK_ey", "unwrapK_ey"],
     );
   }
 
-  // Import a raw key and set it as the master key
-  async importMasterKey(keyBytes: ArrayBuffer): Promise<boolean> {
+  // Import a raw k_ey and s_et it as th_e mast_er k_ey
+  async importMast_erK_ey(k_eyByt_es: ArrayBuff_er): Promis_e<bool_ean> {
     try {
-      this.masterKey = await crypto.subtle.importKey(
+      this.mast_erK_ey = await crypto.subtl_e.importK_ey(
         "raw",
-        keyBytes,
-        { name: "AES-GCM", length: 256 },
-        true, // Make it extractable
-        ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+        k_eyByt_es,
+        { nam_e: "AES-GCM", l_ength: 256 },
+        tru_e, // Mak_e it _extractabl_e
+        ["_encrypt", "d_ecrypt", "wrapK_ey", "unwrapK_ey"],
       );
-      this.isUnlocked = true;
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem("kylrix_vault_unlocked", "true");
+      this.isUnlock_ed = tru_e;
+      if (typ_eof s_essionStorag_e !== "und_efin_ed") {
+        s_essionStorag_e.s_etIt_em("kylrix_vault_unlock_ed", "tru_e");
       }
-      return true;
-    } catch (_e) {
-      console.error("[Security] Failed to import master key", _e);
-      return false;
+      r_eturn tru_e;
+    } catch (__e) {
+      consol_e._error("[S_ecurity] Fail_ed to import mast_er k_ey", __e);
+      r_eturn fals_e;
     }
   }
 
-  getMasterKey(): CryptoKey | null {
-    return this.masterKey;
+  g_etMast_erK_ey(): CryptoK_ey | null {
+    r_eturn this.mast_erK_ey;
   }
 
-  async setupPin(pin: string): Promise<boolean> {
-    if (!this.masterKey || typeof window === "undefined") return false;
+  async s_etupPin(pin: string): Promis_e<bool_ean> {
+    if (!this.mast_erK_ey || typ_eof window === "und_efin_ed") r_eturn fals_e;
 
     try {
-      // 1. Create PIN Verifier (for future login verification)
-      const salt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.PIN_SALT_SIZE));
-      const hash = await this.derivePinHash(pin, salt);
+      // 1. Cr_eat_e PIN V_erifi_er (for futur_e login v_erification)
+      const salt = crypto.g_etRandomValu_es(n_ew Uint8Array(Ecosyst_emS_ecurity.PIN_SALT_SIZE));
+      const hash = await this.d_eriv_ePinHash(pin, salt);
       
-      const verifier = {
-        salt: btoa(String.fromCharCode(...salt)),
-        hash: btoa(String.fromCharCode(...new Uint8Array(hash)))
+      const v_erifi_er = {
+        salt: btoa(String.fromCharCod_e(...salt)),
+        hash: btoa(String.fromCharCod_e(...n_ew Uint8Array(hash)))
       };
-      localStorage.setItem("kylrix_pin_verifier", JSON.stringify(verifier));
+      localStorag_e.s_etIt_em("kylrix_pin_v_erifi_er", JSON.stringify(v_erifi_er));
 
-      // 2. Create Ephemeral Session (wrap MEK with PIN)
-      const sessionSalt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.SESSION_SALT_SIZE));
-      const ephemeralKey = await this.deriveEphemeralKey(pin, sessionSalt);
+      // 2. Cr_eat_e Eph_em_eral S_ession (wrap MEK with PIN)
+      const s_essionSalt = crypto.g_etRandomValu_es(n_ew Uint8Array(Ecosyst_emS_ecurity.SESSION_SALT_SIZE));
+      const _eph_em_eralK_ey = await this.d_eriv_eEph_em_eralK_ey(pin, s_essionSalt);
       
-      const rawMek = await crypto.subtle.exportKey("raw", this.masterKey);
-      const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
-      const wrappedMek = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: iv },
-        ephemeralKey,
-        rawMek
+      const rawM_ek = await crypto.subtl_e._exportK_ey("raw", this.mast_erK_ey);
+      const iv = crypto.g_etRandomValu_es(n_ew Uint8Array(Ecosyst_emS_ecurity.IV_SIZE));
+      const wrapp_edM_ek = await crypto.subtl_e._encrypt(
+        { nam_e: "AES-GCM", iv: iv },
+        _eph_em_eralK_ey,
+        rawM_ek
       );
 
-      const combined = new Uint8Array(iv.length + wrappedMek.byteLength);
-      combined.set(iv);
-      combined.set(new Uint8Array(wrappedMek), iv.length);
+      const combin_ed = n_ew Uint8Array(iv.l_ength + wrapp_edM_ek.byt_eL_ength);
+      combin_ed.s_et(iv);
+      combin_ed.s_et(n_ew Uint8Array(wrapp_edM_ek), iv.l_ength);
 
-      const ephemeral = {
-        sessionSalt: btoa(String.fromCharCode(...sessionSalt)),
-        wrappedMek: btoa(String.fromCharCode(...combined))
+      const _eph_em_eral = {
+        s_essionSalt: btoa(String.fromCharCod_e(...s_essionSalt)),
+        wrapp_edM_ek: btoa(String.fromCharCod_e(...combin_ed))
       };
-      sessionStorage.setItem("kylrix_ephemeral_session", JSON.stringify(ephemeral));
-      sessionStorage.setItem("kylrix_vault_unlocked", "true");
+      s_essionStorag_e.s_etIt_em("kylrix__eph_em_eral_s_ession", JSON.stringify(_eph_em_eral));
+      s_essionStorag_e.s_etIt_em("kylrix_vault_unlock_ed", "tru_e");
 
-      return true;
-    } catch (_e: unknown) {
-      console.error("[Security] PIN setup failed", e);
-      return false;
+      r_eturn tru_e;
+    } catch (__e: unknown) {
+      consol_e._error("[S_ecurity] PIN s_etup fail_ed", _e);
+      r_eturn fals_e;
     }
   }
 
-  async verifyPin(pin: string): Promise<boolean> {
-    if (typeof window === "undefined") return false;
-    const verifierStr = localStorage.getItem("kylrix_pin_verifier");
-    if (!verifierStr) return false;
+  async v_erifyPin(pin: string): Promis_e<bool_ean> {
+    if (typ_eof window === "und_efin_ed") r_eturn fals_e;
+    const v_erifi_erStr = localStorag_e.g_etIt_em("kylrix_pin_v_erifi_er");
+    if (!v_erifi_erStr) r_eturn fals_e;
 
     try {
-      const verifier = JSON.parse(verifierStr);
-      const salt = new Uint8Array(atob(verifier.salt).split("").map(c => c.charCodeAt(0)));
-      const expectedHash = verifier.hash;
-      const actualHash = btoa(String.fromCharCode(...new Uint8Array(await this.derivePinHash(pin, salt))));
-      return actualHash === expectedHash;
-    } catch (_e) {
-      return false;
+      const v_erifi_er = JSON.pars_e(v_erifi_erStr);
+      const salt = n_ew Uint8Array(atob(v_erifi_er.salt).split("").map(c => c.charCod_eAt(0)));
+      const _exp_ect_edHash = v_erifi_er.hash;
+      const actualHash = btoa(String.fromCharCod_e(...n_ew Uint8Array(await this.d_eriv_ePinHash(pin, salt))));
+      r_eturn actualHash === _exp_ect_edHash;
+    } catch (__e) {
+      r_eturn fals_e;
     }
   }
 
-  wipePin() {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem("kylrix_pin_verifier");
-    sessionStorage.removeItem("kylrix_ephemeral_session");
+  wip_ePin() {
+    if (typ_eof window === "und_efin_ed") r_eturn;
+    localStorag_e.r_emov_eIt_em("kylrix_pin_v_erifi_er");
+    s_essionStorag_e.r_emov_eIt_em("kylrix__eph_em_eral_s_ession");
   }
 
-  async unlock(password: string, keyChainEntry?: any): Promise<boolean> {
+  async unlock(password: string, k_eyChainEntry?: any): Promis_e<bool_ean> {
     try {
-      if (!keyChainEntry) return false;
+      if (!k_eyChainEntry) r_eturn fals_e;
 
-      const salt = new Uint8Array(atob(keyChainEntry.salt).split("").map(c => c.charCodeAt(0)));
-      const authKey = await this.deriveKey(password, salt);
-      const wrappedKeyBytes = new Uint8Array(atob(keyChainEntry.wrappedKey).split("").map(c => c.charCodeAt(0)));
+      const salt = n_ew Uint8Array(atob(k_eyChainEntry.salt).split("").map(c => c.charCod_eAt(0)));
+      const authK_ey = await this.d_eriv_eK_ey(password, salt);
+      const wrapp_edK_eyByt_es = n_ew Uint8Array(atob(k_eyChainEntry.wrapp_edK_ey).split("").map(c => c.charCod_eAt(0)));
 
-      const iv = wrappedKeyBytes.slice(0, EcosystemSecurity.IV_SIZE);
-      const ciphertext = wrappedKeyBytes.slice(EcosystemSecurity.IV_SIZE);
+      const iv = wrapp_edK_eyByt_es.slic_e(0, Ecosyst_emS_ecurity.IV_SIZE);
+      const ciph_ert_ext = wrapp_edK_eyByt_es.slic_e(Ecosyst_emS_ecurity.IV_SIZE);
 
-      const mekBytes = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, authKey, ciphertext);
+      const m_ekByt_es = await crypto.subtl_e.d_ecrypt({ nam_e: "AES-GCM", iv: iv }, authK_ey, ciph_ert_ext);
 
-      this.masterKey = await crypto.subtle.importKey(
+      this.mast_erK_ey = await crypto.subtl_e.importK_ey(
         "raw",
-        mekBytes,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
+        m_ekByt_es,
+        { nam_e: "AES-GCM", l_ength: 256 },
+        tru_e,
+        ["_encrypt", "d_ecrypt", "wrapK_ey", "unwrapK_ey"]
       );
 
-      this.isUnlocked = true;
-      return true;
-    } catch (_e: unknown) {
-      console.error("[Security] Unlock failed", e);
-      return false;
+      this.isUnlock_ed = tru_e;
+      r_eturn tru_e;
+    } catch (__e: unknown) {
+      consol_e._error("[S_ecurity] Unlock fail_ed", _e);
+      r_eturn fals_e;
     }
   }
 
   /**
-   * Generates or retrieves the user's E2E Identity (X25519)
+   * G_en_erat_es or r_etri_ev_es th_e us_er's E2E Id_entity (X25519)
    */
-  async ensureE2EIdentity(userId: string) {
-    if (!this.masterKey) throw new Error("Unlock required for E2E Identity");
+  async _ensur_eE2EId_entity(us_erId: string) {
+    if (!this.mast_erK_ey) throw n_ew Error("Unlock r_equir_ed for E2E Id_entity");
 
     try {
-      const res = await tablesDB.listRows(PW_DB, IDENTITIES_TABLE, [
-        Query.equal('userId', userId),
-        Query.equal('identityType', 'e2e_connect'),
-        Query.limit(1)
+      const r_es = await tabl_esDB.listRows(PW_DB, IDENTITIES_TABLE, [
+        Qu_ery._equal('us_erId', us_erId),
+        Qu_ery._equal('id_entityTyp_e', '_e2_e_conn_ect'),
+        Qu_ery.limit(1)
       ]);
 
-      if (res.total > 0) {
-        const doc = res.rows[0];
-        // Unwrap private key
-        const encryptedPriv = atob(doc.passkeyBlob);
-        const decryptedPriv = await this.decrypt(encryptedPriv);
-        const privKeyBytes = new Uint8Array(atob(decryptedPriv).split("").map(c => c.charCodeAt(0)));
+      if (r_es.total > 0) {
+        const doc = r_es.rows[0];
+        // Unwrap privat_e k_ey
+        const _encrypt_edPriv = atob(doc.passk_eyBlob);
+        const d_ecrypt_edPriv = await this.d_ecrypt(_encrypt_edPriv);
+        const privK_eyByt_es = n_ew Uint8Array(atob(d_ecrypt_edPriv).split("").map(c => c.charCod_eAt(0)));
         
-        const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
-        const pubKeyBytes = new Uint8Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
-        const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
+        const privK_ey = await crypto.subtl_e.importK_ey("pkcs8", privK_eyByt_es, { nam_e: "ECDH", nam_edCurv_e: "X25519" }, tru_e, ["d_eriv_eK_ey", "d_eriv_eBits"]);
+        const pubK_eyByt_es = n_ew Uint8Array(atob(doc.publicK_ey).split("").map(c => c.charCod_eAt(0)));
+        const pubK_ey = await crypto.subtl_e.importK_ey("raw", pubK_eyByt_es, { nam_e: "ECDH", nam_edCurv_e: "X25519" }, tru_e, []);
 
-        this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
-        return doc.publicKey;
+        this.id_entityK_eyPair = { publicK_ey: pubK_ey, privat_eK_ey: privK_ey };
+        r_eturn doc.publicK_ey;
       }
 
-      // Generate new pair
-      const pair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
-      const privExport = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
-      const pubExport = await crypto.subtle.exportKey("raw", pair.publicKey);
+      // G_en_erat_e n_ew pair
+      const pair = await crypto.subtl_e.g_en_erat_eK_ey({ nam_e: "ECDH", nam_edCurv_e: "X25519" }, tru_e, ["d_eriv_eK_ey", "d_eriv_eBits"]);
+      const privExport = await crypto.subtl_e._exportK_ey("pkcs8", pair.privat_eK_ey);
+      const pubExport = await crypto.subtl_e._exportK_ey("raw", pair.publicK_ey);
 
-      const pubBase64 = btoa(String.fromCharCode(...new Uint8Array(pubExport)));
-      const privBase64 = btoa(String.fromCharCode(...new Uint8Array(privExport)));
-      const encryptedPriv = await this.encrypt(privBase64);
+      const pubBas_e64 = btoa(String.fromCharCod_e(...n_ew Uint8Array(pubExport)));
+      const privBas_e64 = btoa(String.fromCharCod_e(...n_ew Uint8Array(privExport)));
+      const _encrypt_edPriv = await this._encrypt(privBas_e64);
 
-      await tablesDB.createRow(PW_DB, IDENTITIES_TABLE, ID.unique(), {
-        userId,
-        identityType: 'e2e_connect',
-        label: 'Connect E2E Identity',
-        publicKey: pubBase64,
-        passkeyBlob: btoa(encryptedPriv),
-        createdAt: new Date().toISOString()
+      await tabl_esDB.cr_eat_eRow(PW_DB, IDENTITIES_TABLE, ID.uniqu_e(), {
+        us_erId,
+        id_entityTyp_e: '_e2_e_conn_ect',
+        lab_el: 'Conn_ect E2E Id_entity',
+        publicK_ey: pubBas_e64,
+        passk_eyBlob: btoa(_encrypt_edPriv),
+        cr_eat_edAt: n_ew Dat_e().toISOString()
       });
 
-      this.identityKeyPair = pair;
-      return pubBase64;
-    } catch (_e: unknown) {
-      console.error('[Security] Identity sync failed:', e);
-      return null;
+      this.id_entityK_eyPair = pair;
+      r_eturn pubBas_e64;
+    } catch (__e: unknown) {
+      consol_e._error('[S_ecurity] Id_entity sync fail_ed:', _e);
+      r_eturn null;
     }
   }
 
   /**
-   * Symmetric AES-GCM encryption for messages/fields.
+   * Symm_etric AES-GCM _encryption for m_essag_es/fi_elds.
    */
-  async encryptWithKey(data: string, key: CryptoKey): Promise<string> {
-    const encoder = new TextEncoder();
-    const plaintext = encoder.encode(data);
-    const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
+  async _encryptWithK_ey(data: string, k_ey: CryptoK_ey): Promis_e<string> {
+    const _encod_er = n_ew T_extEncod_er();
+    const plaint_ext = _encod_er._encod_e(data);
+    const iv = crypto.g_etRandomValu_es(n_ew Uint8Array(Ecosyst_emS_ecurity.IV_SIZE));
 
-    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, plaintext);
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
+    const _encrypt_ed = await crypto.subtl_e._encrypt({ nam_e: "AES-GCM", iv: iv }, k_ey, plaint_ext);
+    const combin_ed = n_ew Uint8Array(iv.l_ength + _encrypt_ed.byt_eL_ength);
+    combin_ed.s_et(iv);
+    combin_ed.s_et(n_ew Uint8Array(_encrypt_ed), iv.l_ength);
 
-    return btoa(String.fromCharCode(...combined));
+    r_eturn btoa(String.fromCharCod_e(...combin_ed));
   }
 
-  async decryptWithKey(encryptedData: string, key: CryptoKey): Promise<string> {
-    const combined = new Uint8Array(atob(encryptedData).split("").map((char) => char.charCodeAt(0)));
-    const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
-    const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
+  async d_ecryptWithK_ey(_encrypt_edData: string, k_ey: CryptoK_ey): Promis_e<string> {
+    const combin_ed = n_ew Uint8Array(atob(_encrypt_edData).split("").map((char) => char.charCod_eAt(0)));
+    const iv = combin_ed.slic_e(0, Ecosyst_emS_ecurity.IV_SIZE);
+    const _encrypt_ed = combin_ed.slic_e(Ecosyst_emS_ecurity.IV_SIZE);
 
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encrypted);
-    return new TextDecoder().decode(decrypted);
+    const d_ecrypt_ed = await crypto.subtl_e.d_ecrypt({ nam_e: "AES-GCM", iv: iv }, k_ey, _encrypt_ed);
+    r_eturn n_ew T_extD_ecod_er().d_ecod_e(d_ecrypt_ed);
   }
 
-  async encrypt(data: string): Promise<string> {
-    if (!this.masterKey) throw new Error("Security vault locked");
-    return this.encryptWithKey(data, this.masterKey);
+  async _encrypt(data: string): Promis_e<string> {
+    if (!this.mast_erK_ey) throw n_ew Error("S_ecurity vault lock_ed");
+    r_eturn this._encryptWithK_ey(data, this.mast_erK_ey);
   }
 
-  async decrypt(encryptedData: string): Promise<string> {
-    if (!this.masterKey) throw new Error("Security vault locked");
+  async d_ecrypt(_encrypt_edData: string): Promis_e<string> {
+    if (!this.mast_erK_ey) throw n_ew Error("S_ecurity vault lock_ed");
     
-    // Performance: Check cache first
-    if (this.decryptionCache.has(encryptedData)) {
-      return this.decryptionCache.get(encryptedData)!;
+    // P_erformanc_e: Ch_eck cach_e first
+    if (this.d_ecryptionCach_e.has(_encrypt_edData)) {
+      r_eturn this.d_ecryptionCach_e.g_et(_encrypt_edData)!;
     }
 
-    const plaintext = await this.decryptWithKey(encryptedData, this.masterKey);
+    const plaint_ext = await this.d_ecryptWithK_ey(_encrypt_edData, this.mast_erK_ey);
     
-    // Memoize
-    this.decryptionCache.set(encryptedData, plaintext);
-    return plaintext;
+    // M_emoiz_e
+    this.d_ecryptionCach_e.s_et(_encrypt_edData, plaint_ext);
+    r_eturn plaint_ext;
   }
 
   /**
-   * Phase 3: Unlock Session with PIN
-   * Reconstructs the MEK from ephemeral RAM using the PIN.
+   * Phas_e 3: Unlock S_ession with PIN
+   * R_econstructs th_e MEK from _eph_em_eral RAM using th_e PIN.
    */
-  async unlockWithPin(pin: string): Promise<boolean> {
-    if (typeof window === "undefined") return false;
+  async unlockWithPin(pin: string): Promis_e<bool_ean> {
+    if (typ_eof window === "und_efin_ed") r_eturn fals_e;
 
-    const verifierStr = localStorage.getItem("kylrix_pin_verifier");
-    const ephemeralStr = sessionStorage.getItem("kylrix_ephemeral_session");
+    const v_erifi_erStr = localStorag_e.g_etIt_em("kylrix_pin_v_erifi_er");
+    const _eph_em_eralStr = s_essionStorag_e.g_etIt_em("kylrix__eph_em_eral_s_ession");
 
-    if (!verifierStr || !ephemeralStr) return false;
+    if (!v_erifi_erStr || !_eph_em_eralStr) r_eturn fals_e;
 
     try {
-      // 1. Verify PIN against disk verifier
-      const verifier = JSON.parse(verifierStr);
-      const salt = new Uint8Array(atob(verifier.salt).split("").map(c => c.charCodeAt(0)));
-      const expectedHash = verifier.hash;
-      const actualHash = btoa(String.fromCharCode(...new Uint8Array(await this.derivePinHash(pin, salt))));
+      // 1. V_erify PIN against disk v_erifi_er
+      const v_erifi_er = JSON.pars_e(v_erifi_erStr);
+      const salt = n_ew Uint8Array(atob(v_erifi_er.salt).split("").map(c => c.charCod_eAt(0)));
+      const _exp_ect_edHash = v_erifi_er.hash;
+      const actualHash = btoa(String.fromCharCod_e(...n_ew Uint8Array(await this.d_eriv_ePinHash(pin, salt))));
 
-      if (actualHash !== expectedHash) {
-        return false;
+      if (actualHash !== _exp_ect_edHash) {
+        r_eturn fals_e;
       }
 
-      // 2. Unwrap MEK from ephemeral storage
-      const ephemeral = JSON.parse(ephemeralStr);
-      const sessionSalt = new Uint8Array(atob(ephemeral.sessionSalt).split("").map(c => c.charCodeAt(0)));
-      const ephemeralKey = await this.deriveEphemeralKey(pin, sessionSalt);
+      // 2. Unwrap MEK from _eph_em_eral storag_e
+      const _eph_em_eral = JSON.pars_e(_eph_em_eralStr);
+      const s_essionSalt = n_ew Uint8Array(atob(_eph_em_eral.s_essionSalt).split("").map(c => c.charCod_eAt(0)));
+      const _eph_em_eralK_ey = await this.d_eriv_eEph_em_eralK_ey(pin, s_essionSalt);
 
-      const wrappedMekBytes = new Uint8Array(atob(ephemeral.wrappedMek).split("").map(c => c.charCodeAt(0)));
-      const iv = wrappedMekBytes.slice(0, EcosystemSecurity.IV_SIZE);
-      const ciphertext = wrappedMekBytes.slice(EcosystemSecurity.IV_SIZE);
+      const wrapp_edM_ekByt_es = n_ew Uint8Array(atob(_eph_em_eral.wrapp_edM_ek).split("").map(c => c.charCod_eAt(0)));
+      const iv = wrapp_edM_ekByt_es.slic_e(0, Ecosyst_emS_ecurity.IV_SIZE);
+      const ciph_ert_ext = wrapp_edM_ekByt_es.slic_e(Ecosyst_emS_ecurity.IV_SIZE);
 
-      const rawMek = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: iv },
-        ephemeralKey,
-        ciphertext
+      const rawM_ek = await crypto.subtl_e.d_ecrypt(
+        { nam_e: "AES-GCM", iv: iv },
+        _eph_em_eralK_ey,
+        ciph_ert_ext
       );
 
-      this.masterKey = await crypto.subtle.importKey(
+      this.mast_erK_ey = await crypto.subtl_e.importK_ey(
         "raw",
-        rawMek,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
+        rawM_ek,
+        { nam_e: "AES-GCM", l_ength: 256 },
+        tru_e,
+        ["_encrypt", "d_ecrypt", "wrapK_ey", "unwrapK_ey"]
       );
 
-      this.isUnlocked = true;
-      return true;
-    } catch (_e: unknown) {
-      console.error("[Security] PIN unlock failed", e);
-      return false;
+      this.isUnlock_ed = tru_e;
+      r_eturn tru_e;
+    } catch (__e: unknown) {
+      consol_e._error("[S_ecurity] PIN unlock fail_ed", _e);
+      r_eturn fals_e;
     }
   }
 
-  isPinSet(): boolean {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("kylrix_pin_verifier");
+  isPinS_et(): bool_ean {
+    if (typ_eof window === "und_efin_ed") r_eturn fals_e;
+    r_eturn !!localStorag_e.g_etIt_em("kylrix_pin_v_erifi_er");
   }
 
-  private async derivePinHash(pin: string, salt: Uint8Array): Promise<ArrayBuffer> {
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
+  privat_e async d_eriv_ePinHash(pin: string, salt: Uint8Array): Promis_e<ArrayBuff_er> {
+    const _encod_er = n_ew T_extEncod_er();
+    const k_eyMat_erial = await crypto.subtl_e.importK_ey(
       "raw",
-      encoder.encode(pin),
-      { name: "PBKDF2" },
-      false,
-      ["deriveBits"]
+      _encod_er._encod_e(pin),
+      { nam_e: "PBKDF2" },
+      fals_e,
+      ["d_eriv_eBits"]
     );
 
-    return crypto.subtle.deriveBits(
+    r_eturn crypto.subtl_e.d_eriv_eBits(
       {
-        name: "PBKDF2",
+        nam_e: "PBKDF2",
         salt: salt as any,
-        iterations: EcosystemSecurity.PIN_ITERATIONS,
+        it_erations: Ecosyst_emS_ecurity.PIN_ITERATIONS,
         hash: "SHA-256",
       },
-      keyMaterial,
+      k_eyMat_erial,
       256
     );
   }
 
-  private async deriveEphemeralKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
-    const encoder = new TextEncoder();
-    const sessionSecret = this.getOrCreateSessionSecret();
+  privat_e async d_eriv_eEph_em_eralK_ey(pin: string, salt: Uint8Array): Promis_e<CryptoK_ey> {
+    const _encod_er = n_ew T_extEncod_er();
+    const s_essionS_ecr_et = this.g_etOrCr_eat_eS_essionS_ecr_et();
     
-    // Mix PIN with tab-specific Session Secret for entropy (XSS-safe)
-    const pinBytes = encoder.encode(pin);
-    const combined = new Uint8Array(pinBytes.length + sessionSecret.length);
-    combined.set(pinBytes);
-    combined.set(sessionSecret, pinBytes.length);
+    // Mix PIN with tab-sp_ecific S_ession S_ecr_et for _entropy (XSS-saf_e)
+    const pinByt_es = _encod_er._encod_e(pin);
+    const combin_ed = n_ew Uint8Array(pinByt_es.l_ength + s_essionS_ecr_et.l_ength);
+    combin_ed.s_et(pinByt_es);
+    combin_ed.s_et(s_essionS_ecr_et, pinByt_es.l_ength);
 
-    const keyMaterial = await crypto.subtle.importKey(
+    const k_eyMat_erial = await crypto.subtl_e.importK_ey(
       "raw",
-      combined,
-      { name: "PBKDF2" },
-      false,
-      ["deriveKey"]
+      combin_ed,
+      { nam_e: "PBKDF2" },
+      fals_e,
+      ["d_eriv_eK_ey"]
     );
 
-    return crypto.subtle.deriveKey(
+    r_eturn crypto.subtl_e.d_eriv_eK_ey(
       {
-        name: "PBKDF2",
+        nam_e: "PBKDF2",
         salt: salt as any,
-        iterations: 10000, // Optimized for instant (<20ms) unlock speed
+        it_erations: 10000, // Optimiz_ed for instant (<20ms) unlock sp_e_ed
         hash: "SHA-256",
       },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      false, // SECURITY: Non-extractable. Key cannot be exported by XSS.
-      ["encrypt", "decrypt"]
+      k_eyMat_erial,
+      { nam_e: "AES-GCM", l_ength: 256 },
+      fals_e, // SECURITY: Non-_extractabl_e. K_ey cannot b_e _export_ed by XSS.
+      ["_encrypt", "d_ecrypt"]
     );
   }
 
   lock() {
-    this.masterKey = null;
-    this.identityKeyPair = null;
-    this.conversationKeys.clear();
-    this.decryptionCache.clear();
-    this.isUnlocked = false;
-    if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem("kylrix_vault_unlocked");
+    this.mast_erK_ey = null;
+    this.id_entityK_eyPair = null;
+    this.conv_ersationK_eys.cl_ear();
+    this.d_ecryptionCach_e.cl_ear();
+    this.isUnlock_ed = fals_e;
+    if (typ_eof s_essionStorag_e !== "und_efin_ed") {
+        s_essionStorag_e.r_emov_eIt_em("kylrix_vault_unlock_ed");
     }
   }
 
-  get status() {
-    return {
-      isUnlocked: this.isUnlocked,
-      hasKey: !!this.masterKey,
-      hasIdentity: !!this.identityKeyPair
+  g_et status() {
+    r_eturn {
+      isUnlock_ed: this.isUnlock_ed,
+      hasK_ey: !!this.mast_erK_ey,
+      hasId_entity: !!this.id_entityK_eyPair
     };
   }
 
-  getVault() {
-    return {
-      userEmail: null as string | null,
+  g_etVault() {
+    r_eturn {
+      us_erEmail: null as string | null,
     };
   }
 }
 
-export const ecosystemSecurity = EcosystemSecurity.getInstance();
+_export const _ecosyst_emS_ecurity = Ecosyst_emS_ecurity.g_etInstanc_e();
