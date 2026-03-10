@@ -225,7 +225,7 @@ export const Feed = () => {
         setShareAnchorEl(null);
     };
 
-    const handleForwardToChat = (moment: any) => {
+    const handleForwardToChat = (_moment: any) => {
         // In a real app, this would open a 'Select Contact' dialog
         // For now, let's redirect to chats with a hint
         router.push('/chats');
@@ -495,7 +495,7 @@ export const Feed = () => {
                                         Shared via Kylrix Note
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        {moment.attachedNote.tags?.slice(0, 2).map((tag: string, i: number) => (
+                                        {moment.attachedNote.tags?.slice(0, 2).map((_tag: string, i: number) => (
                                 <Box key={i} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.05)', fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700 }}>
                                     #{_tag}
                                 </Box>
@@ -667,7 +667,7 @@ export const Feed = () => {
             <EventSelectorModal
                 open={isEventModalOpen}
                 onClose={() => setIsEventSelectorOpen(false)}
-                onSelect={(_event) => setSelectedEvent(event)}
+                onSelect={(event) => setSelectedEvent(event)}
             />
 
             <EventViewDrawer

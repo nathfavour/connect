@@ -42,7 +42,7 @@ export const KeychainService = {
         );
     },
 
-    async syncPasskeyStatus(userId: string) {
+    async syncPasskeyStatus(_userId: string) {
         // Implementation for syncing user document isPasskey flag if needed
         // For now, listing entries is sufficient for the UI.
     }

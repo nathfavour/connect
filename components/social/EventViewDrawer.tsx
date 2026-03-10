@@ -17,7 +17,6 @@ import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LanguageIcon from '@mui/icons-material/Language';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 interface EventViewDrawerProps {
     open: boolean;

@@ -1,6 +1,5 @@
 import { ID } from 'appwrite';
 import { storage } from '../appwrite/client';
-import { APPWRITE_CONFIG } from '../appwrite/config';
 
 const BUCKETS = {
     MESSAGES: 'messages', // From your config: "Message Attachments"

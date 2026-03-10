@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Box, TextField, IconButton, Paper, Typography, alpha, LinearProgress } from '@mui/material';
-import { Send as SendIcon, Description as NoteIcon, Shield as ShieldIcon, Timer as TimerIcon } from '@mui/icons-material';
+import React from 'react';
+import { Box, TextField, Paper, Typography, alpha, LinearProgress } from '@mui/material';
+import { Description as NoteIcon, Shield as ShieldIcon, Timer as TimerIcon } from '@mui/icons-material';
 
 const QuickNote = () => {
     return (

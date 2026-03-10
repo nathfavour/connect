@@ -43,7 +43,7 @@ const SearchResultAvatar = ({ u }: { u: any }) => {
         };
         load();
         return () => { mounted = false; };
-    }, [u]);
+    }, [u, url]);
 
     return (
         <Avatar src={url || undefined}>

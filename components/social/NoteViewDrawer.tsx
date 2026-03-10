@@ -8,13 +8,11 @@ import {
     IconButton, 
     Divider,
     Button,
-    Paper,
-    alpha
+    Paper
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import Link from 'next/link';
 
 interface NoteViewDrawerProps {
     open: boolean;

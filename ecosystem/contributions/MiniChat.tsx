@@ -12,9 +12,7 @@ import {
   alpha 
 } from '@mui/material';
 import { 
-  Send as SendIcon, 
-  Chat as ChatIcon,
-  Circle as CircleIcon
+  Send as SendIcon
 } from '@mui/icons-material';
 
 /**

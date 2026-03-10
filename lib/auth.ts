@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Client, Account } from 'appwrite';
 import { UsersService } from '@/lib/services/users';
 import { APPWRITE_CONFIG } from './appwrite/config';
-import { getEcosystemUrl } from './constants';
 
 // Initialize Appwrite
 const client = new Client()
@@ -58,7 +57,7 @@ export function useAuth() {
         });
     }, []);
 
-    const checkSession = async (retryCount = 0) => {
+    const checkSession = useCallback(async (retryCount = 0) => {
         try {
             const session = await account.get();
             setUser(session);
@@ -98,11 +97,11 @@ export function useAuth() {
                 setLoading(false);
             }
         }
-    };
+    }, [attemptSilentAuth]);
 
     useEffect(() => {
         checkSession();
-    }, []);
+    }, [checkSession]);
 
     // Listen for postMessage from IDM window
     useEffect(() => {
@@ -119,7 +118,7 @@ export function useAuth() {
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, []);
+    }, [checkSession]);
 
 
     const login = async () => {
@@ -136,7 +135,7 @@ export function useAuth() {
                 setIsAuthenticating(false);
                 return;
             }
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // No session, proceed to silent check
         }
 
@@ -149,7 +148,7 @@ export function useAuth() {
                 setIsAuthenticating(false);
                 return;
             }
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
             // Still no session
         }
 

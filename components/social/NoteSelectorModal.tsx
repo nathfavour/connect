@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
     Dialog, 
     DialogTitle, 
@@ -41,13 +41,7 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        if (open && user) {
-            loadNotes();
-        }
-    }, [open, user]);
-
-    const loadNotes = async () => {
+    const loadNotes = useCallback(async () => {
         if (!user?.$id) return;
         setLoading(true);
         try {
@@ -60,7 +54,13 @@ export const NoteSelectorModal = ({ open, onClose, onSelect }: NoteSelectorModal
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.$id]);
+
+    useEffect(() => {
+        if (open && user) {
+            loadNotes();
+        }
+    }, [open, user, loadNotes]);
 
     const filteredNotes = notes.filter(note => 
         note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||

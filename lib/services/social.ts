@@ -1,4 +1,4 @@
-import { ID, Query, Permission, Role } from 'appwrite';
+import { ID, Query } from 'appwrite';
 import { tablesDB, realtime } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
@@ -8,7 +8,7 @@ const FOLLOWS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.FOLLOWS;
 const INTERACTIONS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.INTERACTIONS;
 
 export const SocialService = {
-    async getFeed(userId?: string) {
+    async getFeed(_userId?: string) {
         // Fetch public moments or moments from followed users
         const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
             Query.orderDesc('createdAt'),
@@ -27,7 +27,7 @@ export const SocialService = {
                             noteId
                         );
                         return { ...moment, attachedNote: note };
-                    } catch (e: unknown) {
+                    } catch (_e: unknown) {
                         return moment;
                     }
                 } else if (moment.fileId.startsWith('event:')) {
@@ -39,7 +39,7 @@ export const SocialService = {
                             eventId
                         );
                         return { ...moment, attachedEvent: event };
-                    } catch (e: unknown) {
+                    } catch (_e: unknown) {
                         return moment;
                     }
                 }
