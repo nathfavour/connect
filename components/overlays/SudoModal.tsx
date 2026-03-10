@@ -59,7 +59,7 @@ export default function SudoModal({
         if (val.length === 4 && user?.$id) {
             setLoading(true);
             try {
-                const success = await ecosystemSecurity.unlockWithPin(val, user.$id);
+                const success = await ecosystemSecurity.unlockWithPin(val);
                 if (success) {
                     onSuccess();
                 } else {
@@ -80,7 +80,8 @@ export default function SudoModal({
         if (!user?.$id) return;
         setLoading(true);
         try {
-            const success = await ecosystemSecurity.unlockWithPassword(password, user.$id);
+            const keychain = await ecosystemSecurity.fetchKeychain(user.$id);
+            const success = await ecosystemSecurity.unlock(password, keychain);
             if (success) {
                 onSuccess();
             } else {
