@@ -29,7 +29,19 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 const SearchResultAvatar = ({ u }: { u: any }) => {
-// ... existing SearchResultAvatar code ...
+    return (
+        <Avatar 
+            src={u.avatarUrl} 
+            sx={{ 
+                bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                width: 44,
+                height: 44
+            }}
+        >
+            {!u.avatarUrl && <PersonIcon sx={{ color: 'rgba(255, 255, 255, 0.3)' }} />}
+        </Avatar>
+    );
 };
 
 export const UserSearch = () => {
@@ -154,27 +166,14 @@ export const UserSearch = () => {
                         elevation={0}
                     >
                         <ListItem
-                            sx={{ p: 2 }}
-                            secondaryAction={
-                                <Button
-                                    variant="contained"
-                                    startIcon={<MessageIcon size={18} />}
-                                    onClick={() => startChat(u.$id)}
-                                    sx={{ 
-                                        borderRadius: '12px',
-                                        textTransform: 'none',
-                                        fontWeight: 800,
-                                        bgcolor: 'primary.main',
-                                        color: 'black',
-                                        px: 3,
-                                        '&:hover': {
-                                            bgcolor: '#00D1DA'
-                                        }
-                                    }}
-                                >
-                                    Message
-                                </Button>
-                            }
+                            sx={{ 
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    bgcolor: 'rgba(255, 255, 255, 0.04)',
+                                }
+                            }}
+                            onClick={() => startChat(u.$id)}
                         >
                             <ListItemAvatar sx={{ mr: 1 }}>
                                 <SearchResultAvatar u={u} />
