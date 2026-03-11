@@ -168,6 +168,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         let payload = response.payload as Messages;
                         if (payload.conversationId === conversationId) {
                             if (response.events.some(e => e.includes('.create'))) {
+                                // Ignore my own messages. The handleSend function manages optimistic insertions for my sent messages.
+                                // Processing them here creates a race condition that can result in the user seeing the encrypted raw text.
+                                if (user && payload.senderId === user.$id) return;
+
                                 // Decrypt message before adding to state
                                 if (payload.type === 'text' && payload.content && payload.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                                     try {

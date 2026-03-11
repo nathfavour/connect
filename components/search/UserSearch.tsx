@@ -20,15 +20,16 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
+import toast from 'react-hot-toast';
 
 import { useSudo } from '@/context/SudoContext';
 
 const SearchResultAvatar = ({ u }: { u: any }) => {
     return (
-        <Avatar 
-            src={u.avatarUrl} 
-            sx={{ 
-                bgcolor: 'rgba(255, 255, 255, 0.05)', 
+        <Avatar
+            src={u.avatarUrl}
+            sx={{
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 width: 44,
                 height: 44
@@ -75,7 +76,7 @@ export const UserSearch = () => {
 
     const startChat = async (targetUserId: string) => {
         if (!user) return;
-        
+
         // Instant check: look for existing conversation locally first
         try {
             const existing = await ChatService.getConversations(user.$id);
@@ -109,8 +110,9 @@ export const UserSearch = () => {
                     const participants = targetUserId === user.$id ? [user.$id] : [user.$id, targetUserId];
                     const newConv = await ChatService.createConversation(participants, 'direct');
                     router.push(`/chat/${newConv.$id}`);
-                } catch (error: unknown) {
+                } catch (error: any) {
                     console.error('Failed to create chat:', error);
+                    toast.error(`Failed to create chat: ${error?.message || 'Unknown error'}`);
                 }
             }
         });
@@ -121,10 +123,10 @@ export const UserSearch = () => {
             <Paper
                 component="form"
                 onSubmit={handleSearch}
-                sx={{ 
-                    p: '8px 16px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                sx={{
+                    p: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
                     mb: 4,
                     borderRadius: '16px',
                     bgcolor: 'rgba(255, 255, 255, 0.03)',
@@ -139,7 +141,7 @@ export const UserSearch = () => {
                     variant="standard"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    InputProps={{ 
+                    InputProps={{
                         disableUnderline: true,
                         sx: { color: 'white', fontWeight: 500 }
                     }}
@@ -149,9 +151,9 @@ export const UserSearch = () => {
 
             <List sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {(results as any[]).map((u) => (
-                    <Paper 
-                        key={u.$id} 
-                        sx={{ 
+                    <Paper
+                        key={u.$id}
+                        sx={{
                             borderRadius: '20px',
                             bgcolor: 'rgba(255, 255, 255, 0.02)',
                             border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -160,11 +162,11 @@ export const UserSearch = () => {
                                 bgcolor: 'rgba(255, 255, 255, 0.04)',
                                 borderColor: 'rgba(0, 240, 255, 0.2)'
                             }
-                        }} 
+                        }}
                         elevation={0}
                     >
                         <ListItem
-                            sx={{ 
+                            sx={{
                                 p: 2,
                                 cursor: 'pointer',
                                 '&:hover': {

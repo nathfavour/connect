@@ -93,7 +93,7 @@ export const ChatService = {
             participants: uniqueParticipants,
             participantCount: uniqueParticipants.length,
             type,
-            name: encryptedName,
+            name: encryptedName || 'Direct Chat',
             creatorId: creatorId,
             admins: [],
             isPinned: [],
