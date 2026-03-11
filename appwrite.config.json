@@ -68,7 +68,7 @@
                 "create(\"users\")"
             ],
             "databaseId": "67ff05a9000296822396",
-            "name": "accountUsers",
+            "name": "users",
             "enabled": true,
             "rowSecurity": true,
             "columns": [
@@ -3432,12 +3432,16 @@
         {
             "$id": "users",
             "$permissions": [
-                "create(\"users\")"
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "read(\"any\")"
             ],
             "databaseId": "chat",
-            "name": "connectUsers",
+            "name": "users",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "username",
@@ -3509,29 +3513,10 @@
                     "format": ""
                 },
                 {
-                    "key": "userId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "appsActive",
-                    "type": "string",
-                    "required": false,
-                    "array": true,
-                    "size": 50,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "publicKey",
-                    "type": "string",
+                    "type": "text",
                     "required": false,
                     "array": false,
-                    "size": 4096,
                     "default": null,
                     "encrypt": false
                 }
