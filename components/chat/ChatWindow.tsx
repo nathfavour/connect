@@ -347,8 +347,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
     };
 
-    const handleCall = () => {
-        router.push(`/call/${conversationId}?caller=true`);
+    const handleCall = (type: 'audio' | 'video' = 'audio') => {
+        router.push(`/call/${conversationId}?caller=true&type=${type}`);
     };
 
     const _handleAttachClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -373,12 +373,52 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
     };
 
-    const _toggleRecording = () => {
+    const toggleRecording = async () => {
         if (isRecording) {
+            // Stop recording
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+            }
             setIsRecording(false);
-            // Mock voice note for now
         } else {
-            setIsRecording(true);
+            // Start recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mediaRecorder = new MediaRecorder(stream);
+                mediaRecorderRef.current = mediaRecorder;
+                audioChunksRef.current = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        audioChunksRef.current.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                    const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+                    
+                    // Stop all tracks to release microphone
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Send the audio file
+                    setSending(true);
+                    try {
+                        const uploaded = await StorageService.uploadFile(audioFile, StorageService.getBucketForType('audio'));
+                        await ChatService.sendMessage(conversationId, user?.$id || '', 'Voice Message', 'audio', [uploaded.$id]);
+                    } catch (error) {
+                        console.error('Failed to send voice note:', error);
+                    } finally {
+                        setSending(false);
+                    }
+                };
+
+                mediaRecorder.start();
+                setIsRecording(true);
+            } catch (err) {
+                console.error("Failed to start recording:", err);
+                alert("Microphone access is required for voice notes.");
+            }
         }
     };
 
@@ -828,7 +868,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </IconButton>
                     ) : (
                         <IconButton
-                            onClick={() => setIsRecording(!isRecording)}
+                            onClick={() => toggleRecording()}
                             sx={{
                                 color: isRecording ? '#ff4d4d' : 'text.secondary',
                                 p: 1.2,
