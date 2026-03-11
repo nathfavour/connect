@@ -30,23 +30,23 @@ import {
     useMediaQuery,
     alpha
 } from '@mui/material';
-import { 
-    Send, 
-    Phone, 
-    ChevronLeft, 
-    PlusCircle, 
-    Mic, 
-    Square, 
-    File, 
-    Check, 
-    CheckCheck, 
-    MoreVertical, 
-    Shield, 
-    Bookmark, 
-    Users, 
-    User, 
-    Trash2, 
-    FileText, 
+import {
+    Send,
+    Phone,
+    ChevronLeft,
+    PlusCircle,
+    Mic,
+    Square,
+    File,
+    Check,
+    CheckCheck,
+    MoreVertical,
+    Shield,
+    Bookmark,
+    Users,
+    User,
+    Trash2,
+    FileText,
     Key,
     Clock
 } from 'lucide-react';
@@ -111,7 +111,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         try {
             const response = await ChatService.getMessages(conversationId);
             const conv = await ChatService.getConversationById(conversationId);
-            
+
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
             if (user && conv.settings) {
@@ -122,7 +122,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     if (myClearedAt) {
                         displayMessages = displayMessages.filter((m: any) => new Date(m.$createdAt) > new Date(myClearedAt));
                     }
-                } catch (_e: unknown) {}
+                } catch (_e: unknown) { }
             }
 
             // Reverse once for display order (bottom is newest)
@@ -158,7 +158,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         if (conversationId) {
             loadMessages();
             loadConversation();
-            
+
             // Subscribe to real-time messages
             let unsub: any;
             const initRealtime = async () => {
@@ -172,7 +172,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 if (payload.type === 'text' && payload.content && payload.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                                     try {
                                         payload.content = await ecosystemSecurity.decrypt(payload.content);
-                                    } catch (_e: unknown) {}
+                                    } catch (_e: unknown) { }
                                 }
 
                                 setMessages(prev => {
@@ -186,7 +186,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         }
                                         return true;
                                     });
-                                    
+
                                     // Avoid duplicates
                                     if (withoutOptimistic.some(m => m.$id === payload.$id)) return withoutOptimistic;
                                     return [...withoutOptimistic, payload];
@@ -201,7 +201,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 if (payload.type === 'text' && payload.content && payload.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                                     try {
                                         payload.content = await ecosystemSecurity.decrypt(payload.content);
-                                    } catch (_e: unknown) {}
+                                    } catch (_e: unknown) { }
                                 }
                                 setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
                             } else if (response.events.some(e => e.includes('.delete'))) {
@@ -223,7 +223,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     const handleClearChat = async (mode: 'me' | 'everyone') => {
         if (!user || !confirm(`Are you sure you want to wipe this chat ${mode === 'me' ? 'for yourself' : 'for everyone'}?`)) return;
-        
+
         setLoading(true);
         try {
             if (isSelf) {
@@ -250,7 +250,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             content: m.content,
             type: m.type
         }));
-        
+
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -323,9 +323,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             }
 
             const sentMessage = await ChatService.sendMessage(conversationId, user.$id, text, type, actualAttachments);
-            
+
             // Replace optimistic message with the real one to maintain state (readBy, etc)
-            setMessages(prev => prev.map(m => m.$id === optimisticId ? (sentMessage as unknown as Messages) : m));
+            // CRITICAL: We MUST override the content back to plaintext. The sentMessage from the API 
+            // contains the encrypted blob, and if we set it as is, the UI will show gibberish!
+            const messageForState = { ...sentMessage, content: text } as unknown as Messages;
+            setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
         } catch (error: unknown) {
             console.error('Failed to send message:', error);
             // Mark optimistic message as failed
@@ -377,10 +380,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setSending(true);
         try {
             await ChatService.sendMessage(
-                conversationId, 
-                user.$id, 
-                note.title || 'Attached Note', 
-                'note' as any, 
+                conversationId,
+                user.$id,
+                note.title || 'Attached Note',
+                'note' as any,
                 [note.$id]
             );
         } catch (error: unknown) {
@@ -397,18 +400,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             if (type === 'totp') {
                 const content = `TOTP Code for ${item.issuer || 'Unknown'}: ${item.currentCode}`;
                 await ChatService.sendMessage(
-                    conversationId, 
-                    user.$id, 
-                    content, 
-                    'totp' as any, 
+                    conversationId,
+                    user.$id,
+                    content,
+                    'totp' as any,
                     [item.$id]
                 );
             } else {
                 await ChatService.sendMessage(
-                    conversationId, 
-                    user.$id, 
-                    `Shared Secret: ${item.name || 'Unnamed'}`, 
-                    'secret' as any, 
+                    conversationId,
+                    user.$id,
+                    `Shared Secret: ${item.name || 'Unnamed'}`,
+                    'secret' as any,
                     [item.$id]
                 );
             }
@@ -426,13 +429,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
         if (msg.type === ('note' as any)) {
             return (
-                <Box 
-                    sx={{ 
-                        p: 1.5, 
-                        bgcolor: 'rgba(255, 255, 255, 0.05)', 
-                        borderRadius: 2, 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                <Box
+                    sx={{
+                        p: 1.5,
+                        bgcolor: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: 1.5,
                         cursor: 'pointer',
                         '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
@@ -450,13 +453,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
         if (msg.type === ('secret' as any)) {
             return (
-                <Box 
-                    sx={{ 
-                        p: 1.5, 
-                        bgcolor: 'rgba(255, 255, 255, 0.05)', 
-                        borderRadius: 2, 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                <Box
+                    sx={{
+                        p: 1.5,
+                        bgcolor: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: 1.5,
                         cursor: 'pointer',
                         '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' }
@@ -567,13 +570,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'text.secondary' }}>
                         <ChevronLeft size={20} strokeWidth={1.5} />
                     </IconButton>
-                    <Box 
-                        onClick={(e) => setAnchorEl(e.currentTarget)} 
+                    <Box
+                        onClick={(e) => setAnchorEl(e.currentTarget)}
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
-                        <Avatar sx={{ 
-                            width: 36, 
-                            height: 36, 
+                        <Avatar sx={{
+                            width: 36,
+                            height: 36,
                             bgcolor: isSelf ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.05)',
                             border: isSelf ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
@@ -589,9 +592,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         const otherId = conversation.participants.find((p: string) => p !== user?.$id);
                                         const otherPresence = presence[otherId];
                                         if (!otherPresence) return 'Offline';
-                                        
+
                                         const isOnline = otherPresence.status === 'online' && (Date.now() - new Date(otherPresence.lastSeen).getTime() < 1000 * 60 * 5);
-                                        
+
                                         if (isOnline) return (
                                             <>
                                                 <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#00F0FF', boxShadow: '0 0 8px #00F0FF' }} />
@@ -639,7 +642,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 <MenuItem onClick={handleExport} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
                     <File size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Export Chat (.json)
                 </MenuItem>
-                
+
                 <Divider sx={{ my: 1, opacity: 0.1 }} />
 
                 <MenuItem onClick={() => handleClearChat('me')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
@@ -666,9 +669,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'primary.main' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
-                        <Button 
-                            variant="outlined" 
-                            size="small" 
+                        <Button
+                            variant="outlined"
+                            size="small"
                             onClick={() => setUnlockModalOpen(true)}
                             startIcon={<Key size={16} strokeWidth={1.5} />}
                             sx={{ borderRadius: '10px', fontWeight: 800 }}
@@ -688,26 +691,26 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             flexDirection: 'column',
                             gap: 0.5
                         }}>
-                                <Paper sx={{
-                                    p: 1.2,
-                                    px: 1.8,
-                                    borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                    bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.03)',
-                                    border: msg.senderId === user?.$id ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
-                                    color: 'text.primary',
-                                    boxShadow: 'none',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.15) : 'rgba(255, 255, 255, 0.05)',
-                                    }
-                                }}>
-                                    {renderMessageContent(msg)}
-                                </Paper>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
-                                    <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
-                                        {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
-                                    </Typography>
-                                    {msg.senderId === user?.$id && (
+                            <Paper sx={{
+                                p: 1.2,
+                                px: 1.8,
+                                borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                                bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.03)',
+                                border: msg.senderId === user?.$id ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
+                                color: 'text.primary',
+                                boxShadow: 'none',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.15) : 'rgba(255, 255, 255, 0.05)',
+                                }
+                            }}>
+                                {renderMessageContent(msg)}
+                            </Paper>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
+                                    {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
+                                </Typography>
+                                {msg.senderId === user?.$id && (
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
                                             <Box sx={{ opacity: 0.4, display: 'flex' }}><Clock size={11} strokeWidth={2.5} /></Box>
@@ -721,8 +724,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                             )
                                         )}
                                     </Box>
-                                    )}
-                                </Box>
+                                )}
+                            </Box>
                         </Box>
                     ))
                 )}
@@ -731,22 +734,22 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
             {/* Input Area */}
             <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent' }}>
-                <Paper elevation={0} sx={{ 
-                    p: 0.5, 
-                    display: 'flex', 
-                    alignItems: 'flex-end', 
-                    gap: 0.5, 
-                    borderRadius: '24px', 
-                    bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                <Paper elevation={0} sx={{
+                    p: 0.5,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: 0.5,
+                    borderRadius: '24px',
+                    bgcolor: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     '&:focus-within': {
                         borderColor: 'primary.main',
                         bgcolor: 'rgba(255, 255, 255, 0.05)',
                     }
                 }}>
-                    <IconButton 
-                        size="small" 
-                        onClick={(e) => setAttachAnchorEl(e.currentTarget)} 
+                    <IconButton
+                        size="small"
+                        onClick={(e) => setAttachAnchorEl(e.currentTarget)}
                         sx={{ color: 'text.secondary', p: 1.2 }}
                     >
                         <PlusCircle size={22} strokeWidth={1.5} />
@@ -781,34 +784,34 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             <Key size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Attach Secret (Keep)
                         </MenuItem>
                     </Menu>
-                    
-                        <TextField
-                            fullWidth
-                            multiline
-                            maxRows={6}
-                            placeholder="Type a message..."
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                            variant="standard"
-                            InputProps={{
-                                disableUnderline: true,
-                                sx: { py: 1.2, px: 1, fontSize: '0.95rem', fontFamily: 'var(--font-satoshi)' }
-                            }}
-                        />
+
+                    <TextField
+                        fullWidth
+                        multiline
+                        maxRows={6}
+                        placeholder="Type a message..."
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
+                        variant="standard"
+                        InputProps={{
+                            disableUnderline: true,
+                            sx: { py: 1.2, px: 1, fontSize: '0.95rem', fontFamily: 'var(--font-satoshi)' }
+                        }}
+                    />
 
                     {inputText.trim() || attachment ? (
-                        <IconButton 
-                            onClick={() => handleSend()} 
-                            disabled={sending} 
-                            sx={{ 
-                                bgcolor: 'primary.main', 
-                                color: 'black', 
+                        <IconButton
+                            onClick={() => handleSend()}
+                            disabled={sending}
+                            sx={{
+                                bgcolor: 'primary.main',
+                                color: 'black',
                                 m: 0.5,
                                 '&:hover': { bgcolor: 'rgba(0, 240, 255, 0.8)' },
                                 '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.1)' }
@@ -817,9 +820,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={1.5} />}
                         </IconButton>
                     ) : (
-                        <IconButton 
-                            onClick={() => setIsRecording(!isRecording)} 
-                            sx={{ 
+                        <IconButton
+                            onClick={() => setIsRecording(!isRecording)}
+                            sx={{
                                 color: isRecording ? '#ff4d4d' : 'text.secondary',
                                 p: 1.2,
                                 animation: isRecording ? 'pulse 1.5s infinite' : 'none'
@@ -831,18 +834,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 </Paper>
             </Box>
 
-            <NoteSelectorModal 
-                open={noteModalOpen} 
-                onClose={() => setNoteModalOpen(false)} 
-                onSelect={handleNoteSelect} 
+            <NoteSelectorModal
+                open={noteModalOpen}
+                onClose={() => setNoteModalOpen(false)}
+                onSelect={handleNoteSelect}
             />
-            <SecretSelectorModal 
-                open={secretModalOpen} 
-                onClose={() => setSecretModalOpen(false)} 
+            <SecretSelectorModal
+                open={secretModalOpen}
+                onClose={() => setSecretModalOpen(false)}
                 onSelect={handleSecretSelect}
                 isSelf={isSelf || false}
             />
-            <MasterPassModal 
+            <MasterPassModal
                 open={unlockModalOpen}
                 onClose={() => setUnlockModalOpen(false)}
                 onSuccess={() => {

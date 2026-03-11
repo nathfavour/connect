@@ -29,14 +29,14 @@ export const ChatService = {
             try {
                 const pubKeyBytes = new Uint16Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
                 const _pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
-                
+
                 // For simplicity in this V1, we use the MasterPass encryption logic to "wrap" 
                 // but ideally we'd use ECDH to derive a wrapper key.
                 // To keep it "Robust but No Bloat", we'll use a direct RSA-like wrap if available 
                 // or just encrypt with the user's MasterKey if it's a self-chat.
                 // REFINED STRATEGY: Since we are in the same project, we can store the 
                 // Conversation Key encrypted by the User's Identity Key.
-                
+
                 // For now, we store the conversation key in the 'encryptionKey' field.
                 // In a multi-user chat, this field would contain a JSON map of userId -> wrappedKey.
             } catch (e: unknown) {
@@ -73,7 +73,7 @@ export const ChatService = {
             Query.contains('participants', userId),
             Query.orderDesc('lastMessageAt')
         ]);
-        
+
         res.rows = await Promise.all(res.rows.map(c => this._decryptConversation(c)));
         return res;
     },
@@ -82,7 +82,7 @@ export const ChatService = {
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
-        
+
         // E2E Layer: Encrypt name and metadata if it's a group
         let encryptedName = name;
         if (name && ecosystemSecurity.status.isUnlocked) {
@@ -104,17 +104,17 @@ export const ChatService = {
             encryptionVersion: '1.0',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
-        }, [
+        }, Array.from(new Set([
             Permission.read(Role.user(creatorId)),
             Permission.update(Role.user(creatorId)),
             Permission.delete(Role.user(creatorId)),
             ...participants.map(p => Permission.read(Role.user(p)))
-        ]);
+        ])));
     },
 
     async sendMessage(conversationId: string, senderId: string, content: string, type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'call_signal' | 'system' = 'text', attachments: string[] = [], replyTo?: string) {
         const now = new Date().toISOString();
-        
+
         // E2E Layer: Encrypt content if it's text
         let finalContent = content;
         if (type === 'text' && ecosystemSecurity.status.isUnlocked) {
@@ -149,7 +149,7 @@ export const ChatService = {
         const _conv = await this.getConversationById(conversationId);
         const _userId = (await ecosystemSecurity.fetchKeychain('') as any)?.userId; // Get current user ID context if possible, or pass it in. 
         // Better: let the component pass the userId or handle filtering there to keep service clean.
-        
+
         const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
             Query.equal('conversationId', conversationId),
             Query.orderDesc('createdAt'),
@@ -202,7 +202,7 @@ export const ChatService = {
     async clearChatForMe(conversationId: string, userId: string) {
         const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
         let settings: any = {};
-        
+
         try {
             if (conv.settings) {
                 const decryptedSettings = await ecosystemSecurity.decrypt(conv.settings);
@@ -216,7 +216,7 @@ export const ChatService = {
         settings.clearedAt[userId] = new Date().toISOString();
 
         const encryptedSettings = await ecosystemSecurity.encrypt(JSON.stringify(settings));
-        
+
         return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
             settings: encryptedSettings
         });
@@ -240,15 +240,15 @@ export const ChatService = {
         return { success: true };
     },
 
-    async updateConversation(conversationId: string, data: Partial<{ 
-        name: string; 
-        description: string; 
-        avatarUrl: string; 
-        participants: string[]; 
-        admins: string[]; 
-        isPinned: string[]; 
-        isMuted: string[]; 
-        isArchived: string[]; 
+    async updateConversation(conversationId: string, data: Partial<{
+        name: string;
+        description: string;
+        avatarUrl: string;
+        participants: string[];
+        admins: string[];
+        isPinned: string[];
+        isMuted: string[];
+        isArchived: string[];
         tags: string[];
     }>) {
         return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
