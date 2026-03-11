@@ -128,7 +128,7 @@ export class EcosystemSecurity {
     const authKey = await this.deriveKey(password, salt);
     const mekBytes = await crypto.subtle.exportKey("raw", mek);
     const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
-    
+
     const encryptedMek = await crypto.subtle.encrypt(
       { name: "AES-GCM", iv: iv },
       authKey,
@@ -148,7 +148,7 @@ export class EcosystemSecurity {
   public async unwrapMEK(wrappedKeyBase64: string, password: string, saltBase64: string): Promise<CryptoKey> {
     const salt = new Uint8Array(atob(saltBase64).split("").map(c => c.charCodeAt(0)));
     const authKey = await this.deriveKey(password, salt);
-    
+
     const wrappedKeyBytes = new Uint8Array(atob(wrappedKeyBase64).split("").map(c => c.charCodeAt(0)));
     const iv = wrappedKeyBytes.slice(0, EcosystemSecurity.IV_SIZE);
     const ciphertext = wrappedKeyBytes.slice(EcosystemSecurity.IV_SIZE);
@@ -255,7 +255,7 @@ export class EcosystemSecurity {
       // 1. Create PIN Verifier (for future login verification)
       const salt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.PIN_SALT_SIZE));
       const hash = await this.derivePinHash(pin, salt);
-      
+
       const verifier = {
         salt: btoa(String.fromCharCode(...salt)),
         hash: btoa(String.fromCharCode(...new Uint8Array(hash)))
@@ -265,7 +265,7 @@ export class EcosystemSecurity {
       // 2. Create Ephemeral Session (wrap MEK with PIN)
       const sessionSalt = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.SESSION_SALT_SIZE));
       const ephemeralKey = await this.deriveEphemeralKey(pin, sessionSalt);
-      
+
       const rawMek = await crypto.subtle.exportKey("raw", this.masterKey);
       const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
       const wrappedMek = await crypto.subtle.encrypt(
@@ -362,12 +362,29 @@ export class EcosystemSecurity {
         const encryptedPriv = atob(doc.passkeyBlob);
         const decryptedPriv = await this.decrypt(encryptedPriv);
         const privKeyBytes = new Uint8Array(atob(decryptedPriv).split("").map(c => c.charCodeAt(0)));
-        
+
         const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
         const pubKeyBytes = new Uint8Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
         const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
 
         this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
+
+        try {
+          const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+          const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
+          const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
+            Query.equal('userId', userId),
+            Query.limit(1)
+          ]);
+          if (uRes.total > 0) {
+            await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uRes.rows[0].$id, {
+              publicKey: doc.publicKey
+            });
+          }
+        } catch (e) {
+          console.warn("Failed to publish existing public key to chat.users", e);
+        }
+
         return doc.publicKey;
       }
 
@@ -390,6 +407,23 @@ export class EcosystemSecurity {
       });
 
       this.identityKeyPair = pair;
+
+      try {
+        const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+        const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
+        const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
+          Query.equal('userId', userId),
+          Query.limit(1)
+        ]);
+        if (uRes.total > 0) {
+          await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uRes.rows[0].$id, {
+            publicKey: pubBase64
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to publish public key to chat.users", e);
+      }
+
       return pubBase64;
     } catch (_e: unknown) {
       console.error('[Security] Identity sync failed:', _e);
@@ -429,14 +463,14 @@ export class EcosystemSecurity {
 
   async decrypt(encryptedData: string): Promise<string> {
     if (!this.masterKey) throw new Error("Security vault locked");
-    
+
     // Performance: Check cache first
     if (this.decryptionCache.has(encryptedData)) {
       return this.decryptionCache.get(encryptedData)!;
     }
 
     const plaintext = await this.decryptWithKey(encryptedData, this.masterKey);
-    
+
     // Memoize
     this.decryptionCache.set(encryptedData, plaintext);
     return plaintext;
@@ -526,7 +560,7 @@ export class EcosystemSecurity {
   private async deriveEphemeralKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const sessionSecret = this.getOrCreateSessionSecret();
-    
+
     // Mix PIN with tab-specific Session Secret for entropy (XSS-safe)
     const pinBytes = encoder.encode(pin);
     const combined = new Uint8Array(pinBytes.length + sessionSecret.length);
@@ -562,7 +596,7 @@ export class EcosystemSecurity {
     this.decryptionCache.clear();
     this.isUnlocked = false;
     if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem("kylrix_vault_unlocked");
+      sessionStorage.removeItem("kylrix_vault_unlocked");
     }
   }
 

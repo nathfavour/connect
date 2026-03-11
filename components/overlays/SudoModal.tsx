@@ -70,11 +70,11 @@ export default function SudoModal({
         try {
             // 1. Generate new MEK
             const mek = await ecosystemSecurity.generateRandomMEK();
-            
+
             // 2. Wrap it with the password
             const salt = crypto.getRandomValues(new Uint8Array(32));
             const wrappedKey = await ecosystemSecurity.wrapMEK(mek, password, salt);
-            
+
             // 3. Create Keychain Entry
             await KeychainService.createKeychainEntry({
                 userId: user.$id,
@@ -88,7 +88,7 @@ export default function SudoModal({
 
             // 4. Set Masterpass Flag on User Doc
             await ecosystemSecurity.setMasterpassFlag(user.$id, user.email);
-            
+
             // 5. Unlock MasterPass locally
             const rawMek = await crypto.subtle.exportKey("raw", mek);
             await ecosystemSecurity.importMasterKey(rawMek);
@@ -103,6 +103,19 @@ export default function SudoModal({
         }
     };
 
+    const handleSuccessWithSync = async () => {
+        if (user?.$id) {
+            try {
+                // Sudo Hook: Ensure E2E Identity is created and published upon successful MasterPass unlock
+                console.log("Synchronizing Identity...");
+                await ecosystemSecurity.ensureE2EIdentity(user.$id);
+            } catch (e) {
+                console.error("Failed to sync identity on unlock", e);
+            }
+        }
+        onSuccess();
+    };
+
     const handlePinChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/[^0-9]/g, "");
         setPin(val);
@@ -111,7 +124,7 @@ export default function SudoModal({
             try {
                 const success = await ecosystemSecurity.unlockWithPin(val);
                 if (success) {
-                    onSuccess();
+                    handleSuccessWithSync();
                 } else {
                     toast.error("Invalid PIN");
                     setPin("");
@@ -145,7 +158,7 @@ export default function SudoModal({
             }
             const success = await ecosystemSecurity.unlock(password, keychain);
             if (success) {
-                onSuccess();
+                handleSuccessWithSync();
             } else {
                 toast.error("Invalid Master Password");
             }
@@ -163,7 +176,7 @@ export default function SudoModal({
             const success = await unlockWithPasskey(user.$id);
             if (success && isOpen) {
                 toast.success("Verified via Passkey");
-                onSuccess();
+                handleSuccessWithSync();
             }
         } catch (e) {
             console.error("Passkey verification failed or cancelled", e);
@@ -391,9 +404,9 @@ export default function SudoModal({
                                 >
                                     {loading ? <CircularProgress size={24} color="inherit" /> : "Initialize Ecosystem Vault"}
                                 </Button>
-                                
+
                                 <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)', textAlign: 'center', mt: 1 }}>
-                                    Your MasterPass is the key to all your secure data. <br/> It cannot be recovered if lost.
+                                    Your MasterPass is the key to all your secure data. <br /> It cannot be recovered if lost.
                                 </Typography>
                             </Stack>
                         </form>
