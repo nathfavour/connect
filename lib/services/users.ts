@@ -44,19 +44,7 @@ export const UsersService = {
             // Attempt to get by document ID if it matches userId
             return await tablesDB.getRow(DB_ID, USERS_TABLE, userId);
         } catch (_e: unknown) {
-            // Fallback: search by explicit userId attribute or $id
-            try {
-                const res = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                    Query.or([
-                        Query.equal('userId', userId),
-                        Query.equal('$id', userId)
-                    ]),
-                    Query.limit(1)
-                ]);
-                return res.rows[0] || null;
-            } catch (_inner) {
-                return null;
-            }
+            return null;
         }
     },
 
@@ -91,7 +79,10 @@ export const UsersService = {
         }
 
         if (currentProfile) {
-            return await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, data);
+            // Clean up data to avoid sending non-schema attributes
+            const updatePayload: any = { ...data };
+            delete updatePayload.appsActive; // Not in schema!
+            return await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, updatePayload);
         } else {
             // Should not normally happen if they are calling update, but fallback to creating
             return await this.createProfile(userId, data.username || `user_${userId.slice(0, 6)}`, data);
@@ -114,21 +105,14 @@ export const UsersService = {
             USERS_TABLE,
             userId,
             {
-                userId: userId,
                 username: normalized,
                 displayName: data.displayName || username,
                 bio: data.bio || '',
                 avatarUrl: data.avatarUrl || null,
-                appsActive: data.appsActive || ['connect'],
                 publicKey: data.publicKey || null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
-            },
-            [
-                Permission.read(Role.any()), // Critical: Document must be public
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId))
-            ]
+            }
         );
     },
 
@@ -153,8 +137,7 @@ export const UsersService = {
 
         try {
             return await this.createProfile(user.$id, candidate, {
-                displayName: user?.name || candidate,
-                appsActive: ['connect']
+                displayName: user?.name || candidate
             });
         } catch (_e: unknown) {
             // Handle race condition if profile was created simultaneously

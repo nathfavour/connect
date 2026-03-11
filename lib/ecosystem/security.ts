@@ -372,14 +372,16 @@ export class EcosystemSecurity {
         try {
           const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
           const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
-          const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('userId', userId),
-            Query.limit(1)
-          ]);
-          if (uRes.total > 0) {
-            await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uRes.rows[0].$id, {
-              publicKey: doc.publicKey
-            });
+          // Attempt to get user by their document ID instead of userId attribute
+          try {
+              const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+              if (uDoc) {
+                  await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+                    publicKey: doc.publicKey
+                  });
+              }
+          } catch (e) {
+              // Ignore if document not found
           }
         } catch (e) {
           console.warn("Failed to publish existing public key to chat.users", e);
@@ -411,14 +413,15 @@ export class EcosystemSecurity {
       try {
         const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
         const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
-        const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-          Query.equal('userId', userId),
-          Query.limit(1)
-        ]);
-        if (uRes.total > 0) {
-          await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uRes.rows[0].$id, {
-            publicKey: pubBase64
-          });
+        try {
+            const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+            if (uDoc) {
+                await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+                  publicKey: pubBase64
+                });
+            }
+        } catch (e) {
+            // Ignore if document not found
         }
       } catch (e) {
         console.warn("Failed to publish public key to chat.users", e);
