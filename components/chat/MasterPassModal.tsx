@@ -51,6 +51,11 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
         try {
             const success = await unlockWithPasskey(user.$id);
             if (success && open) {
+                try {
+                    await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                } catch (e) {
+                    console.error("Failed to sync identity on passkey unlock", e);
+                }
                 onSuccess();
                 onClose();
             }
@@ -96,6 +101,11 @@ export const MasterPassModal = ({ open, onClose, onSuccess }: MasterPassModalPro
         try {
             const success = await ecosystemSecurity.unlockWithPin(pinValue);
             if (success) {
+                try {
+                    await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                } catch (e) {
+                    console.error("Failed to sync identity on pin unlock", e);
+                }
                 if (!hasPasskey) {
                     setShowPasskeyIncentive(true);
                 } else {

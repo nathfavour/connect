@@ -94,7 +94,7 @@ export default function SudoModal({
             await ecosystemSecurity.importMasterKey(rawMek);
 
             toast.success("MasterPass initialized successfully");
-            onSuccess();
+            handleSuccessWithSync();
         } catch (err) {
             console.error(err);
             toast.error("Initialization failed");
