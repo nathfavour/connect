@@ -222,22 +222,20 @@ export class EcosystemSecurity {
       const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
 
       // Check if user doc exists in CHAT database
-      const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-        Query.equal('userId', userId),
-        Query.limit(1)
-      ]);
-
-      if (res.total > 0) {
-        await tablesDB.updateRow(CHAT_DB, USERS_TABLE, res.rows[0].$id, {
-          hasMasterpass: true
-        });
-      } else {
-        // Create user doc if it doesn't exist
-        await tablesDB.createRow(CHAT_DB, USERS_TABLE, ID.unique(), {
-          userId,
-          email,
-          hasMasterpass: true
-        });
+      try {
+          const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+          if (uDoc) {
+            await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+              hasMasterpass: true
+            });
+          }
+      } catch (e) {
+          // Create user doc if it doesn't exist (assuming create works, but if no permission it fails, which is caught)
+          try {
+              await tablesDB.createRow(CHAT_DB, USERS_TABLE, userId, {
+                hasMasterpass: true
+              });
+          } catch (inner) {}
       }
     } catch (_e: unknown) {
       console.error('[Security] Failed to set masterpass flag:', _e);

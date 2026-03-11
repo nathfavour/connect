@@ -20,15 +20,15 @@ export const ChatService = {
 
         // Fetch public keys for all participants from the unified chat.users table
         const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('userId', participants),
+            Query.equal('$id', participants),
         ]);
 
         for (const doc of res.rows) {
             try {
                 if (doc.publicKey) {
-                    wrappedKeys[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
+                    wrappedKeys[doc.$id] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
                 } else {
-                    console.warn(`User ${doc.userId} does not have a publicKey published yet`);
+                    console.warn(`User ${doc.$id} does not have a publicKey published yet`);
                 }
             } catch (e: unknown) {
                 console.error('Failed to wrap key for user:', doc.userId, e);
@@ -56,17 +56,17 @@ export const ChatService = {
             const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
             const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
 
-            const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-                Query.equal('userId', conv.creatorId),
-                Query.limit(1)
-            ]);
+            try {
+                const creatorDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, conv.creatorId);
+                const creatorPubKey = creatorDoc?.publicKey;
+                if (!creatorPubKey) throw new Error("Creator public key not found");
 
-            const creatorPubKey = uRes.rows[0]?.publicKey;
-            if (!creatorPubKey) throw new Error("Creator public key not found");
-
-            key = await ecosystemSecurity.unwrapKeyWithECDH(myWrappedKey, creatorPubKey);
-            if (key) {
-                ecosystemSecurity.setConversationKey(conv.$id, key);
+                key = await ecosystemSecurity.unwrapKeyWithECDH(myWrappedKey, creatorPubKey);
+                if (key) {
+                    ecosystemSecurity.setConversationKey(conv.$id, key);
+                }
+            } catch (e) {
+                throw new Error("Could not retrieve creator public key");
             }
             return key;
         } catch (e) {
