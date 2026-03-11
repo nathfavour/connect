@@ -456,6 +456,80 @@ export class EcosystemSecurity {
     return new TextDecoder().decode(decrypted);
   }
 
+  // --- CONVERSATION KEY CACHE --- //
+  getConversationKey(conversationId: string): CryptoKey | null {
+    return this.conversationKeys.get(conversationId) || null;
+  }
+
+  setConversationKey(conversationId: string, key: CryptoKey) {
+    this.conversationKeys.set(conversationId, key);
+  }
+
+  // --- ECDH UNIVERSAL HANDSHAKE PROTOCOL --- //
+
+  async generateConversationKey(): Promise<CryptoKey> {
+    return await crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  private async deriveSharedSecret(peerPublicKeyBase64: string): Promise<CryptoKey> {
+    if (!this.identityKeyPair) throw new Error("E2E Identity not initialized");
+
+    const pubKeyBytes = new Uint8Array(atob(peerPublicKeyBase64).split("").map(c => c.charCodeAt(0)));
+    const peerPubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
+
+    return await crypto.subtle.deriveKey(
+      { name: "ECDH", public: peerPubKey },
+      this.identityKeyPair.privateKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async wrapKeyWithECDH(keyToWrap: CryptoKey, peerPublicKeyBase64: string): Promise<string> {
+    const sharedSecret = await this.deriveSharedSecret(peerPublicKeyBase64);
+    const rawKey = await crypto.subtle.exportKey("raw", keyToWrap);
+
+    const iv = crypto.getRandomValues(new Uint8Array(EcosystemSecurity.IV_SIZE));
+    const encryptedKey = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      sharedSecret,
+      rawKey
+    );
+
+    const combined = new Uint8Array(iv.length + encryptedKey.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encryptedKey), iv.length);
+
+    return btoa(String.fromCharCode(...combined));
+  }
+
+  async unwrapKeyWithECDH(wrappedKeyBase64: string, peerPublicKeyBase64: string): Promise<CryptoKey> {
+    const sharedSecret = await this.deriveSharedSecret(peerPublicKeyBase64);
+
+    const combined = new Uint8Array(atob(wrappedKeyBase64).split("").map(c => c.charCodeAt(0)));
+    const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
+    const ciphertext = combined.slice(EcosystemSecurity.IV_SIZE);
+
+    const rawKey = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      sharedSecret,
+      ciphertext
+    );
+
+    return await crypto.subtle.importKey(
+      "raw",
+      rawKey,
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+  }
+
   async encrypt(data: string): Promise<string> {
     if (!this.masterKey) throw new Error("Security vault locked");
     return this.encryptWithKey(data, this.masterKey);

@@ -83,7 +83,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     const loadConversation = React.useCallback(async () => {
         try {
-            const conv = await ChatService.getConversationById(conversationId);
+            const conv = await ChatService.getConversationById(conversationId, user?.$id);
             if (conv.type === 'direct') {
                 const otherId = conv.participants.find((p: string) => p !== user!.$id);
                 if (otherId) {
@@ -109,8 +109,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     const loadMessages = React.useCallback(async () => {
         try {
-            const response = await ChatService.getMessages(conversationId);
-            const conv = await ChatService.getConversationById(conversationId);
+            const response = await ChatService.getMessages(conversationId, 50, 0, user?.$id);
+            const conv = await ChatService.getConversationById(conversationId, user?.$id);
 
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;

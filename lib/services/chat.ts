@@ -13,32 +13,23 @@ export const ChatService = {
      * Uses X25519 public keys from the identities table.
      */
     async _wrapConversationKey(convKey: CryptoKey, participants: string[]) {
-        const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-        const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+        const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+        const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
 
         const wrappedKeys: Record<string, string> = {};
-        const _exportedKey = await crypto.subtle.exportKey("raw", convKey);
 
-        // Fetch public keys for all participants
-        const res = await tablesDB.listRows(PW_DB, IDENTITIES_TABLE, [
+        // Fetch public keys for all participants from the unified chat.users table
+        const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
             Query.equal('userId', participants),
-            Query.equal('identityType', 'e2e_connect')
         ]);
 
         for (const doc of res.rows) {
             try {
-                const pubKeyBytes = new Uint16Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
-                const _pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
-
-                // For simplicity in this V1, we use the MasterPass encryption logic to "wrap" 
-                // but ideally we'd use ECDH to derive a wrapper key.
-                // To keep it "Robust but No Bloat", we'll use a direct RSA-like wrap if available 
-                // or just encrypt with the user's MasterKey if it's a self-chat.
-                // REFINED STRATEGY: Since we are in the same project, we can store the 
-                // Conversation Key encrypted by the User's Identity Key.
-
-                // For now, we store the conversation key in the 'encryptionKey' field.
-                // In a multi-user chat, this field would contain a JSON map of userId -> wrappedKey.
+                if (doc.publicKey) {
+                    wrappedKeys[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
+                } else {
+                    console.warn(`User ${doc.userId} does not have a publicKey published yet`);
+                }
             } catch (e: unknown) {
                 console.error('Failed to wrap key for user:', doc.userId, e);
             }
@@ -46,15 +37,70 @@ export const ChatService = {
         return JSON.stringify(wrappedKeys);
     },
 
-    async getConversationById(conversationId: string) {
-        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
-        return await this._decryptConversation(conv);
+    async _unwrapConversationKey(conv: any, myUserId: string): Promise<CryptoKey | null> {
+        let key = ecosystemSecurity.getConversationKey(conv.$id);
+        if (key) return key;
+
+        if (!conv.encryptionKey) return null;
+
+        try {
+            const keyMap = JSON.parse(conv.encryptionKey);
+            const myWrappedKey = keyMap[myUserId];
+
+            if (!myWrappedKey) {
+                console.warn(`No wrapped key found for user ${myUserId} in conversation ${conv.$id}`);
+                return null;
+            }
+
+            // We need the creator's public key (the one who wrapped it) to do ECDH
+            const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+            const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
+
+            const uRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
+                Query.equal('userId', conv.creatorId),
+                Query.limit(1)
+            ]);
+
+            const creatorPubKey = uRes.rows[0]?.publicKey;
+            if (!creatorPubKey) throw new Error("Creator public key not found");
+
+            key = await ecosystemSecurity.unwrapKeyWithECDH(myWrappedKey, creatorPubKey);
+            if (key) {
+                ecosystemSecurity.setConversationKey(conv.$id, key);
+            }
+            return key;
+        } catch (e) {
+            console.error("Failed to unwrap conversation key", e);
+            return null;
+        }
     },
 
-    async _decryptConversation(conv: any) {
+    async getConversationById(conversationId: string, userId?: string) {
+        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
+        return await this._decryptConversation(conv, userId);
+    },
+
+    async _decryptConversation(conv: any, userId?: string) {
         if (!conv.isEncrypted || !ecosystemSecurity.status.isUnlocked) return conv;
         try {
-            // Decrypt fields if they look like ciphertexts
+            let convKey: CryptoKey | null = null;
+            if (userId) {
+                convKey = await this._unwrapConversationKey(conv, userId);
+            } else {
+                convKey = ecosystemSecurity.getConversationKey(conv.$id);
+            }
+
+            if (convKey) {
+                if (conv.name && conv.name.length > 40) {
+                    conv.name = await ecosystemSecurity.decryptWithKey(conv.name, convKey);
+                }
+                if (conv.lastMessageText && conv.lastMessageText.length > 40) {
+                    conv.lastMessageText = await ecosystemSecurity.decryptWithKey(conv.lastMessageText, convKey);
+                }
+                return conv;
+            }
+
+            // Fallback for legacy MasterPass encryption
             if (conv.name && conv.name.length > 40) {
                 conv.name = await ecosystemSecurity.decrypt(conv.name);
             }
@@ -74,7 +120,7 @@ export const ChatService = {
             Query.orderDesc('lastMessageAt')
         ]);
 
-        res.rows = await Promise.all(res.rows.map(c => this._decryptConversation(c)));
+        res.rows = await Promise.all(res.rows.map(c => this._decryptConversation(c, userId)));
         return res;
     },
 
@@ -83,10 +129,18 @@ export const ChatService = {
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
-        // E2E Layer: Encrypt name and metadata if it's a group
+        // E2E Layer: Universal Handshake Protocol
+        // 1. Generate unique Group/Conversation Key
+        const convKey = await ecosystemSecurity.generateConversationKey();
+
+        // 2. Wrap specifically for each participant
+        const encryptionKeyMap = await this._wrapConversationKey(convKey, uniqueParticipants);
+
+        // 3. Encrypt name and metadata if it's a group
         let encryptedName = name;
         if (name && ecosystemSecurity.status.isUnlocked) {
-            encryptedName = await ecosystemSecurity.encrypt(name);
+            // we use the local convKey to encrypt group metadata! Faster and precise.
+            encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
         return await tablesDB.createRow(DB_ID, CONV_TABLE, ID.unique(), {
@@ -101,6 +155,7 @@ export const ChatService = {
             isArchived: [],
             tags: [],
             isEncrypted: true,
+            encryptionKey: encryptionKeyMap,
             encryptionVersion: '1.0',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -115,10 +170,17 @@ export const ChatService = {
     async sendMessage(conversationId: string, senderId: string, content: string, type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'call_signal' | 'system' = 'text', attachments: string[] = [], replyTo?: string) {
         const now = new Date().toISOString();
 
-        // E2E Layer: Encrypt content if it's text
+        // E2E Layer: Universal Handshake Protocol
+        // Messages are encrypted using the unique Group/Session Key!
         let finalContent = content;
         if (type === 'text' && ecosystemSecurity.status.isUnlocked) {
-            finalContent = await ecosystemSecurity.encrypt(content);
+            const convKey = ecosystemSecurity.getConversationKey(conversationId);
+            if (convKey) {
+                finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);
+            } else {
+                // Warning fallback if keys failed to sync in session
+                finalContent = await ecosystemSecurity.encrypt(content);
+            }
         }
 
         // 1. Create Message
@@ -145,10 +207,10 @@ export const ChatService = {
         return message;
     },
 
-    async getMessages(conversationId: string, limit = 50, offset = 0) {
-        const _conv = await this.getConversationById(conversationId);
-        const _userId = (await ecosystemSecurity.fetchKeychain('') as any)?.userId; // Get current user ID context if possible, or pass it in. 
-        // Better: let the component pass the userId or handle filtering there to keep service clean.
+    async getMessages(conversationId: string, limit = 50, offset = 0, userId?: string) {
+        // Ensure UI has explicitly unwrapped the Conversation Key before fetching messages
+        const _conv = await this.getConversationById(conversationId, userId);
+        const convKey = ecosystemSecurity.getConversationKey(conversationId);
 
         const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
             Query.equal('conversationId', conversationId),
@@ -161,9 +223,18 @@ export const ChatService = {
         res.rows = await Promise.all(res.rows.map(async (msg: any) => {
             if (msg.type === 'text' && msg.content && msg.content.length > 40 && ecosystemSecurity.status.isUnlocked) {
                 try {
-                    msg.content = await ecosystemSecurity.decrypt(msg.content);
+                    if (convKey) {
+                        msg.content = await ecosystemSecurity.decryptWithKey(msg.content, convKey);
+                    } else {
+                        msg.content = await ecosystemSecurity.decrypt(msg.content);
+                    }
                 } catch (_e: unknown) {
-                    msg.content = "[Encrypted Message]";
+                    try {
+                        // Fallback attempt for legacy MasterPass encrypted messages in older DMs
+                        msg.content = await ecosystemSecurity.decrypt(msg.content);
+                    } catch (fallbackE) {
+                        msg.content = "[Encrypted Message]";
+                    }
                 }
             }
             return msg;
