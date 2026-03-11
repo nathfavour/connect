@@ -55,7 +55,6 @@ export function PasskeySetup({
   const [masterPassword, setMasterPassword] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,7 +79,6 @@ export function PasskeySetup({
       return false;
     }
     
-    setVerifyingPassword(true);
     try {
       // Need to find the keychain entry for password
       const entries = await KeychainService.listKeychainEntries(userId);
@@ -102,8 +100,6 @@ export function PasskeySetup({
       console.error("Password verification failed:", error);
       toast.error("Failed to verify master password.");
       return false;
-    } finally {
-      setVerifyingPassword(false);
     }
   };
 

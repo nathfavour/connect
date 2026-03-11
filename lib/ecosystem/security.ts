@@ -216,7 +216,7 @@ export class EcosystemSecurity {
   /**
    * Set Masterpass Flag on User Document
    */
-  async setMasterpassFlag(userId: string, email: string) {
+  async setMasterpassFlag(userId: string, _email: string) {
     try {
       const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
       const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
@@ -229,13 +229,13 @@ export class EcosystemSecurity {
               hasMasterpass: true
             });
           }
-      } catch (e) {
+      } catch (_e) {
           // Create user doc if it doesn't exist (assuming create works, but if no permission it fails, which is caught)
           try {
               await tablesDB.createRow(CHAT_DB, USERS_TABLE, userId, {
                 hasMasterpass: true
               });
-          } catch (inner) {}
+          } catch (_inner) {}
       }
     } catch (_e: unknown) {
       console.error('[Security] Failed to set masterpass flag:', _e);
@@ -378,11 +378,11 @@ export class EcosystemSecurity {
                     publicKey: doc.publicKey
                   });
               }
-          } catch (e) {
+          } catch (_e) {
               // Ignore if document not found
           }
-        } catch (e) {
-          console.warn("Failed to publish existing public key to chat.users", e);
+        } catch (_e) {
+          console.warn("Failed to publish existing public key to chat.users", _e);
         }
 
         return doc.publicKey;
@@ -418,11 +418,11 @@ export class EcosystemSecurity {
                   publicKey: pubBase64
                 });
             }
-        } catch (e) {
+        } catch (_e) {
             // Ignore if document not found
         }
-      } catch (e) {
-        console.warn("Failed to publish public key to chat.users", e);
+      } catch (_e) {
+        console.warn("Failed to publish public key to chat.users", _e);
       }
 
       return pubBase64;

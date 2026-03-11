@@ -103,7 +103,7 @@ export default function SudoModal({
         }
     };
 
-    const handleSuccessWithSync = async () => {
+    const handleSuccessWithSync = useCallback(async () => {
         if (user?.$id) {
             try {
                 // Sudo Hook: Ensure E2E Identity is created and published upon successful MasterPass unlock
@@ -114,7 +114,7 @@ export default function SudoModal({
             }
         }
         onSuccess();
-    };
+    }, [user?.$id, onSuccess]);
 
     const handlePinChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/[^0-9]/g, "");
@@ -183,7 +183,7 @@ export default function SudoModal({
         } finally {
             setPasskeyLoading(false);
         }
-    }, [user?.$id, isOpen, onSuccess]);
+    }, [user?.$id, isOpen, handleSuccessWithSync]);
 
     // Check if user has passkey and PIN set up
     useEffect(() => {

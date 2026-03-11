@@ -1,7 +1,7 @@
 import { Client, TablesDB, Databases, ID } from 'appwrite';
 const client = new Client().setEndpoint('https://fra.cloud.appwrite.io/v1').setProject('67fe9627001d97e37ef3');
 const tablesDB = new TablesDB(client);
-const db = new Databases(client);
+const _db = new Databases(client);
 
 async function run() {
     try {

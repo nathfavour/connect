@@ -1,4 +1,4 @@
-import { ID, Query, Permission, Role } from 'appwrite';
+import { ID, Query } from 'appwrite';
 import { tablesDB, account } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { ecosystemSecurity } from '../ecosystem/security';
@@ -66,16 +66,15 @@ export const ChatService = {
                 if (key) {
                     ecosystemSecurity.setConversationKey(conv.$id, key);
                 }
-            } catch (e) {
+            } catch (_e) {
                 throw new Error("Could not retrieve creator public key");
             }
             return key;
-        } catch (e) {
-            console.error("Failed to unwrap conversation key", e);
+            } catch (_e) {
+            console.error("Failed to unwrap conversation key", _e);
             return null;
-        }
-    },
-
+            }
+            },
     async getConversationById(conversationId: string, userId?: string) {
         const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
         return await this._decryptConversation(conv, userId);
@@ -239,7 +238,7 @@ export const ChatService = {
                     try {
                         // Fallback attempt for legacy MasterPass encrypted messages in older DMs
                         msg.content = await ecosystemSecurity.decrypt(msg.content);
-                    } catch (fallbackE) {
+                    } catch (_fallbackE) {
                         msg.content = "[Encrypted Message]";
                     }
                 }

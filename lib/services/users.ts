@@ -1,4 +1,4 @@
-import { Query, Permission, Role } from 'appwrite';
+import { Query } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
