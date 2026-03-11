@@ -33,6 +33,7 @@ import {
 import {
     Send,
     Phone,
+    Video,
     ChevronLeft,
     PlusCircle,
     Mic,
@@ -77,6 +78,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     const router = useRouter();
 
     const isSelf = conversation?.type === 'direct' && conversation?.participants?.every((p: string) => p === user?.$id);

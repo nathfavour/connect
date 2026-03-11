@@ -14,11 +14,11 @@ import MicOffIcon from '@mui/icons-material/MicOff';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 
-export const CallInterface = ({ conversationId, isCaller }: { conversationId: string, isCaller: boolean }) => {
+export const CallInterface = ({ conversationId, isCaller, callType = 'video' }: { conversationId: string, isCaller: boolean, callType?: 'audio' | 'video' }) => {
     const { user } = useAuth();
     const [status, setStatus] = useState('Initializing...');
     const [isMuted, setIsMuted] = useState(false);
-    const [isVideoOff, setIsVideoOff] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(callType === 'audio');
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const rtcManager = useRef<WebRTCManager | null>(null);
@@ -45,8 +45,9 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
             }
         });
 
-        rtcManager.current.initializeLocalStream(true, true).then((stream) => {
-            if (localVideoRef.current) {
+        const initVideo = callType === 'video';
+        rtcManager.current.initializeLocalStream(initVideo, true).then((stream) => {
+            if (localVideoRef.current && initVideo) {
                 localVideoRef.current.srcObject = stream;
             }
             if (isCaller) {
@@ -60,6 +61,9 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
                     }
                 });
             }
+        }).catch(err => {
+             console.error("Failed to init media stream:", err);
+             setStatus('Camera/Microphone Error');
         });
 
         const unsubscribe = client.subscribe(
@@ -118,50 +122,52 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
             flexDirection: 'column'
         }}>
             <Box sx={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                {/* Remote Video */}
+                {/* Remote Video / Audio */}
                 <Box 
                     component="video"
                     ref={remoteVideoRef} 
                     autoPlay 
                     playsInline 
-                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: status === 'connected' ? 'block' : 'none' }} 
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: status === 'connected' && callType === 'video' ? 'block' : 'none' }} 
                 />
                 
-                {/* Placeholder when not connected */}
-                {status !== 'connected' && (
+                {/* Placeholder when not connected or Audio only */}
+                {(status !== 'connected' || callType === 'audio') && (
                     <Box sx={{ textAlign: 'center', color: 'white' }}>
                         <Typography variant="h5" gutterBottom>
                             {status === 'Initializing...' ? 'Setting up call...' : status}
                         </Typography>
                         <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                            Waiting for remote video...
+                            {callType === 'video' ? 'Waiting for remote video...' : 'Audio Call Active'}
                         </Typography>
                     </Box>
                 )}
                 
                 {/* Local Video */}
-                <Box sx={{ 
-                    position: 'absolute', 
-                    bottom: 100, 
-                    right: 20, 
-                    width: 120, 
-                    height: 160, 
-                    bgcolor: 'grey.900',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '2px solid white',
-                    boxShadow: 3,
-                    zIndex: 1301
-                }}>
-                    <Box 
-                        component="video"
-                        ref={localVideoRef} 
-                        autoPlay 
-                        playsInline 
-                        muted 
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                    />
-                </Box>
+                {callType === 'video' && (
+                    <Box sx={{ 
+                        position: 'absolute', 
+                        bottom: 100, 
+                        right: 20, 
+                        width: 120, 
+                        height: 160, 
+                        bgcolor: 'grey.900',
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '2px solid white',
+                        boxShadow: 3,
+                        zIndex: 1301
+                    }}>
+                        <Box 
+                            component="video"
+                            ref={localVideoRef} 
+                            autoPlay 
+                            playsInline 
+                            muted 
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                    </Box>
+                )}
 
                 {/* Status Overlay */}
                 <Box sx={{
@@ -200,13 +206,15 @@ export const CallInterface = ({ conversationId, isCaller }: { conversationId: st
                     <CallEndIcon />
                 </Fab>
 
-                <IconButton 
-                    onClick={toggleVideo} 
-                    sx={{ bgcolor: isVideoOff ? 'white' : 'rgba(255,255,255,0.2)', color: isVideoOff ? 'black' : 'white', '&:hover': { bgcolor: isVideoOff ? 'grey.200' : 'rgba(255,255,255,0.3)' } }}
-                    size="large"
-                >
-                    {isVideoOff ? <VideocamOffIcon /> : <VideocamIcon />}
-                </IconButton>
+                {callType === 'video' && (
+                    <IconButton 
+                        onClick={toggleVideo} 
+                        sx={{ bgcolor: isVideoOff ? 'white' : 'rgba(255,255,255,0.2)', color: isVideoOff ? 'black' : 'white', '&:hover': { bgcolor: isVideoOff ? 'grey.200' : 'rgba(255,255,255,0.3)' } }}
+                        size="large"
+                    >
+                        {isVideoOff ? <VideocamOffIcon /> : <VideocamIcon />}
+                    </IconButton>
+                )}
             </Box>
         </Box>
     );
