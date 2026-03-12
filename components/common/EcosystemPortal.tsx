@@ -35,7 +35,33 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
         )
     );
 
+    const getCurrentSubdomain = () => {
+        if (typeof window === 'undefined') return null;
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+            const port = window.location.port;
+            const ports: Record<string, string> = {
+                '3000': 'accounts',
+                '3001': 'note',
+                '3002': 'vault',
+                '3003': 'flow',
+                '3004': 'connect',
+                '3005': 'kylrix'
+            };
+            return ports[port] || null;
+        }
+        const segments = host.split('.');
+        if (segments.length <= 2) return 'kylrix';
+        return segments[0];
+    };
+
     const handleAppClick = (subdomain: string) => {
+        const currentSubdomain = getCurrentSubdomain();
+        if (subdomain === currentSubdomain) {
+            onClose();
+            return;
+        }
+
         window.location.assign(getEcosystemUrl(subdomain));
         onClose();
     };
