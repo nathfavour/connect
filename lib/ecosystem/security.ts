@@ -223,19 +223,19 @@ export class EcosystemSecurity {
 
       // Check if user doc exists in CHAT database
       try {
-          const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
-          if (uDoc) {
-            await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
-              hasMasterpass: true
-            });
-          }
+        const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+        if (uDoc) {
+          await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+            hasMasterpass: true
+          });
+        }
       } catch (_e) {
-          // Create user doc if it doesn't exist (assuming create works, but if no permission it fails, which is caught)
-          try {
-              await tablesDB.createRow(CHAT_DB, USERS_TABLE, userId, {
-                hasMasterpass: true
-              });
-          } catch (_inner) {}
+        // Create user doc if it doesn't exist (assuming create works, but if no permission it fails, which is caught)
+        try {
+          await tablesDB.createRow(CHAT_DB, USERS_TABLE, userId, {
+            hasMasterpass: true
+          });
+        } catch (_inner) { }
       }
     } catch (_e: unknown) {
       console.error('[Security] Failed to set masterpass flag:', _e);
@@ -365,23 +365,23 @@ export class EcosystemSecurity {
         const decryptedPriv = await this.decrypt(doc.passkeyBlob);
         const privKeyBytes = new Uint8Array(atob(decryptedPriv).split("").map(c => c.charCodeAt(0)));
 
-        const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
+        const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "X25519" }, true, ["deriveKey", "deriveBits"]);
         const pubKeyBytes = new Uint8Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
-        const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
+        const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "X25519" }, true, []);
 
         this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
 
         try {
           // Attempt to get user by their document ID instead of userId attribute
           try {
-              const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
-              if (uDoc) {
-                  await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
-                    publicKey: doc.publicKey
-                  });
-              }
+            const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
+            if (uDoc) {
+              await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
+                publicKey: doc.publicKey
+              });
+            }
           } catch (_e) {
-              // Ignore if document not found
+            // Ignore if document not found
           }
         } catch (_e) {
           console.warn("Failed to publish existing public key to chat.users", _e);
@@ -391,7 +391,7 @@ export class EcosystemSecurity {
       }
 
       // Generate new pair
-      const pair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
+      const pair = (await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveKey", "deriveBits"])) as CryptoKeyPair;
       const privExport = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
       const pubExport = await crypto.subtle.exportKey("raw", pair.publicKey);
 
@@ -412,14 +412,14 @@ export class EcosystemSecurity {
 
       try {
         try {
-            const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
-            if (uDoc) {
-                await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
-                  publicKey: pubBase64
-                });
-            }
+          const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
+          if (uDoc) {
+            await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
+              publicKey: pubBase64
+            });
+          }
         } catch (_e) {
-            // Ignore if document not found
+          // Ignore if document not found
         }
       } catch (_e) {
         console.warn("Failed to publish public key to chat.users", _e);
@@ -480,10 +480,10 @@ export class EcosystemSecurity {
     if (!this.identityKeyPair) throw new Error("E2E Identity not initialized");
 
     const pubKeyBytes = new Uint8Array(atob(peerPublicKeyBase64).split("").map(c => c.charCodeAt(0)));
-    const peerPubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, []);
+    const peerPubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "X25519" }, true, []);
 
     return await crypto.subtle.deriveKey(
-      { name: "ECDH", public: peerPubKey },
+      { name: "X25519", public: peerPubKey },
       this.identityKeyPair.privateKey,
       { name: "AES-GCM", length: 256 },
       false,
