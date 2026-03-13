@@ -344,8 +344,13 @@ export class EcosystemSecurity {
   /**
    * Generates or retrieves the user's E2E Identity (X25519)
    */
-  async ensureE2EIdentity(userId: string) {
+  async ensureE2EIdentity(userId: string): Promise<string | null> {
     if (!this.masterKey) throw new Error("Unlock required for E2E Identity");
+
+    const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb';
+    const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER?.IDENTITIES || 'identities';
+    const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT || 'chat';
+    const CHAT_USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT?.USERS || 'users';
 
     try {
       const res = await tablesDB.listRows(PW_DB, IDENTITIES_TABLE, [
@@ -357,8 +362,7 @@ export class EcosystemSecurity {
       if (res.total > 0) {
         const doc = res.rows[0];
         // Unwrap private key
-        const encryptedPriv = atob(doc.passkeyBlob);
-        const decryptedPriv = await this.decrypt(encryptedPriv);
+        const decryptedPriv = await this.decrypt(doc.passkeyBlob);
         const privKeyBytes = new Uint8Array(atob(decryptedPriv).split("").map(c => c.charCodeAt(0)));
 
         const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "ECDH", namedCurve: "X25519" }, true, ["deriveKey", "deriveBits"]);
@@ -368,13 +372,11 @@ export class EcosystemSecurity {
         this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
 
         try {
-          const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
-          const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
           // Attempt to get user by their document ID instead of userId attribute
           try {
-              const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+              const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
               if (uDoc) {
-                  await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+                  await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
                     publicKey: doc.publicKey
                   });
               }
@@ -402,19 +404,17 @@ export class EcosystemSecurity {
         identityType: 'e2e_connect',
         label: 'Connect E2E Identity',
         publicKey: pubBase64,
-        passkeyBlob: btoa(encryptedPriv),
+        passkeyBlob: encryptedPriv,
         createdAt: new Date().toISOString()
       });
 
       this.identityKeyPair = pair;
 
       try {
-        const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
-        const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
         try {
-            const uDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, userId);
+            const uDoc = await tablesDB.getRow(CHAT_DB, CHAT_USERS_TABLE, userId);
             if (uDoc) {
-                await tablesDB.updateRow(CHAT_DB, USERS_TABLE, uDoc.$id, {
+                await tablesDB.updateRow(CHAT_DB, CHAT_USERS_TABLE, uDoc.$id, {
                   publicKey: pubBase64
                 });
             }
