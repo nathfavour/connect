@@ -64,7 +64,7 @@ export const UsersService = {
     /**
      * Updates the global Chat directory profile.
      */
-    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; appsActive?: string[], publicKey?: string }) {
+    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatarUrl?: string; publicKey?: string }) {
         const currentProfile = await this.getProfileById(userId);
 
         if (data.username) {
@@ -81,7 +81,6 @@ export const UsersService = {
         if (currentProfile) {
             // Clean up data to avoid sending non-schema attributes
             const updatePayload: any = { ...data };
-            delete updatePayload.appsActive; // Not in schema!
             return await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, updatePayload);
         } else {
             // Should not normally happen if they are calling update, but fallback to creating
@@ -95,7 +94,7 @@ export const UsersService = {
     async createProfile(
         userId: string,
         username: string,
-        data: { displayName?: string; bio?: string; avatarUrl?: string; appsActive?: string[], publicKey?: string } = {}
+        data: { displayName?: string; bio?: string; avatarUrl?: string; publicKey?: string } = {}
     ) {
         const normalized = normalizeUsername(username);
         if (!normalized) throw new Error('Invalid username');

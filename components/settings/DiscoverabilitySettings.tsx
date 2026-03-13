@@ -91,20 +91,27 @@ export const DiscoverabilitySettings = () => {
             return;
         }
 
-        setSaving(true);
-        try {
-            const currentApps = profile.appsActive || [];
-            const appsActive = checked
-                ? Array.from(new Set([...currentApps, 'connect']))
-                : currentApps.filter((a: string) => a !== 'connect');
+        if (checked && !profile.publicKey) {
+            // Need to set up public key
+            if (!ecosystemSecurity.status.isUnlocked) {
+                toast.error("Unlock your vault to enable secure discoverability");
+                return;
+            }
 
-            await UsersService.updateProfile(user.$id, { appsActive });
-            setProfile({ ...profile, appsActive });
-            toast.success(checked ? "You are now discoverable" : "Discovery disabled");
-        } catch (_e: unknown) {
-            toast.error("Failed to update preference");
-        } finally {
-            setSaving(false);
+            setSaving(true);
+            try {
+                const pub = await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                if (pub) {
+                    setProfile({ ...profile, publicKey: pub });
+                    toast.success("E2E Identity initialized and discovery enabled");
+                }
+            } catch (e) {
+                toast.error("Failed to initialize identity");
+            } finally {
+                setSaving(false);
+            }
+        } else {
+            toast.success(checked ? "Discovery enabled" : "Discovery disabled (Identity remains secure)");
         }
     };
 
@@ -139,7 +146,6 @@ export const DiscoverabilitySettings = () => {
                 // Ensure profile for user handles creation with safe defaults
                 const p = await UsersService.createProfile(user.$id, normalized, {
                     displayName: user.name || normalized,
-                    appsActive: ['connect'],
                     publicKey
                 });
                 setProfile(p);
@@ -157,7 +163,7 @@ export const DiscoverabilitySettings = () => {
 
     if (loading) return <CircularProgress size={24} />;
 
-    const isDiscoverable = profile?.appsActive?.includes('connect');
+    const isDiscoverable = !!profile?.publicKey;
 
     return (
         <Box>
