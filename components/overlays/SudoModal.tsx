@@ -72,8 +72,8 @@ export default function SudoModal({
                 const hasPasskey = entries.some((e: any) => e.type === 'passkey');
 
                 if (intent === "reset") {
-                    window.open("https://vault.kylrix.space/masterpass/reset", "_blank");
-                    onCancel();
+                    const callbackUrl = encodeURIComponent(window.location.href);
+                    window.location.href = `https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`;
                     return;
                 }
 
@@ -90,7 +90,12 @@ export default function SudoModal({
             }
         }
         onSuccess();
-    }, [user, onSuccess, intent, onCancel]);
+    }, [user, onSuccess, intent]);
+
+    const handleRedirectToVaultSetup = useCallback(() => {
+        const callbackUrl = encodeURIComponent(window.location.href);
+        window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
+    }, []);
 
     const handlePinChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/[^0-9]/g, "");
@@ -119,7 +124,7 @@ export default function SudoModal({
         if (!user?.$id) return;
 
         if (hasMasterpass === false) {
-            setMode("initialize");
+            handleRedirectToVaultSetup();
             return;
         }
 
@@ -128,7 +133,7 @@ export default function SudoModal({
             const keychain = await ecosystemSecurity.fetchKeychain(user.$id);
             if (!keychain) {
                 setHasMasterpass(false);
-                setMode("initialize");
+                handleRedirectToVaultSetup();
                 setLoading(false);
                 return;
             }
@@ -180,7 +185,7 @@ export default function SudoModal({
                         toast.error("MasterPass already set");
                         setMode("password");
                     } else {
-                        setMode("initialize");
+                        handleRedirectToVaultSetup();
                     }
                     setIsDetecting(false);
                     return;
@@ -195,7 +200,7 @@ export default function SudoModal({
 
                 // Enforce Master Password setup if missing
                 if (!passwordPresent && isOpen) {
-                    setMode("initialize");
+                    handleRedirectToVaultSetup();
                     setIsDetecting(false);
                     return;
                 }
@@ -221,7 +226,7 @@ export default function SudoModal({
             setPasskeyLoading(false);
             setIsDetecting(true);
         }
-    }, [isOpen, user?.$id, intent]);
+    }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup]);
 
     useEffect(() => {
         if (isOpen && mode === "passkey" && hasPasskey && !passkeyLoading) {
@@ -818,7 +823,10 @@ export default function SudoModal({
                                 fullWidth
                                 variant="text"
                                 size="small"
-                                onClick={() => window.open("https://vault.kylrix.space/masterpass/reset", "_blank")}
+                                onClick={() => {
+                                    const callbackUrl = encodeURIComponent(window.location.href);
+                                    window.location.href = `https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`;
+                                }}
                                 sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }, mt: 2 }}
                             >
                                 Reset Master Password
