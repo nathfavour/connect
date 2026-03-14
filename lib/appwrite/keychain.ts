@@ -26,6 +26,20 @@ export const KeychainService = {
     },
 
     async createKeychainEntry(data: any) {
+        // SAFETY: Existence Guard for Master Passwords
+        // Mathematically, a user should only ever have ONE 'password' type entry.
+        // We check for existence before creation to prevent the "Mathematical Paradox"
+        // of fragmented identities across the ecosystem.
+        if (data.type === 'password' && data.userId) {
+            const existing = await this.listKeychainEntries(data.userId);
+            const hasPassword = existing.some((e: any) => e.type === 'password');
+            
+            if (hasPassword) {
+                console.warn('[KeychainService] Blocked attempt to create duplicate master password.');
+                throw new Error('KEYCHAIN_ALREADY_EXISTS');
+            }
+        }
+
         return await tablesDB.createRow(
             DB_ID,
             KEYCHAIN_TABLE,
