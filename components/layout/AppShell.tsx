@@ -136,17 +136,17 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                             borderRadius: '12px', 
                                             transition: 'all 0.2s ease',
                                             '&.Mui-selected': {
-                                                bgcolor: 'rgba(0, 240, 255, 0.1)',
-                                                color: '#00F0FF',
-                                                '&:hover': { bgcolor: 'rgba(0, 240, 255, 0.15)' },
-                                                '& .MuiListItemIcon-root': { color: '#00F0FF' }
+                                                bgcolor: 'rgba(99, 102, 241, 0.1)',
+                                                color: 'var(--color-primary)',
+                                                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' },
+                                                '& .MuiListItemIcon-root': { color: 'var(--color-primary)' }
                                             },
                                             '&:hover': {
                                                 bgcolor: 'rgba(255, 255, 255, 0.05)'
                                             }
                                         }}
                                     >
-                                        <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? '#00F0FF' : 'text.secondary' }}>
+                                        <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? 'var(--color-primary)' : 'text.secondary' }}>
                                             {item.icon}
                                         </ListItemIcon>
                                         <ListItemText 
@@ -236,7 +236,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                 sx={{ 
                                     color: 'text.secondary',
                                     '&.Mui-selected': { 
-                                        color: '#00F0FF',
+                                        color: 'var(--color-primary)',
                                         '& .MuiBottomNavigationAction-label': {
                                             fontWeight: 700,
                                             fontSize: '0.75rem'

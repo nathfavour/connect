@@ -174,7 +174,7 @@ export default function SettingsPage() {
                 <Stack spacing={4}>
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Shield size={20} color="#00F0FF" /> Security & Privacy
+                            <Shield size={20} color="var(--color-primary)" /> Security & Privacy
                         </Typography>
                         
                         <Paper sx={{ 
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                                                         }
                                                     >
                                                         <ListItemIcon>
-                                                            <Fingerprint size={20} color="#00F0FF" />
+                                                            <Fingerprint size={20} color="var(--color-primary)" />
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={pk.params?.name || `Passkey ${idx + 1}`}
@@ -314,10 +314,10 @@ export default function SettingsPage() {
                                                     borderRadius: '12px', 
                                                     py: 1.5, 
                                                     fontWeight: 700,
-                                                    bgcolor: isPinSet ? alpha('#00F0FF', 0.1) : 'primary.main',
-                                                    color: isPinSet ? '#00F0FF' : 'black',
-                                                    border: isPinSet ? '1px solid #00F0FF' : 'none',
-                                                    '&:hover': { bgcolor: isPinSet ? alpha('#00F0FF', 0.2) : alpha('#00F0FF', 0.8) }
+                                                    bgcolor: isPinSet ? alpha('#6366F1', 0.1) : 'var(--color-primary)',
+                                                    color: isPinSet ? 'var(--color-primary)' : 'black',
+                                                    border: isPinSet ? '1px solid var(--color-primary)' : 'none',
+                                                    '&:hover': { bgcolor: isPinSet ? alpha('#6366F1', 0.2) : alpha('#6366F1', 0.8) }
                                                 }}
                                             >
                                                 {loading ? <CircularProgress size={24} color="inherit" /> : (isPinSet ? "Update PIN" : "Setup PIN")}
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                     {/* App Settings */}
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Smartphone size={20} color="#00F0FF" /> App Preferences
+                            <Smartphone size={20} color="var(--color-electric)" /> App Preferences
                         </Typography>
                         <Paper sx={{ 
                             p: 3, 

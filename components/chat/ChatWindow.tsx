@@ -528,13 +528,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             const label = msg.content?.replace(code, '').trim();
 
             return (
-                <Box sx={{ p: 1.5, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 240, 255, 0.2)' }}>
+                <Box sx={{ p: 1.5, bgcolor: 'rgba(99, 102, 241, 0.05)', borderRadius: 2, border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Key size={16} color="#6366F1" strokeWidth={1.5} />
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>TOTP Code Shared</Typography>
+                        <Key size={16} color="var(--color-primary)" strokeWidth={1.5} />
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: 1 }}>TOTP Code Shared</Typography>
                     </Box>
                     <Typography variant="body2" sx={{ mb: 1, opacity: 0.8 }}>{label}</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-mono)', letterSpacing: 2, color: 'primary.main', textAlign: 'center', py: 1, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-mono)', letterSpacing: 2, color: 'var(--color-primary)', textAlign: 'center', py: 1, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
                         {code}
                     </Typography>
                 </Box>
@@ -624,13 +624,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <Avatar sx={{
                             width: 36,
                             height: 36,
-                            bgcolor: isSelf ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.05)',
-                            border: isSelf ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)'
+                            bgcolor: isSelf ? alpha('#F59E0B', 0.1) : 'rgba(255, 255, 255, 0.05)',
+                            border: isSelf ? `1px solid ${alpha('#F59E0B', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                            {isSelf ? <Bookmark size={18} color="#00F0FF" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
+                            {isSelf ? <Bookmark size={18} color="var(--color-electric)" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.2, color: isSelf ? '#00F0FF' : 'text.primary' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? 'var(--color-electric)' : 'text.primary' }}>
                                 {isSelf ? 'Saved Messages' : conversation?.name || 'Loading...'}
                             </Typography>
                             {!isSelf && conversation?.type === 'direct' && (
@@ -644,7 +644,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                                         if (isOnline) return (
                                             <>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#00F0FF', boxShadow: '0 0 8px #00F0FF' }} />
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'var(--color-primary)', boxShadow: '0 0 8px var(--color-primary)' }} />
                                                 Online
                                             </>
                                         );
@@ -715,8 +715,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             {/* Messages Area */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {conversation?.isEncrypted && !isUnlocked && (
-                    <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(0, 240, 255, 0.05)', borderRadius: '16px', border: '1px solid rgba(0, 240, 255, 0.1)', textAlign: 'center' }}>
-                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'primary.main' }}>
+                    <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'var(--color-primary)' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
                         <Button
@@ -724,7 +724,16 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             size="small"
                             onClick={() => setUnlockModalOpen(true)}
                             startIcon={<Key size={16} strokeWidth={1.5} />}
-                            sx={{ borderRadius: '10px', fontWeight: 800 }}
+                            sx={{ 
+                                borderRadius: '10px', 
+                                fontWeight: 800,
+                                borderColor: 'var(--color-primary)',
+                                color: 'var(--color-primary)',
+                                '&:hover': {
+                                    borderColor: 'var(--color-primary)',
+                                    bgcolor: 'rgba(99, 102, 241, 0.1)'
+                                }
+                            }}
                         >
                             Unlock Vault to Read
                         </Button>
@@ -745,13 +754,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.2,
                                 px: 1.8,
                                 borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.03)',
-                                border: msg.senderId === user?.$id ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
+                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.1) : 'rgba(255, 255, 255, 0.03)',
+                                border: msg.senderId === user?.$id ? `1px solid ${alpha('#6366F1', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
                                 color: 'text.primary',
                                 boxShadow: 'none',
                                 transition: 'all 0.2s ease',
                                 '&:hover': {
-                                    bgcolor: msg.senderId === user?.$id ? alpha('#00F0FF', 0.15) : 'rgba(255, 255, 255, 0.05)',
+                                    bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.15) : 'rgba(255, 255, 255, 0.05)',
                                 }
                             }}>
                                 {renderMessageContent(msg)}
@@ -768,7 +777,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                             <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px' }}>Failed</Typography>
                                         ) : (
                                             msg.readBy?.length && msg.readBy.length > 1 ? (
-                                                <CheckCheck size={13} color="#00F0FF" strokeWidth={2.5} />
+                                                <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} />
                                             ) : (
                                                 <Check size={13} strokeWidth={2.5} style={{ opacity: 0.4 }} />
                                             )
@@ -860,10 +869,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             onClick={() => handleSend()}
                             disabled={sending}
                             sx={{
-                                bgcolor: 'primary.main',
+                                bgcolor: 'var(--color-primary)',
                                 color: 'black',
                                 m: 0.5,
-                                '&:hover': { bgcolor: 'rgba(0, 240, 255, 0.8)' },
+                                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.8)' },
                                 '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.1)' }
                             }}
                         >

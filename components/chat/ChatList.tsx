@@ -151,7 +151,7 @@ export const ChatList = () => {
                     variant="h5" 
                     sx={{ 
                         fontWeight: 900, 
-                        fontFamily: 'var(--font-space-grotesk)',
+                        fontFamily: 'var(--font-clash)',
                         letterSpacing: '-0.02em',
                         mb: 2,
                         color: 'text.primary'
@@ -222,9 +222,9 @@ export const ChatList = () => {
                                     <ListItemAvatar>
                                         <Avatar 
                                             sx={{ 
-                                                bgcolor: conv.isSelf ? alpha('#00F0FF', 0.1) : 'rgba(255, 255, 255, 0.03)',
-                                                color: conv.isSelf ? '#00F0FF' : 'text.secondary',
-                                                border: conv.isSelf ? `1px solid ${alpha('#00F0FF', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
+                                                bgcolor: conv.isSelf ? alpha('#F59E0B', 0.1) : 'rgba(255, 255, 255, 0.03)',
+                                                color: conv.isSelf ? 'var(--color-electric)' : 'text.secondary',
+                                                border: conv.isSelf ? `1px solid ${alpha('#F59E0B', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
                                                 width: 44,
                                                 height: 44
                                             }}
@@ -245,8 +245,8 @@ export const ChatList = () => {
                                         primaryTypographyProps={{ 
                                             fontWeight: 700, 
                                             fontSize: '0.95rem',
-                                            color: conv.isSelf ? '#00F0FF' : 'text.primary',
-                                            fontFamily: 'var(--font-space-grotesk)'
+                                            color: conv.isSelf ? 'var(--color-electric)' : 'text.primary',
+                                            fontFamily: 'var(--font-clash)'
                                         }}
                                         secondaryTypographyProps={{ 
                                             noWrap: true,

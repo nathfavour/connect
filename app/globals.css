@@ -20,8 +20,22 @@
   /* Disabled */
 
   /* THE PULSE (Brand Accent) */
-  --color-electric: #00F0FF;
-  /* Primary Brand - Cybernetic Teal */
+  --color-electric: #F59E0B;
+  /* Connect Amber */
+  --color-primary: #6366F1;
+  /* Ecosystem Primary */
+
+  /* ASH SHADES (Tapering) */
+  --ash-50: #F8F9FA;
+  --ash-100: #E9ECEF;
+  --ash-200: #DEE2E6;
+  --ash-300: #CED4DA;
+  --ash-400: #ADB5BD;
+  --ash-500: #6C757D;
+  --ash-600: #495057;
+  --ash-700: #343A40;
+  --ash-800: #212529;
+  --ash-900: #121417;
 
   /* THE BORDERS */
   --border-subtle: #222222;
@@ -34,7 +48,7 @@
   --card: var(--color-surface);
   --card-foreground: var(--color-titanium);
   --border: var(--border-subtle);
-  --ring: var(--color-electric);
+  --ring: var(--color-primary);
 
   /* Organic Realism: Radii */
   --radius-micro: 12px;
