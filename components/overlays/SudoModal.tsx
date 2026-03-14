@@ -302,6 +302,17 @@ export default function SudoModal({
                 }
             }}
         >
+            <style>{`
+                @keyframes race {
+                    from { stroke-dashoffset: 240; }
+                    to { stroke-dashoffset: 0; }
+                }
+                @keyframes pulse-hex {
+                    0% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.8; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+            `}</style>
             <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 1, position: 'relative' }}>
                 <IconButton
                     onClick={onCancel}
@@ -330,25 +341,25 @@ export default function SudoModal({
                             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
                         }} 
                     />
-                    <Box sx={{
-                        position: 'absolute',
-                        bottom: -8,
-                        right: -8,
-                        width: 32,
-                        height: 32,
-                        borderRadius: '10px',
-                        bgcolor: '#E2B714',
-                        color: '#000',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(226, 183, 20, 0.4)',
-                        border: '3px solid rgba(10, 10, 10, 1)',
-                        zIndex: 1
-                    }}>
-                        <Lock size={16} strokeWidth={3} />
+                        <Box sx={{
+                            position: 'absolute',
+                            bottom: -8,
+                            right: -8,
+                            width: 32,
+                            height: 32,
+                            borderRadius: '10px',
+                            bgcolor: '#F59E0B',
+                            color: '#000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+                            border: '3px solid rgba(10, 10, 10, 1)',
+                            zIndex: 1
+                        }}>
+                            <Shield size={16} strokeWidth={3} />
+                        </Box>
                     </Box>
-                </Box>
                 <Typography variant="h5" sx={{
                     fontWeight: 900,
                     letterSpacing: '-0.03em',
@@ -435,12 +446,23 @@ export default function SudoModal({
                     </Stack>
                 ) : isDetecting || passkeyLoading ? (
                     <Stack spacing={3} sx={{ mt: 4, mb: 2, alignItems: 'center' }}>
-                        <CircularProgress size={48} sx={{ color: '#E2B714' }} />
+                        <CircularProgress size={48} sx={{ color: '#F59E0B' }} />
                         <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 600, letterSpacing: '0.1em' }}>
                                 {passkeyLoading ? "AUTHENTICATING..." : "PREPARING SECURITY CHECK..."}
                             </Typography>
                         </Box>
+                        {passkeyLoading && (
+                            <Button
+                                fullWidth
+                                variant="text"
+                                size="small"
+                                onClick={() => setMode("password")}
+                                sx={{ color: 'rgba(255, 255, 255, 0.5)', '&:hover': { color: 'white' } }}
+                            >
+                                Use Master Password
+                            </Button>
+                        )}
                     </Stack>
                 ) : mode === "initialize" ? (
                     <Stack spacing={3} sx={{ mt: 2 }}>
@@ -470,7 +492,7 @@ export default function SudoModal({
                                                 bgcolor: 'rgba(255, 255, 255, 0.03)',
                                                 '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                                '&.Mui-focused fieldset': { borderColor: '#E2B714' },
+                                                '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
                                             },
                                             '& .MuiInputBase-input': { color: 'white' }
                                         }}
@@ -499,7 +521,7 @@ export default function SudoModal({
                                                 bgcolor: 'rgba(255, 255, 255, 0.03)',
                                                 '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                                '&.Mui-focused fieldset': { borderColor: '#E2B714' },
+                                                '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
                                             },
                                             '& .MuiInputBase-input': { color: 'white' }
                                         }}
@@ -514,15 +536,15 @@ export default function SudoModal({
                                     sx={{
                                         py: 1.8,
                                         borderRadius: '16px',
-                                        background: 'linear-gradient(135deg, #E2B714 0%, #B59410 100%)',
+                                        background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                                         color: '#000',
                                         fontWeight: 800,
                                         fontFamily: 'var(--font-satoshi)',
                                         textTransform: 'none',
                                         '&:hover': {
-                                            background: 'linear-gradient(135deg, #D1A610 0%, #A4830D 100%)',
+                                            background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
                                             transform: 'translateY(-1px)',
-                                            boxShadow: '0 8px 25px rgba(226, 183, 20, 0.25)'
+                                            boxShadow: '0 8px 25px rgba(245, 158, 11, 0.25)'
                                         }
                                     }}
                                 >
@@ -566,7 +588,7 @@ export default function SudoModal({
                                         bgcolor: 'rgba(255, 255, 255, 0.03)',
                                         '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                         '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                        '&.Mui-focused fieldset': { borderColor: '#E2B714' },
+                                        '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
                                     },
                                     '& .MuiInputBase-input': { color: 'white' }
                                 }}
@@ -604,29 +626,55 @@ export default function SudoModal({
                         <Box
                             onClick={handlePasskeyVerify}
                             sx={{
-                                width: 72,
-                                height: 72,
-                                borderRadius: '50%',
-                                border: '2px dashed',
-                                borderColor: passkeyLoading ? '#E2B714' : 'rgba(255, 255, 255, 0.2)',
+                                width: 80,
+                                height: 80,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
+                                position: 'relative',
                                 transition: 'all 0.3s ease',
-                                animation: passkeyLoading ? 'pulse 2s infinite' : 'none',
                                 '&:hover': {
-                                    borderColor: '#E2B714',
-                                    bgcolor: alpha('#E2B714', 0.05),
                                     transform: 'scale(1.05)'
                                 }
                             }}
                         >
-                            {passkeyLoading ? (
-                                <CircularProgress size={32} sx={{ color: '#E2B714' }} />
-                            ) : (
-                                <Fingerprint size={32} color="rgba(255, 255, 255, 0.4)" />
-                            )}
+                            <svg width="80" height="80" viewBox="0 0 80 80">
+                                <path
+                                    d="M40 5 L70 22.5 L70 57.5 L40 75 L10 57.5 L10 22.5 Z"
+                                    fill="transparent"
+                                    stroke="rgba(255, 255, 255, 0.1)"
+                                    strokeWidth="2"
+                                    strokeDasharray="4 4"
+                                />
+                                {passkeyLoading && (
+                                    <path
+                                        d="M40 5 L70 22.5 L70 57.5 L40 75 L10 57.5 L10 22.5 Z"
+                                        fill="transparent"
+                                        stroke="url(#racingGradient)"
+                                        strokeWidth="3"
+                                        strokeDasharray="60 180"
+                                        style={{
+                                            animation: 'race 2s linear infinite'
+                                        }}
+                                    />
+                                )}
+                                <defs>
+                                    <linearGradient id="racingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stopColor="#F59E0B" />
+                                        <stop offset="100%" stopColor="#D97706" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <Box sx={{
+                                position: 'absolute',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                animation: passkeyLoading ? 'pulse-hex 2s infinite ease-in-out' : 'none'
+                            }}>
+                                <Fingerprint size={32} color={passkeyLoading ? '#F59E0B' : 'rgba(255, 255, 255, 0.4)'} />
+                            </Box>
                         </Box>
 
                         <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -653,10 +701,10 @@ export default function SudoModal({
                             fullWidth
                             variant="text"
                             size="small"
-                            onClick={() => window.open("https://vault.kylrix.space/masterpass/reset", "_blank")}
-                            sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }, mt: 2 }}
+                            onClick={() => setMode("password")}
+                            sx={{ color: 'rgba(255, 255, 255, 0.5)', '&:hover': { color: 'white' } }}
                         >
-                            Reset Master Password
+                            Use Master Password
                         </Button>
                     </Stack>
                 ) : (
@@ -687,7 +735,7 @@ export default function SudoModal({
                                                 bgcolor: 'rgba(255, 255, 255, 0.03)',
                                                 '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                                '&.Mui-focused fieldset': { borderColor: '#E2B714' },
+                                                '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
                                             },
                                             '& .MuiInputBase-input': { color: 'white' }
                                         }}
@@ -702,13 +750,13 @@ export default function SudoModal({
                                     sx={{
                                         py: 1.5,
                                         borderRadius: '14px',
-                                        bgcolor: '#E2B714',
+                                        bgcolor: '#F59E0B',
                                         color: '#000',
                                         fontWeight: 700,
                                         '&:hover': {
-                                            bgcolor: alpha('#E2B714', 0.8),
+                                            bgcolor: alpha('#F59E0B', 0.8),
                                             transform: 'translateY(-1px)',
-                                            boxShadow: '0 8px 20px rgba(226, 183, 20, 0.3)'
+                                            boxShadow: '0 8px 20px rgba(245, 158, 11, 0.3)'
                                         }
                                     }}
                                 >
@@ -736,19 +784,22 @@ export default function SudoModal({
                             </Box>
                         )}
 
-                        {hasPasskey && (
+                        {hasPasskey && mode !== "passkey" && (
                             <Button
                                 fullWidth
                                 variant="text"
                                 startIcon={<Fingerprint size={18} />}
-                                onClick={() => setMode("passkey")}
+                                onClick={() => {
+                                    setMode("passkey");
+                                    handlePasskeyVerify();
+                                }}
                                 sx={{ color: 'rgba(255, 255, 255, 0.5)', '&:hover': { color: 'white' } }}
                             >
                                 Use Passkey
                             </Button>
                         )}
 
-                        {hasPin && (
+                        {hasPin && mode !== "pin" && (
                             <Button
                                 fullWidth
                                 variant="text"
@@ -757,6 +808,18 @@ export default function SudoModal({
                                 sx={{ color: 'rgba(255, 255, 255, 0.5)', '&:hover': { color: 'white' } }}
                             >
                                 Use PIN
+                            </Button>
+                        )}
+
+                        {mode === "password" && (
+                            <Button
+                                fullWidth
+                                variant="text"
+                                size="small"
+                                onClick={() => window.open("https://vault.kylrix.space/masterpass/reset", "_blank")}
+                                sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }, mt: 2 }}
+                            >
+                                Reset Master Password
                             </Button>
                         )}
                     </Stack>
