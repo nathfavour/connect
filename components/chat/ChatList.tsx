@@ -69,6 +69,14 @@ export const ChatList = () => {
                         return;
                     }
 
+                    // CRITICAL: Ensure E2E identity is ready before creating conversation.
+                    // createConversation -> _wrapConversationKey -> wrapKeyWithECDH requires identityKeyPair.
+                    // If the vault was just unlocked, ensureE2EIdentity might not have run yet.
+                    if (ecosystemSecurity.status.isUnlocked) {
+                        console.log('[ChatList] Ensuring E2E identity before self-chat creation...');
+                        await ecosystemSecurity.ensureE2EIdentity(user!.$id);
+                    }
+
                     const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
                     console.log('[ChatList] Self chat created:', newSelfChat.$id);
                     rows = [newSelfChat, ...rows];

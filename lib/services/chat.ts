@@ -1,8 +1,8 @@
 import { ID, Query } from 'appwrite';
-import { tablesDB, account } from '../appwrite/client';
+import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { ecosystemSecurity } from '../ecosystem/security';
-import { getEcosystemUrl } from '../constants';
+
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
@@ -179,47 +179,49 @@ export const ChatService = {
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
-        // E2E Layer: Universal Handshake Protocol
-        // 1. Generate unique Group/Conversation Key
-        const convKey = await ecosystemSecurity.generateConversationKey();
+        let encryptionKeyMap: string | undefined;
+        let convKey: CryptoKey | null = null;
 
-        // 2. Wrap specifically for each participant
-        const encryptionKeyMap = await this._wrapConversationKey(convKey, uniqueParticipants);
+        // E2E Layer: Only if vault is unlocked and identity is ready
+        if (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
+            // 1. Generate unique Group/Conversation Key
+            convKey = await ecosystemSecurity.generateConversationKey();
+
+            // 2. Wrap specifically for each participant
+            encryptionKeyMap = await this._wrapConversationKey(convKey, uniqueParticipants);
+        }
 
         // 3. Encrypt name and metadata if it's a group
         let encryptedName = name;
-        if (name && ecosystemSecurity.status.isUnlocked) {
-            // we use the local convKey to encrypt group metadata! Faster and precise.
+        if (name && convKey && ecosystemSecurity.status.isUnlocked) {
             encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
-        // Call our accounts server API to bypass client permission restrictions
-        const jwt = await account.createJWT();
-        const response = await fetch(`${getEcosystemUrl('accounts')}/api/connect/conversations`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwt.jwt}`
-            },
-            body: JSON.stringify({
-                participants: uniqueParticipants,
-                type,
-                name: encryptedName || 'Direct Chat',
-                encryptionKey: encryptionKeyMap,
-                creatorId
-            })
+        const now = new Date().toISOString();
+
+        const newConv = await tablesDB.createRow(DB_ID, CONV_TABLE, ID.unique(), {
+            participants: uniqueParticipants,
+            participantCount: uniqueParticipants.length,
+            type: type || 'direct',
+            name: encryptedName || 'Direct Chat',
+            creatorId,
+            admins: [],
+            isPinned: [],
+            isMuted: [],
+            isArchived: [],
+            tags: [],
+            isEncrypted: !!encryptionKeyMap,
+            encryptionKey: encryptionKeyMap || '',
+            encryptionVersion: '1.0',
+            createdAt: now,
+            updatedAt: now
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Failed to create conversation via API');
+        // Cache the local key for this session
+        if (convKey) {
+            ecosystemSecurity.setConversationKey(newConv.$id, convKey);
         }
 
-        const newConv = await response.json();
-        
-        // Cache the local key for this session
-        ecosystemSecurity.setConversationKey(newConv.$id, convKey);
-        
         return newConv;
     },
 
@@ -263,7 +265,7 @@ export const ChatService = {
         // 3. (Background) If this is a group, check if any participant needs re-keying
         // This ensures a reset participant can receive future messages
         if (ecosystemSecurity.status.isUnlocked) {
-            this.rewrapConversationKeys(conversationId).catch(err => 
+            this.rewrapConversationKeys(conversationId).catch(err =>
                 console.warn("[ChatService] Background re-wrap failed:", err)
             );
         }
