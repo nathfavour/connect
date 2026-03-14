@@ -138,9 +138,9 @@ export function PasskeySetup({
           id: "kylrix.space",
         },
         user: {
-          id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
-          name: username || ecosystemSecurity.getVault()?.userEmail || userId,
-          displayName: username || ecosystemSecurity.getVault()?.userEmail || userId,
+          id: arrayBufferToBase64(new TextEncoder().encode(username || userId).buffer as ArrayBuffer),
+          name: `@${username || userId}`,
+          displayName: `@${username || userId}`,
         },
         pubKeyCredParams: [{ alg: -7, type: "public-key" as const }, { alg: -257, type: "public-key" as const }],
         authenticatorSelection: {
