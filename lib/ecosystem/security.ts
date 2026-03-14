@@ -347,13 +347,13 @@ export class EcosystemSecurity {
   async ensureE2EIdentity(userId: string): Promise<string | null> {
     if (!this.masterKey) throw new Error("Unlock required for E2E Identity");
 
-    const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb';
-    const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER?.IDENTITIES || 'identities';
+    const PW_DB_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb';
+    const IDENTITIES_TABLE_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER?.IDENTITIES || 'identities';
     const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT || 'chat';
     const CHAT_USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT?.USERS || 'users';
 
     try {
-      const res = await tablesDB.listRows(PW_DB, IDENTITIES_TABLE, [
+      const res = await tablesDB.listRows(PW_DB_ID, IDENTITIES_TABLE_ID, [
         Query.equal('userId', userId),
         Query.equal('identityType', 'e2e_connect'),
         Query.limit(1)
@@ -400,7 +400,7 @@ export class EcosystemSecurity {
       const privBase64 = btoa(String.fromCharCode(...new Uint8Array(privExport)));
       const encryptedPriv = await this.encrypt(privBase64);
 
-      await tablesDB.createRow(PW_DB, IDENTITIES_TABLE, ID.unique(), {
+      await tablesDB.createRow(PW_DB_ID, IDENTITIES_TABLE_ID, ID.unique(), {
         userId,
         identityType: 'e2e_connect',
         label: 'Connect E2E Identity',
