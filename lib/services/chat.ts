@@ -397,7 +397,7 @@ export const ChatService = {
     async updateConversation(conversationId: string, data: Partial<{
         name: string;
         description: string;
-        avatarUrl: string;
+        avatar: string;
         participants: string[];
         admins: string[];
         isPinned: string[];

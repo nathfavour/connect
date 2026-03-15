@@ -89,17 +89,17 @@ export const Feed = () => {
                 try {
                     const creator = await UsersService.getProfileById(creatorId);
 
-                    let avatarUrl = null;
-                    const picId = creator?.profilePicId || creator?.avatar;
+                    let avatar = null;
+                    const picId = creator?.avatar;
                     if (picId && typeof picId === 'string' && picId.length > 5) {
                         try {
                             const url = await fetchProfilePreview(picId, 64, 64);
-                            avatarUrl = url as unknown as string;
+                            avatar = url as unknown as string;
                         } catch (_e: unknown) { }
                     }
 
                     if (creator) {
-                        return { ...moment, creator: { ...creator, avatarUrl } };
+                        return { ...moment, creator: { ...creator, avatar } };
                     }
                     throw new Error('Creator not found');
                 } catch (_e: unknown) {
@@ -137,21 +137,21 @@ export const Feed = () => {
                     try {
                         const creator = await UsersService.getProfileById(creatorId);
 
-                        let avatarUrl = null;
-                        const picId = creator?.profilePicId || creator?.avatar;
+                        let avatar = null;
+                        const picId = creator?.avatar;
                         if (picId && typeof picId === 'string' && picId.length > 5) {
                             try {
                                 const url = await fetchProfilePreview(picId, 64, 64);
-                                avatarUrl = url as unknown as string;
+                                avatar = url as unknown as string;
                             } catch (_e: unknown) { }
                         }
 
                         const enrichedMoment = {
                             ...moment,
-                            creator: creator ? { ...creator, avatarUrl } : {
+                            creator: creator ? { ...creator, avatar } : {
                                 username: `user_${creatorId.slice(0, 5)}`,
                                 displayName: 'Kylrix User',
-                                avatarUrl: null,
+                                avatar: null,
                                 $id: creatorId
                             }
                         };
@@ -384,7 +384,7 @@ export const Feed = () => {
                     <CardHeader
                         avatar={
                             <Avatar
-                                src={moment.creator?.avatarUrl || undefined}
+                                src={moment.creator?.avatar || undefined}
                                 sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', color: 'text.secondary', border: '1px solid rgba(255, 255, 255, 0.1)' }}
                             >
                                 {moment.creator?.username?.charAt(0).toUpperCase() || '?'}

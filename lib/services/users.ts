@@ -79,9 +79,29 @@ export const UsersService = {
         }
 
         if (currentProfile) {
-            // Clean up data to avoid sending non-schema attributes
-            const updatePayload: any = { ...data };
-            return await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, updatePayload);
+            // Explicitly only allow schema fields to prevent 'Unknown attribute' errors
+            const updatePayload: any = {};
+            const allowedFields = ['username', 'displayName', 'bio', 'avatar', 'publicKey'];
+
+            allowedFields.forEach(field => {
+                if (Object.prototype.hasOwnProperty.call(data, field)) {
+                    updatePayload[field] = (data as any)[field];
+                }
+            });
+
+            // Ensure updatedAt is always set
+            updatePayload.updatedAt = new Date().toISOString();
+
+            console.log('[UsersService] Updating profile for', userId, 'with payload:', JSON.stringify(updatePayload));
+            try {
+                const result = await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, updatePayload);
+                console.log('[UsersService] Update result:', result);
+                return result;
+            } catch (err: any) {
+                console.error('[UsersService] Update failed with error:', err);
+                if (err?.response) console.error('[UsersService] Error response:', err.response);
+                throw err;
+            }
         } else {
             // Should not normally happen if they are calling update, but fallback to creating
             return await this.createProfile(userId, data.username || `user_${userId.slice(0, 6)}`, data);
