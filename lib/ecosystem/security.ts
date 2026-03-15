@@ -235,32 +235,25 @@ export class EcosystemSecurity {
    */
   async setMasterpassFlag(userId: string, _email: string) {
     try {
-      const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
-      const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.USERS;
-
-      try {
-        await genDB.use('chat').use('users').update(userId, {
-          publicKey,
-          wrappedKey: wrappedKey || null,
-          isLocked: true,
-          isGhost: userId === 'ghost'
-        });
-      } catch (updateErr: any) {
-        console.error('[Security] Failed to update publicKey in chat.users:', updateErr?.message || updateErr);
-      }
+      // In connect, we don't have masterpass column in chat.users
+      // We just ensure the profile is initialized if it's not
+      const { UsersService } = await import('../services/users');
+      await UsersService.getProfileById(userId);
     } catch (e: any) {
       console.error('[Security] setMasterpassFlag failed:', e);
     }
   }
 
   async updateWrappedKey(userId: string, wrappedKey: string) {
-    const updatePayload: any = { wrappedKey };
-    await genDB.use('chat').use('users').update(userId, updatePayload);
-    console.log('[Security] Published publicKey to chat.users via update');
+    // wrappedKey is not in chat.users schema
+    console.log('[Security] updateWrappedKey called but not supported in chat.users schema');
   }
 
   async syncIdentity(userId: string) {
     try {
+      const PW_DB_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+      const IDENTITIES_TABLE_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+
       const res = await tablesDB.listRows(PW_DB_ID, IDENTITIES_TABLE_ID, [
         Query.equal('userId', userId),
         Query.equal('identityType', 'e2e_connect'),
@@ -280,7 +273,8 @@ export class EcosystemSecurity {
         this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
 
         // Publish publicKey to chat.users
-        await publishPublicKey(doc.publicKey);
+        const { UsersService } = await import('../services/users');
+        await UsersService.updateProfile(userId, { publicKey: doc.publicKey });
 
         return doc.publicKey;
       }
@@ -306,7 +300,8 @@ export class EcosystemSecurity {
       this.identityKeyPair = pair;
 
       // Publish publicKey to chat.users
-      await publishPublicKey(pubBase64);
+      const { UsersService } = await import('../services/users');
+      await UsersService.updateProfile(userId, { publicKey: pubBase64 });
 
       return pubBase64;
     } catch (_e: unknown) {
