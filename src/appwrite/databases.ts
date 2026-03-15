@@ -1,5 +1,5 @@
 import { Client, TablesDB, ID, Query, type Models, Permission, Role } from 'appwrite';
-import type { DatabaseHandle, DatabaseId, DatabaseTableMap, DatabaseTables, QueryBuilder, PermissionBuilder, RoleBuilder, RoleString } from './types';
+import type { DatabaseHandle, DatabaseId, DatabaseTableMap, DatabasesApi, QueryBuilder, PermissionBuilder, RoleBuilder, RoleString } from './types';
 import { PROJECT_ID, ENDPOINT } from './constants';
 
 const createQueryBuilder = <T>(): QueryBuilder<T> => ({
@@ -154,6 +154,8 @@ function createDatabaseHandle<D extends DatabaseId>(
   const dbMap = tableIdMap[databaseId];
 
   return {
+    id: databaseId,
+    tables: Object.keys(dbMap),
     use: <T extends keyof DatabaseTableMap[D] & string>(tableId: T): DatabaseTableMap[D][T] => {
       if (!hasOwn(dbMap, tableId)) {
         throw new Error(`Unknown table "${tableId}" in database "${databaseId}"`);
@@ -170,11 +172,11 @@ function createDatabaseHandle<D extends DatabaseId>(
   };
 }
 
-function createDatabasesApi(tablesDB: TablesDB): DatabaseTables {
-  const dbCache = new Map<DatabaseId, ReturnType<typeof createDatabaseHandle>>();
+function createDatabasesApi(tablesDB: TablesDB): DatabasesApi {
+  const dbCache = new Map<DatabaseId, DatabaseHandle<any>>();
 
   return {
-    use: (databaseId: DatabaseId) => {
+    use: <D extends DatabaseId>(databaseId: D): DatabaseHandle<D> => {
       if (!hasOwn(tableIdMap, databaseId)) {
         throw new Error(`Unknown database "${databaseId}"`);
       }
@@ -182,9 +184,9 @@ function createDatabasesApi(tablesDB: TablesDB): DatabaseTables {
       if (!dbCache.has(databaseId)) {
         dbCache.set(databaseId, createDatabaseHandle(tablesDB, databaseId));
       }
-      return dbCache.get(databaseId);
+      return dbCache.get(databaseId) as DatabaseHandle<D>;
     },
-  } as DatabaseTables;
+  };
 }
 
 // Initialize client
@@ -194,4 +196,4 @@ const client = new Client()
 
 const tablesDB = new TablesDB(client);
 
-export const databases: DatabaseTables = createDatabasesApi(tablesDB);
+export const databases: DatabasesApi = createDatabasesApi(tablesDB);
