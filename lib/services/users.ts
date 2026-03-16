@@ -97,6 +97,11 @@ export const UsersService = {
             // Ensure updatedAt is always set
             updatePayload.updatedAt = new Date().toISOString();
 
+            // Explicitly delete ghost fields that might be lingering
+            delete (updatePayload as any).avatarFileId;
+            delete (updatePayload as any).avatarUrl;
+
+            console.log('[UsersService] [PAYLOAD_AUDIT] Keys being sent:', Object.keys(updatePayload));
             console.log('[UsersService] Updating profile for', userId, 'with payload:', JSON.stringify(updatePayload));
             try {
                 const result = await genDB.use('chat').use('users').update(currentProfile.$id, updatePayload);
@@ -134,6 +139,10 @@ export const UsersService = {
             updatedAt: new Date().toISOString()
         };
 
+        delete (createData as any).avatarFileId;
+        delete (createData as any).avatarUrl;
+
+        console.log('[UsersService] [PAYLOAD_AUDIT] Creating with keys:', Object.keys(createData));
         console.log('[UsersService] Creating profile for', userId, 'with data:', JSON.stringify(createData));
 
         return await tablesDB.createRow(
@@ -206,7 +215,7 @@ export const UsersService = {
 
         return await genDB.use('chat').use('users').update(userId, {
             updatedAt: new Date().toISOString()
-        }, permissions);
+        }, { permissions });
     },
 
     /**
@@ -214,8 +223,8 @@ export const UsersService = {
      * When enabled, the file becomes accessible to Role.any() in Appwrite Storage.
      */
     async setAvatarVisible(userId: string, fileId: string, isVisible: boolean) {
-        const bucketId = APPWRITE_CONFIG.BUCKETS.CHAT.PROFILES || 'profile_pictures';
-        
+        const bucketId = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
+
         // Construct standard permissions
         const permissions = [
             Permission.read(Role.user(userId)),
