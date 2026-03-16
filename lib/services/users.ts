@@ -203,19 +203,23 @@ export const UsersService = {
      * When enabled, anyone can find and view the profile metadata.
      */
     async setProfileDiscoverable(userId: string, isDiscoverable: boolean) {
-        const permissions = [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId))
-        ];
-
-        if (isDiscoverable) {
-            permissions.push(Permission.read(Role.any()));
-        }
-
         return await genDB.use('chat').use('users').update(userId, {
             updatedAt: new Date().toISOString()
-        }, { permissions });
+        }, {
+            permissions: (p, r) => {
+                const perms = [
+                    p.read(r.user(userId)),
+                    p.update(r.user(userId)),
+                    p.delete(r.user(userId))
+                ];
+
+                if (isDiscoverable) {
+                    perms.push(p.read(r.any()));
+                }
+
+                return perms;
+            }
+        });
     },
 
     /**

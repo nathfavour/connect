@@ -25,7 +25,6 @@ import { useEffect } from 'react';
 const VaultStatus = () => {
     const { user } = useAuth();
     const [isInitialized, setIsInitialized] = React.useState<boolean | null>(null);
-    const [isLocked, setIsLocked] = React.useState(true);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [sudoIntent, setSudoIntent] = React.useState<"unlock" | "initialize" | "reset">("unlock");
 
@@ -35,8 +34,9 @@ const VaultStatus = () => {
                 setIsInitialized(entries.some((e: any) => e.type === 'password'));
             });
         }
-        setIsLocked(!ecosystemSecurity.status.isUnlocked);
-    }, [user?.$id, ecosystemSecurity.status.isUnlocked]);
+    }, [user?.$id]);
+
+    const isLocked = !ecosystemSecurity.status.isUnlocked;
 
     const handleAction = () => {
         if (isInitialized === false) {

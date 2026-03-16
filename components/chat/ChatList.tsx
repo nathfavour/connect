@@ -193,7 +193,7 @@ export const ChatList = () => {
     );
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default', position: 'relative' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
             <Box sx={{ p: 3, pb: 2 }}>
                 <Typography
                     variant="h5"
@@ -213,14 +213,26 @@ export const ChatList = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                        bgcolor: '#161412',
                         borderRadius: '12px',
                         px: 2,
                         py: 1,
                         border: '1px solid rgba(255, 255, 255, 0.05)',
+                        boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                        position: 'relative',
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: '12px'
+                        },
                         '&:focus-within': {
-                            borderColor: 'primary.main',
-                            bgcolor: 'rgba(255, 255, 255, 0.05)'
+                            borderColor: '#EC4899',
+                            bgcolor: '#1C1A18'
                         }
                     }}
                 >
@@ -270,9 +282,10 @@ export const ChatList = () => {
                                     <ListItemAvatar>
                                         <Avatar
                                             sx={{
-                                                bgcolor: conv.isSelf ? alpha('#F59E0B', 0.1) : 'rgba(255, 255, 255, 0.03)',
-                                                color: conv.isSelf ? 'var(--color-electric)' : 'text.secondary',
-                                                border: conv.isSelf ? `1px solid ${alpha('#F59E0B', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
+                                                bgcolor: conv.isSelf ? alpha('#EC4899', 0.1) : '#161412',
+                                                color: conv.isSelf ? '#EC4899' : 'text.secondary',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                                                 width: 44,
                                                 height: 44
                                             }}
@@ -293,7 +306,7 @@ export const ChatList = () => {
                                         primaryTypographyProps={{
                                             fontWeight: 700,
                                             fontSize: '0.95rem',
-                                            color: conv.isSelf ? 'var(--color-electric)' : 'text.primary',
+                                            color: conv.isSelf ? '#EC4899' : 'text.primary',
                                             fontFamily: 'var(--font-clash)'
                                         }}
                                         secondaryTypographyProps={{

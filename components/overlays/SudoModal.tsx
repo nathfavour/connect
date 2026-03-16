@@ -59,8 +59,7 @@ export function SudoModal({
     const [hasPasskey, setHasPasskey] = useState(false);
     const [hasPin, setHasPin] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
-    const [mode, setMode] = useState<"passkey" | "password" | "pin" | "initialize" | null>(null);
-    const modeStr = mode as string;
+    const [mode, setMode] = useState<any>(null);
     const [isDetecting, setIsDetecting] = useState(true);
     const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
 
@@ -345,7 +344,7 @@ export function SudoModal({
             </DialogTitle>
 
             <DialogContent sx={{ pb: 4 }}>
-                {isDetecting || (loading && !password && modeStr !== "pin") ? (
+                {isDetecting || (loading && !password && mode !== "pin") ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                         <CircularProgress sx={{ color: '#A855F7' }} />
                     </Box>
@@ -524,7 +523,7 @@ export function SudoModal({
                             {loading ? <CircularProgress size={24} color="inherit" /> : "Verify Identity"}
                         </Button>
 
-                        {hasPasskey && modeStr !== "passkey" && (
+                        {hasPasskey && mode !== "passkey" && (
                             <Button
                                 fullWidth
                                 variant="text"
@@ -549,7 +548,7 @@ export function SudoModal({
                             </Button>
                         )}
 
-                        {hasPin && modeStr !== "pin" && (
+                        {hasPin && mode !== "pin" && (
                             <Button
                                 fullWidth
                                 variant="text"

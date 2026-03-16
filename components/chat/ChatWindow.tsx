@@ -188,60 +188,60 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 setUnlockModalOpen(true);
             }
 
-        // Subscribe to real-time messages
-        let unsub: any;
-        const initRealtime = async () => {
-            unsub = await realtime.subscribe(
-                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
-                async (response) => {
-                    const payload = response.payload as Messages;
-                    if (payload.conversationId === conversationId) {
-                        if (response.events.some(e => e.includes('.create')) || response.events.some(e => e.includes('.update'))) {
-                            if (user && payload.senderId === user.$id && response.events.some(e => e.includes('.create'))) return;
+            // Subscribe to real-time messages
+            let unsub: any;
+            const initRealtime = async () => {
+                unsub = await realtime.subscribe(
+                    [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
+                    async (response) => {
+                        const payload = response.payload as Messages;
+                        if (payload.conversationId === conversationId) {
+                            if (response.events.some(e => e.includes('.create')) || response.events.some(e => e.includes('.update'))) {
+                                if (user && payload.senderId === user.$id && response.events.some(e => e.includes('.create'))) return;
 
-                            // Decrypt message before adding to state
-                            const isEncrypted = ecosystemSecurity.status.isUnlocked && (
-                                (payload.type === MessagesType.TEXT && payload.content && payload.content.length > 40)
-                            );
+                                // Decrypt message before adding to state
+                                const isEncrypted = ecosystemSecurity.status.isUnlocked && (
+                                    (payload.type === MessagesType.TEXT && payload.content && payload.content.length > 40)
+                                );
 
-                            if (isEncrypted) {
-                                try {
-                                    const convKey = ecosystemSecurity.getConversationKey(conversationId);
-                                    const decrypt = async (val: string) => {
-                                        if (convKey) return await ecosystemSecurity.decryptWithKey(val, convKey);
-                                        return await ecosystemSecurity.decrypt(val);
-                                    };
+                                if (isEncrypted) {
+                                    try {
+                                        const convKey = ecosystemSecurity.getConversationKey(conversationId);
+                                        const decrypt = async (val: string) => {
+                                            if (convKey) return await ecosystemSecurity.decryptWithKey(val, convKey);
+                                            return await ecosystemSecurity.decrypt(val);
+                                        };
 
-                                    if (payload.type === MessagesType.TEXT && payload.content && payload.content.length > 40) {
-                                        payload.content = await decrypt(payload.content);
-                                    }
-                                } catch (_e: unknown) { }
-                            }
-
-                            if (response.events.some(e => e.includes('.create'))) {
-                                setMessages(prev => {
-                                    const withoutOptimistic = prev.filter(m => {
-                                        const isOptimistic = m.$id && String(m.$id).startsWith('optimistic-');
-                                        if (isOptimistic) return m.content !== payload.content;
-                                        return true;
-                                    });
-                                    if (withoutOptimistic.some(m => m.$id === payload.$id)) return withoutOptimistic;
-                                    return [...withoutOptimistic, payload];
-                                });
-                                if (user && payload.senderId !== user.$id) {
-                                    ChatService.markAsRead(payload.$id, user.$id);
+                                        if (payload.type === MessagesType.TEXT && payload.content && payload.content.length > 40) {
+                                            payload.content = await decrypt(payload.content);
+                                        }
+                                    } catch (_e: unknown) { }
                                 }
-                                setTimeout(() => scrollToBottom(), 100);
-                            } else {
-                                setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
+
+                                if (response.events.some(e => e.includes('.create'))) {
+                                    setMessages(prev => {
+                                        const withoutOptimistic = prev.filter(m => {
+                                            const isOptimistic = m.$id && String(m.$id).startsWith('optimistic-');
+                                            if (isOptimistic) return m.content !== payload.content;
+                                            return true;
+                                        });
+                                        if (withoutOptimistic.some(m => m.$id === payload.$id)) return withoutOptimistic;
+                                        return [...withoutOptimistic, payload];
+                                    });
+                                    if (user && payload.senderId !== user.$id) {
+                                        ChatService.markAsRead(payload.$id, user.$id);
+                                    }
+                                    setTimeout(() => scrollToBottom(), 100);
+                                } else {
+                                    setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
+                                }
+                            } else if (response.events.some(e => e.includes('.delete'))) {
+                                setMessages(prev => prev.filter(m => m.$id === payload.$id));
                             }
-                        } else if (response.events.some(e => e.includes('.delete'))) {
-                            setMessages(prev => prev.filter(m => m.$id === payload.$id));
                         }
                     }
-                }
-            );
-        };
+                );
+            };
 
             initRealtime();
 
@@ -250,7 +250,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 else if (unsub?.unsubscribe) unsub.unsubscribe();
             };
         }
-    }, [conversationId, user, loadConversation, loadMessages]);
+    }, [conversationId, user, loadConversation, loadMessages, conversation?.isEncrypted, isUnlocked, unlockModalOpen]);
 
     const handleClearChat = async (mode: 'me' | 'everyone') => {
         if (!user || !confirm(`Are you sure you want to wipe this chat ${mode === 'me' ? 'for yourself' : 'for everyone'}?`)) return;
@@ -930,8 +930,22 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default', position: 'relative' }}>
-            <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', bgcolor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
+            <AppBar position="static" color="transparent" elevation={0} sx={{ 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
+                bgcolor: '#0A0908', 
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: 'rgba(255,255,255,0.05)'
+                }
+            }}>
                 <Toolbar sx={{ gap: 1 }}>
                     <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'text.secondary' }}>
                         <ChevronLeft size={20} strokeWidth={1.5} />
@@ -943,13 +957,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <Avatar sx={{
                             width: 36,
                             height: 36,
-                            bgcolor: isSelf ? alpha('#F59E0B', 0.1) : 'rgba(255, 255, 255, 0.05)',
-                            border: isSelf ? `1px solid ${alpha('#F59E0B', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)'
+                            bgcolor: isSelf ? alpha('#EC4899', 0.1) : '#161412',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            boxShadow: '0 1px 0 rgba(0,0,0,0.4)'
                         }}>
                             {isSelf ? <Bookmark size={18} color="var(--color-electric)" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? 'var(--color-electric)' : 'text.primary' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#EC4899' : 'text.primary' }}>
                                 {conversation?.name || 'Loading...'}
                             </Typography>
                             {!isSelf && conversation?.type === 'direct' && (
@@ -963,7 +978,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                                         if (isOnline) return (
                                             <>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'var(--color-primary)', boxShadow: '0 0 8px var(--color-primary)' }} />
+                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#EC4899', boxShadow: '0 0 8px #EC4899' }} />
                                                 Online
                                             </>
                                         );
@@ -1033,9 +1048,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {conversation?.isEncrypted && !isUnlocked && (
-                    <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(99, 102, 241, 0.05)', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
-                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: 'var(--color-primary)' }}>
+                    <Box sx={{ p: 2, mb: 2, bgcolor: alpha('#EC4899', 0.05), borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#EC4899' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
                         <Button
@@ -1046,18 +1060,17 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             sx={{ 
                                 borderRadius: '10px', 
                                 fontWeight: 800,
-                                borderColor: 'var(--color-primary)',
-                                color: 'var(--color-primary)',
+                                borderColor: '#EC4899',
+                                color: '#EC4899',
                                 '&:hover': {
-                                    borderColor: 'var(--color-primary)',
-                                    bgcolor: 'rgba(99, 102, 241, 0.1)'
+                                    borderColor: '#EC4899',
+                                    bgcolor: alpha('#EC4899', 0.1)
                                 }
                             }}
                         >
                             Unlock Vault to Read
                         </Button>
                     </Box>
-                )}
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
                 ) : (
@@ -1073,13 +1086,19 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.2,
                                 px: 1.8,
                                 borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.1) : 'rgba(255, 255, 255, 0.03)',
-                                border: msg.senderId === user?.$id ? `1px solid ${alpha('#6366F1', 0.2)}` : '1px solid rgba(255, 255, 255, 0.05)',
-                                color: 'text.primary',
-                                boxShadow: 'none',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.15) : 'rgba(255, 255, 255, 0.05)',
+                                bgcolor: msg.senderId === user?.$id ? alpha('#EC4899', 0.1) : '#161412',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                position: 'relative',
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '1px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px'
                                 }
                             }}>
                                 {renderMessageContent(msg)}

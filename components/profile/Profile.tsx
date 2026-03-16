@@ -162,16 +162,27 @@ export const Profile = ({ username }: ProfileProps) => {
 
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
-            <Paper sx={{ 
-                p: 4, 
-                borderRadius: '32px', 
-                mb: 4,
-                background: 'rgba(255, 255, 255, 0.02)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                position: 'relative',
-                overflow: 'hidden'
-            }} elevation={0}>
+                <Paper sx={{ 
+                    p: 4, 
+                    borderRadius: '32px', 
+                    mb: 4,
+                    background: '#161412',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '32px'
+                    }
+                }} elevation={0}>
                 {/* Brand Accent Blur */}
                 <Box sx={{
                     position: 'absolute',
@@ -185,20 +196,20 @@ export const Profile = ({ username }: ProfileProps) => {
                 }} />
 
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4, position: 'relative', zIndex: 1 }}>
-                    <Avatar
-                        src={profileUrl || profile.avatar}
-                        sx={{ 
-                            width: 140, 
-                            height: 140, 
-                            fontSize: 48, 
-                            bgcolor: 'var(--color-electric)',
-                            color: 'black',
-                            fontWeight: 900,
-                            border: '4px solid rgba(255, 255, 255, 0.05)',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-                            fontFamily: 'var(--font-clash)'
-                        }}
-                    >
+                        <Avatar
+                            src={profileUrl || profile.avatar}
+                            sx={{ 
+                                width: 140, 
+                                height: 140, 
+                                fontSize: 48, 
+                                bgcolor: '#EC4899',
+                                color: 'black',
+                                fontWeight: 900,
+                                border: '4px solid rgba(255, 255, 255, 0.05)',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                                fontFamily: 'var(--font-clash)'
+                            }}
+                        >
                         {(profile.displayName || profile.username || currentUser?.name || 'U').charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
@@ -240,9 +251,9 @@ export const Profile = ({ username }: ProfileProps) => {
                                             px: 3,
                                             py: 1,
                                             fontWeight: 700,
-                                            bgcolor: 'var(--color-electric)',
+                                            bgcolor: '#EC4899',
                                             color: 'black',
-                                            '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
+                                            '&:hover': { bgcolor: alpha('#EC4899', 0.8) }
                                         }}
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
@@ -283,11 +294,11 @@ export const Profile = ({ username }: ProfileProps) => {
                                             px: 3,
                                             py: 1,
                                             fontWeight: 700,
-                                            bgcolor: isFollowing ? 'transparent' : 'var(--color-electric)',
-                                            color: isFollowing ? 'var(--color-electric)' : 'black',
-                                            borderColor: isFollowing ? 'var(--color-electric)' : 'none',
+                                            bgcolor: isFollowing ? 'transparent' : '#EC4899',
+                                            color: isFollowing ? '#EC4899' : 'black',
+                                            borderColor: isFollowing ? '#EC4899' : 'none',
                                             '&:hover': { 
-                                                bgcolor: isFollowing ? alpha('#F59E0B', 0.05) : alpha('#F59E0B', 0.8) 
+                                                bgcolor: isFollowing ? alpha('#EC4899', 0.05) : alpha('#EC4899', 0.8) 
                                             }
                                         }}
                                         onClick={handleFollow}
@@ -331,7 +342,7 @@ export const Profile = ({ username }: ProfileProps) => {
                 gap: 1.5,
                 opacity: 0.8
             }}>
-                <Activity size={20} color="var(--color-electric)" /> Activity Stats
+                <Activity size={20} color="#EC4899" /> Activity Stats
             </Typography>
             <Stack direction="row" spacing={2}>
                 <Paper sx={{ 
@@ -339,10 +350,22 @@ export const Profile = ({ username }: ProfileProps) => {
                     textAlign: 'center', 
                     borderRadius: '24px', 
                     flex: 1,
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    background: '#161412',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '24px'
+                    }
                 }} elevation={0}>
-                    <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--color-electric)', fontFamily: 'var(--font-clash)' }}>0</Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 900, color: '#EC4899', fontFamily: 'var(--font-clash)' }}>0</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Posts</Typography>
                 </Paper>
                 <Paper sx={{ 
@@ -350,8 +373,20 @@ export const Profile = ({ username }: ProfileProps) => {
                     textAlign: 'center', 
                     borderRadius: '24px', 
                     flex: 1,
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    background: '#161412',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '24px'
+                    }
                 }} elevation={0}>
                     <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'var(--font-clash)' }}>0</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Followers</Typography>
@@ -361,8 +396,20 @@ export const Profile = ({ username }: ProfileProps) => {
                     textAlign: 'center', 
                     borderRadius: '24px', 
                     flex: 1,
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    background: '#161412',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    position: 'relative',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '24px'
+                    }
                 }} elevation={0}>
                     <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--color-titanium)', fontFamily: 'var(--font-clash)' }}>0</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Following</Typography>

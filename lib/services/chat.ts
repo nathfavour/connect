@@ -46,7 +46,7 @@ export const ChatService = {
 
         try {
             const keyMap = JSON.parse(conv.encryptionKey);
-            let myWrappedKey = keyMap[myUserId];
+            const myWrappedKey = keyMap[myUserId];
 
             // If we don't have a wrapped key, but we have a valid identity, we might need a re-wrap
             // This happens after a Master Password reset where the user has a new public key.
