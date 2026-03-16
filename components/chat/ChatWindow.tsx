@@ -5,7 +5,7 @@ import { ChatService } from '@/lib/services/chat';
 import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
-import { Messages, MessagesType } from '@/src/appwrite/types';
+import { Messages, MessagesType } from '@/generated/appwrite/types';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { realtime } from '@/lib/appwrite/client';

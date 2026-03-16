@@ -657,7 +657,6 @@ export type MessagesCreate = {
     "attachments"?: string[] | null;
     "replyTo"?: string | null;
     "readBy"?: string[] | null;
-    "metadata"?: string | null;
 }
 
 export type Messages = Models.Row & {
@@ -670,7 +669,6 @@ export type Messages = Models.Row & {
     "attachments"?: string[] | null;
     "replyTo"?: string | null;
     "readBy"?: string[] | null;
-    "metadata"?: string | null;
 }
 
 export type ConversationsCreate = {
@@ -1068,12 +1066,10 @@ export type QueryValue = string | number | boolean;
 
 export type ExtractQueryValue<T> = T extends (infer U)[]
   ? U extends QueryValue ? U : never
-  : NonNullable<T> extends QueryValue ? NonNullable<T> : never;
+  : T extends QueryValue | null ? NonNullable<T> : never;
 
 export type QueryableKeys<T> = {
-  [K in keyof T]-?: T[K] extends (infer U)[]
-    ? U extends QueryValue ? K : never
-    : NonNullable<T[K]> extends QueryValue ? K : never;
+  [K in keyof T]: ExtractQueryValue<T[K]> extends never ? never : K;
 }[keyof T];
 
 export type QueryBuilder<T> = {
@@ -1715,7 +1711,6 @@ export type DatabaseTableMap = {
         "attachments"?: string[] | null;
         "replyTo"?: string | null;
         "readBy"?: string[] | null;
-        "metadata"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Messages>;
       get: (id: string) => Promise<Messages>;
       update: (id: string, data: Partial<{
@@ -1728,7 +1723,6 @@ export type DatabaseTableMap = {
         "attachments"?: string[] | null;
         "replyTo"?: string | null;
         "readBy"?: string[] | null;
-        "metadata"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Messages>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; notEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; lessThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; lessThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; greaterThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; contains: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; search: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Messages>>(field: K) => string; isNotNull: <K extends QueryableKeys<Messages>>(field: K) => string; startsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; between: <K extends QueryableKeys<Messages>>(field: K, start: ExtractQueryValue<Messages[K]>, end: ExtractQueryValue<Messages[K]>) => string; select: <K extends keyof Messages>(fields: K[]) => string; orderAsc: <K extends keyof Messages>(field: K) => string; orderDesc: <K extends keyof Messages>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Messages[] }>;
