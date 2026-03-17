@@ -19,7 +19,7 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ 
   sx, 
   size = 40, 
-  app = 'connect', 
+  app = 'root', 
   variant = 'full',
   component,
   href,
@@ -40,10 +40,10 @@ const Logo: React.FC<LogoProps> = ({
   const current = appColors[app] || appColors.root;
 
   // The Identity Split:
-  // Left Hemisphere = Application Specific Color
-  // Right Hemisphere = Ecosystem Indigo (#6366F1) or White (for Root)
-  const leftColor = current.secondary;
-  const rightColor = app === 'root' ? (isDarkMode ? "#FFFFFF" : "#000000") : current.primary;
+  // Left Hemisphere = Ecosystem Indigo (#6366F1) or White (for Root)
+  // Right Hemisphere = Application Specific Color
+  const leftColor = app === 'root' ? (isDarkMode ? "#FFFFFF" : "#000000") : current.secondary;
+  const rightColor = current.primary;
   
   // Center cutout color (punches through to background)
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
@@ -101,16 +101,19 @@ const Logo: React.FC<LogoProps> = ({
       transition={animate ? { repeat: Infinity, duration: 8, ease: "linear" } : {}}
       style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
     >
+      {/* Left Hemisphere */}
       <polygon 
         points="50,10 15,30 15,70 50,90" 
         fill={leftColor} 
         style={{ transition: 'fill 0.4s ease' }}
       />
+      {/* Right Hemisphere */}
       <polygon 
         points="50,10 85,30 85,70 50,90" 
         fill={rightColor} 
         style={{ transition: 'fill 0.4s ease' }}
       />
+      {/* Center Cutout */}
       {renderCutout()}
     </motion.svg>
   );
