@@ -365,8 +365,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         }
         setSearching(true);
         try {
-            const results = await UsersService.searchUsers(query);
-            const enriched = await Promise.all(results.map(async (u: any) => {
+            const result = await UsersService.searchUsers(query);
+            const enriched = await Promise.all(result.rows.map(async (u: any) => {
                 let avatar = null;
                 if (u.avatar) {
                     try {

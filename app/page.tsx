@@ -3,12 +3,10 @@
 import React, { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Feed } from '@/components/social/Feed';
-import { Container, Tabs, Tab, Box, alpha } from '@mui/material';
-import { useAuth } from '@/lib/auth';
+import { Container, Tabs, Tab, Box } from '@mui/material';
 import { TrendingUp, MessageCircle, Search } from 'lucide-react';
 
 export default function Home() {
-  const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
 
   return (

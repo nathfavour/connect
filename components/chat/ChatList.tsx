@@ -72,6 +72,8 @@ export const ChatList = () => {
                 const keeper = allSelfChats[0];
                 const extras = allSelfChats.slice(1);
 
+                console.log('[ChatList] Keeping self-chat:', keeper.$id);
+
                 // Delete duplicates in background
                 for (const dup of extras) {
                     console.log('[ChatList] Removing duplicate self-chat:', dup.$id);

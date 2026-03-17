@@ -138,7 +138,6 @@ export function PasskeySetup({
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const challengeBase64 = arrayBufferToBase64(challenge.buffer);
 
-      const userIdBytes = new TextEncoder().encode(userId);
       const registrationOptions = {
         challenge: challengeBase64,
         rp: {

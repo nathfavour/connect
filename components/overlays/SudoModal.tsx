@@ -16,15 +16,10 @@ import {
     Fade,
     alpha,
     InputAdornment,
-    useTheme,
 } from "@mui/material";
 import {
     Lock,
     Fingerprint,
-    X,
-    Shield,
-    Zap,
-    LogOut,
     Eye,
     EyeOff,
     LayoutGrid,
@@ -50,8 +45,7 @@ export function SudoModal({
     onCancel,
     intent,
 }: SudoModalProps) {
-    const theme = useTheme();
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [pin, setPin] = useState("");
@@ -238,7 +232,7 @@ export function SudoModal({
     }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup]);
 
     useEffect(() => {
-        if (isOpen && mode === "passkey" && hasPasskey && !passkeyLoading) {
+        if (isOpen && mode === "passkey" && hasPasskey) {
             handlePasskeyVerify();
         }
     }, [isOpen, mode, hasPasskey, handlePasskeyVerify]);

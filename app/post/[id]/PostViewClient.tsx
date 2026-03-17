@@ -43,7 +43,7 @@ import { getUserProfilePicId } from '@/lib/user-utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { TextField, InputAdornment, Alert } from '@mui/material';
-import { LogIn } from 'lucide-react';
+import Image from 'next/image';
 
 export function PostViewClient() {
     const params = useParams();
@@ -62,7 +62,7 @@ export function PostViewClient() {
             try {
                 const url = await fetchProfilePreview(picId, 64, 64);
                 setUserAvatarUrl(url as unknown as string);
-            } catch (_e) {
+            } catch (_e: unknown) {
                 console.warn('Failed to fetch user avatar', _e);
             }
         }
@@ -70,6 +70,7 @@ export function PostViewClient() {
 
     const loadMoment = useCallback(async () => {
         if (!params.id) return;
+        setLoading(true);
         try {
             const id = Array.isArray(params.id) ? params.id[0] : params.id;
             const data = await SocialService.getMomentById(id, user?.$id);
@@ -99,11 +100,11 @@ export function PostViewClient() {
                         try {
                             const url = await fetchProfilePreview(sCreator.avatar, 64, 64);
                             sAvatar = url as unknown as string;
-                        } catch (_e) {}
+                        } catch (_e: unknown) {}
                     }
                     sourceMoment = { ...source, creator: { ...sCreator, avatar: sAvatar } };
-                } catch (e) {
-                    console.warn('Failed to resolve source moment in client', e);
+                } catch (_e: unknown) {
+                    console.warn('Failed to resolve source moment in client', _e);
                 }
             }
 
@@ -119,14 +120,14 @@ export function PostViewClient() {
                     try {
                         const url = await fetchProfilePreview(rCreator.avatar, 48, 48);
                         rAvatar = url as unknown as string;
-                    } catch (_e) {}
+                    } catch (_e: unknown) {}
                 }
                 return { ...reply, creator: { ...rCreator, avatar: rAvatar } };
             }));
             setReplies(enrichedReplies);
 
-        } catch (error) {
-            console.error('Failed to load moment:', error);
+        } catch (_e: unknown) {
+            console.error('Failed to load moment:', _e);
             toast.error('Moment not found');
         } finally {
             setLoading(false);
@@ -388,10 +389,11 @@ export function PostViewClient() {
                                             justifyContent: 'center',
                                             position: 'relative'
                                         }}>
-                                            <img 
+                                            <Image 
                                                 src={`https://fra.cloud.appwrite.io/v1/storage/buckets/moments/files/${att.id}/view?project=${APPWRITE_CONFIG.PROJECT_ID}`} 
                                                 alt="Attachment"
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                fill
+                                                style={{ objectFit: 'cover' }}
                                             />
                                         </Box>
                                     ))}

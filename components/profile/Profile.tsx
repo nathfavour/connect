@@ -19,8 +19,6 @@ import {
     Settings as SettingsIcon, 
     UserPlus as PersonAddIcon, 
     MessageSquare as ChatIcon,
-    Layers,
-    Users,
     Activity,
     Heart,
     MessageCircle,
@@ -80,7 +78,6 @@ export const Profile = ({ username }: ProfileProps) => {
     };
 
     const normalizedUsername = normalizeUsername(username);
-    const isGuest = !currentUser;
 
     const isOwnProfile = currentUser && !profile?.__external && (
         normalizedUsername === profile?.username ||

@@ -23,9 +23,7 @@ import {
     Home, 
     Phone, 
     User, 
-    Settings,
-    LayoutGrid,
-    Search
+    Settings
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMemo, useEffect, useState } from 'react';

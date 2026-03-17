@@ -53,9 +53,7 @@ import {
     Lock,
     ExternalLink,
     RefreshCw,
-    CheckSquare,
-    Square as CheckboxBlankIcon,
-    AlertCircle
+    CheckSquare
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
@@ -169,7 +167,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 console.warn("[ChatWindow] Background re-wrap failed:", err)
             );
         }
-    }, [conversationId, isUnlocked, !!conversation]);
+    }, [conversationId, isUnlocked, conversation]);
 
     useEffect(() => {
         if (conversationId && conversation?.type === 'direct' && !isSelf) {
@@ -250,7 +248,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 else if (unsub?.unsubscribe) unsub.unsubscribe();
             };
         }
-    }, [conversationId, user, loadConversation, loadMessages, conversation?.isEncrypted, isUnlocked, unlockModalOpen]);
+    }, [conversationId, user, loadConversation, loadMessages, conversation?.isEncrypted, isUnlocked, unlockModalOpen, conversation]);
 
     const handleClearChat = async (mode: 'me' | 'everyone') => {
         if (!user || !confirm(`Are you sure you want to wipe this chat ${mode === 'me' ? 'for yourself' : 'for everyone'}?`)) return;
@@ -352,13 +350,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setTimeout(() => scrollToBottom(), 50);
 
         // 3. Encrypt name and metadata if it's a group
-        let finalContent = text;
         if (type === MessagesType.TEXT && ecosystemSecurity.status.isUnlocked) {
             const convKey = ecosystemSecurity.getConversationKey(conversationId);
             if (convKey) {
-                finalContent = await ecosystemSecurity.encryptWithKey(text, convKey);
+                await ecosystemSecurity.encryptWithKey(text, convKey);
             } else {
-                finalContent = await ecosystemSecurity.encrypt(text);
+                await ecosystemSecurity.encrypt(text);
             }
         }
 
@@ -842,6 +839,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     };
 
     const renderMessageContent = (msg: Messages) => {
+        if (msg.metadata?.type === 'attachment') {
+            return <AttachmentCard metadata={msg.metadata as unknown as AttachmentMetadata} />;
+        }
         // Handle gibberish display when vault is locked
         const isLikelyEncrypted = (val: string) => {
             if (!val) return false;
@@ -1111,18 +1111,20 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
                                     {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
                                 </Typography>
-                                {msg.senderId === user?.$id && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
-                                            <Box sx={{ opacity: 0.4, display: 'flex' }}><Clock size={11} strokeWidth={2.5} /></Box>
-                                        ) : (msg as any).status === 'error' ? (
-                                            <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px' }}>Failed</Typography>
-                                        ) : (
-                                            msg.readBy?.length && msg.readBy.length > 1 ? (
-                                                <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} />
-                                            ) : (
-                                                <Check size={13} strokeWidth={2.5} style={{ opacity: 0.4 }} />
-                                            )
+                                        {msg.senderId === user?.$id && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
+                                                    <Box sx={{ opacity: 0.4, display: 'flex' }}><Clock size={11} strokeWidth={2.5} /></Box>
+                                                ) : (msg as any).status === 'error' ? (
+                                                    <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px' }}>Failed</Typography>
+                                                ) : (
+                                                    msg.readBy?.length && msg.readBy.length > 1 ? (
+                                                        <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} />
+                                                    ) : (
+                                                        <Check size={13} strokeWidth={2.5} style={{ opacity: 0.4 }} />
+                                                    )
+                                                )}
+                                            </Box>
                                         )}
                                     </Box>
                                 )}

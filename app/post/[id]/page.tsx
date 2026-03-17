@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
                 creator: `@${creator?.username}`,
             },
         };
-    } catch (e) {
+    } catch (_e: unknown) {
         return { title: 'Moment - Kylrix Connect' };
     }
 }

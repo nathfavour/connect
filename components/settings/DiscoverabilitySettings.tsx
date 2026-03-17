@@ -16,8 +16,7 @@ import {
     DialogContent,
     DialogActions,
     Button,
-    TextField,
-    Tooltip
+    TextField
 } from '@mui/material';
 import { Search, Edit2, Check, X, ShieldAlert, User, Image, Globe } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
