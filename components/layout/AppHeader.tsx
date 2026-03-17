@@ -93,9 +93,9 @@ export const AppHeader = () => {
       elevation={0}
       sx={{ 
         zIndex: 1201,
-        bgcolor: 'rgba(5, 5, 5, 0.01)',
+        bgcolor: 'rgba(11, 9, 8, 0.95)',
         backdropFilter: 'blur(25px) saturate(180%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
         backgroundImage: 'none'
       }}
     >
@@ -302,17 +302,27 @@ export const AppHeader = () => {
             sx: {
               mt: 1.5,
               width: 280,
-              bgcolor: 'rgba(10, 10, 10, 0.95)',
-              backdropFilter: 'blur(25px) saturate(180%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              bgcolor: '#161412',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '24px',
               backgroundImage: 'none',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-              overflow: 'hidden'
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.4)',
+              overflow: 'hidden',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '24px',
+              },
             }
           }}
         >
-          <Box sx={{ px: 3, py: 2.5, bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
+          <Box sx={{ px: 3, py: 2.5, bgcolor: 'rgba(255, 255, 255, 0.02)', position: 'relative', zIndex: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Account Identity
             </Typography>
@@ -360,17 +370,27 @@ export const AppHeader = () => {
             sx: {
               mt: 1.5,
               width: 360,
-              bgcolor: 'rgba(10, 10, 10, 0.95)',
-              backdropFilter: 'blur(25px) saturate(180%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              bgcolor: '#161412',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '24px',
               backgroundImage: 'none',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-              overflow: 'hidden'
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.4)',
+              overflow: 'hidden',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '24px',
+              },
             }
           }}
         >
-          <Box sx={{ px: 3, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
+          <Box sx={{ px: 3, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.02)', position: 'relative', zIndex: 1 }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Intelligence Feed
             </Typography>

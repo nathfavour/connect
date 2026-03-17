@@ -231,7 +231,7 @@ export const ChatList = () => {
                             borderRadius: '12px'
                         },
                         '&:focus-within': {
-                            borderColor: '#EC4899',
+                            borderColor: '#6366F1',
                             bgcolor: '#1C1A18'
                         }
                     }}
@@ -248,7 +248,7 @@ export const ChatList = () => {
                             fontSize: '0.875rem',
                             outline: 'none',
                             width: '100%',
-                            fontFamily: 'var(--font-inter)'
+                            fontFamily: 'var(--font-satoshi)'
                         }}
                     />
                 </Box>
@@ -282,8 +282,8 @@ export const ChatList = () => {
                                     <ListItemAvatar>
                                         <Avatar
                                             sx={{
-                                                bgcolor: conv.isSelf ? alpha('#EC4899', 0.1) : '#161412',
-                                                color: conv.isSelf ? '#EC4899' : 'text.secondary',
+                                                bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : '#161412',
+                                                color: conv.isSelf ? '#6366F1' : 'text.secondary',
                                                 border: '1px solid rgba(255, 255, 255, 0.05)',
                                                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                                                 width: 44,
@@ -306,7 +306,7 @@ export const ChatList = () => {
                                         primaryTypographyProps={{
                                             fontWeight: 700,
                                             fontSize: '0.95rem',
-                                            color: conv.isSelf ? '#EC4899' : 'text.primary',
+                                            color: conv.isSelf ? '#6366F1' : 'text.primary',
                                             fontFamily: 'var(--font-clash)'
                                         }}
                                         secondaryTypographyProps={{

@@ -83,17 +83,27 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
     if (isEmbedded) {
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: '#000', p: 2, overflowY: 'auto' }}>
+            <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', p: 2, overflowY: 'auto' }}>
                 <Paper
                     elevation={0}
                     sx={{
                         minHeight: '100%',
-                        bgcolor: 'rgba(10, 10, 10, 0.7)',
-                        backdropFilter: 'blur(20px) saturate(180%)',
+                        bgcolor: '#161412',
                         borderRadius: '24px',
                         border: '1px solid',
-                        borderColor: 'rgba(255, 255, 255, 0.08)',
-                        p: 2
+                        borderColor: 'rgba(255, 255, 255, 0.05)',
+                        p: 2,
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '24px',
+                        },
                     }}
                 >
                     {children}
@@ -103,7 +113,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#000000' }}>
+        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#0A0908' }}>
             <AppHeader />
 
             {/* Desktop Sidebar */}
@@ -118,9 +128,9 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                             boxSizing: 'border-box', 
                             top: 72, 
                             height: 'calc(100% - 72px)',
-                            bgcolor: '#000000',
+                            bgcolor: '#0A0908',
                             borderRight: '1px solid',
-                            borderColor: 'rgba(255, 255, 255, 0.08)'
+                            borderColor: 'rgba(255, 255, 255, 0.05)'
                         },
                     }}
                 >
@@ -137,16 +147,16 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                             transition: 'all 0.2s ease',
                                             '&.Mui-selected': {
                                                 bgcolor: 'rgba(99, 102, 241, 0.1)',
-                                                color: 'var(--color-primary)',
+                                                color: '#6366F1',
                                                 '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' },
-                                                '& .MuiListItemIcon-root': { color: 'var(--color-primary)' }
+                                                '& .MuiListItemIcon-root': { color: '#6366F1' }
                                             },
                                             '&:hover': {
                                                 bgcolor: 'rgba(255, 255, 255, 0.05)'
                                             }
                                         }}
                                     >
-                                        <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? 'var(--color-primary)' : 'text.secondary' }}>
+                                        <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? '#6366F1' : 'text.secondary' }}>
                                             {item.icon}
                                         </ListItemIcon>
                                         <ListItemText 
@@ -173,7 +183,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                     overflow: 'hidden', 
                     position: 'relative', 
                     pt: '72px',
-                    bgcolor: '#000000',
+                    bgcolor: '#0A0908',
                     transition: 'all 0.3s ease-in-out'
                 }}
             >
@@ -189,12 +199,22 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                         elevation={0}
                         sx={{
                             minHeight: '100%',
-                            bgcolor: 'rgba(10, 10, 10, 0.7)',
-                            backdropFilter: 'blur(20px) saturate(180%)',
+                            bgcolor: '#161412',
                             borderRadius: '24px',
                             border: '1px solid',
-                            borderColor: 'rgba(255, 255, 255, 0.08)',
-                            p: { xs: 2, md: 4 }
+                            borderColor: 'rgba(255, 255, 255, 0.05)',
+                            p: { xs: 2, md: 4 },
+                            position: 'relative',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '1px',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                borderRadius: '24px',
+                            },
                         }}
                     >
                         {children}
@@ -214,8 +234,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                         borderRadius: '20px', 
                         overflow: 'hidden',
                         border: '1px solid',
-                        borderColor: 'rgba(255, 255, 255, 0.08)',
-                        bgcolor: 'rgba(10, 10, 10, 0.8)',
+                        borderColor: 'rgba(255, 255, 255, 0.05)',
+                        bgcolor: 'rgba(22, 20, 18, 0.8)',
                         backdropFilter: 'blur(20px)',
                         zIndex: 1000
                     }} 
@@ -236,7 +256,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                 sx={{ 
                                     color: 'text.secondary',
                                     '&.Mui-selected': { 
-                                        color: 'var(--color-primary)',
+                                        color: '#6366F1',
                                         '& .MuiBottomNavigationAction-label': {
                                             fontWeight: 700,
                                             fontSize: '0.75rem'

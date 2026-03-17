@@ -957,14 +957,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <Avatar sx={{
                             width: 36,
                             height: 36,
-                            bgcolor: isSelf ? alpha('#EC4899', 0.1) : '#161412',
+                            bgcolor: isSelf ? alpha('#6366F1', 0.1) : '#161412',
                             border: '1px solid rgba(255, 255, 255, 0.05)',
                             boxShadow: '0 1px 0 rgba(0,0,0,0.4)'
                         }}>
-                            {isSelf ? <Bookmark size={18} color="var(--color-electric)" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
+                            {isSelf ? <Bookmark size={18} color="#6366F1" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : <User size={20} strokeWidth={1.5} />)}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#EC4899' : 'text.primary' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#6366F1' : 'text.primary' }}>
                                 {conversation?.name || 'Loading...'}
                             </Typography>
                             {!isSelf && conversation?.type === 'direct' && (
@@ -978,7 +978,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                                         if (isOnline) return (
                                             <>
-                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#EC4899', boxShadow: '0 0 8px #EC4899' }} />
+                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1' }} />
                                                 Online
                                             </>
                                         );
@@ -1048,8 +1048,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <Box sx={{ p: 2, mb: 2, bgcolor: alpha('#EC4899', 0.05), borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
-                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#EC4899' }}>
+                {!isUnlocked && conversation?.isEncrypted && (
+                    <Box sx={{ p: 2, mb: 2, bgcolor: alpha('#6366F1', 0.05), borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#6366F1' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
                         <Button
@@ -1060,17 +1061,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             sx={{ 
                                 borderRadius: '10px', 
                                 fontWeight: 800,
-                                borderColor: '#EC4899',
-                                color: '#EC4899',
+                                borderColor: '#6366F1',
+                                color: '#6366F1',
                                 '&:hover': {
-                                    borderColor: '#EC4899',
-                                    bgcolor: alpha('#EC4899', 0.1)
+                                    borderColor: '#6366F1',
+                                    bgcolor: alpha('#6366F1', 0.1)
                                 }
                             }}
                         >
                             Unlock Vault to Read
                         </Button>
                     </Box>
+                )}
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
                 ) : (
@@ -1086,7 +1088,23 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.2,
                                 px: 1.8,
                                 borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                bgcolor: msg.senderId === user?.$id ? alpha('#EC4899', 0.1) : '#161412',
+                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.1) : '#161412',
+                                border: '1px solid',
+                                borderColor: msg.senderId === user?.$id ? alpha('#6366F1', 0.2) : 'rgba(255, 255, 255, 0.05)',
+                                color: 'text.primary',
+                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                position: 'relative',
+                                '&::after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '1px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                                }
+                            }}>
                                 border: '1px solid rgba(255, 255, 255, 0.05)',
                                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                                 position: 'relative',
@@ -1182,40 +1200,51 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </MenuItem>
                     </Menu>
 
-                    <TextField
-                        fullWidth
-                        multiline
-                        maxRows={6}
-                        placeholder="Type a message..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                        variant="standard"
-                        InputProps={{
-                            disableUnderline: true,
-                            sx: { py: 1.2, px: 1, fontSize: '0.95rem', fontFamily: 'var(--font-satoshi)' }
-                        }}
-                    />
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    maxRows={4}
+                                    placeholder="Type a message..."
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: '12px',
+                                            bgcolor: '#1C1A18',
+                                            fontSize: '0.95rem',
+                                            transition: 'all 0.2s ease',
+                                            '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
+                                            '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                                            '&.Mui-focused fieldset': { borderColor: '#6366F1' },
+                                        }
+                                    }}
+                                />
 
                     {inputText.trim() || attachment ? (
-                        <IconButton
-                            onClick={() => handleSend()}
-                            disabled={sending}
-                            sx={{
-                                bgcolor: 'var(--color-primary)',
-                                color: 'black',
-                                m: 0.5,
-                                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.8)' },
-                                '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.1)' }
-                            }}
-                        >
-                            {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={1.5} />}
-                        </IconButton>
+                                <IconButton 
+                                    onClick={handleSend} 
+                                    disabled={!inputText.trim() && !attachment} 
+                                    sx={{ 
+                                        bgcolor: '#6366F1', 
+                                        color: '#000', 
+                                        width: 42, 
+                                        height: 42, 
+                                        borderRadius: '12px',
+                                        '&:hover': { 
+                                            bgcolor: alpha('#6366F1', 0.8),
+                                            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                                        },
+                                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.1)' }
+                                    }}
+                                >
+                                    {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={2} />}
+                                </IconButton>
                     ) : (
                         <IconButton
                             onClick={() => toggleRecording()}

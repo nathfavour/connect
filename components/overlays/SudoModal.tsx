@@ -314,12 +314,12 @@ export function SudoModal({
                             width: 28,
                             height: 28,
                             borderRadius: '8px',
-                            bgcolor: '#A855F7',
+                            bgcolor: '#6366F1',
                             color: 'white',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
                             border: '3px solid #0a0a0a',
                             zIndex: 1
                         }}>
@@ -345,7 +345,7 @@ export function SudoModal({
             <DialogContent sx={{ pb: 4 }}>
                 {isDetecting || (loading && !password && mode !== "pin") ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                        <CircularProgress sx={{ color: '#A855F7' }} />
+                        <CircularProgress sx={{ color: '#6366F1' }} />
                     </Box>
                 ) : mode === "pin" ? (
                     <Stack spacing={3} sx={{ mt: 2 }}>
@@ -371,7 +371,7 @@ export function SudoModal({
                                         bgcolor: 'rgba(255, 255, 255, 0.03)',
                                         '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                         '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                        '&.Mui-focused fieldset': { borderColor: '#A855F7' },
+                                        '&.Mui-focused fieldset': { borderColor: '#6366F1' },
                                     },
                                     '& .MuiInputBase-input': { color: 'white' }
                                 }}
@@ -428,8 +428,8 @@ export function SudoModal({
                                 )}
                                 <defs>
                                     <linearGradient id="racingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#A855F7" />
-                                        <stop offset="100%" stopColor="#7E22CE" />
+                                        <stop offset="0%" stopColor="#6366F1" />
+                                        <stop offset="100%" stopColor="#4F46E5" />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -440,7 +440,7 @@ export function SudoModal({
                                 justifyContent: 'center',
                                 animation: passkeyLoading ? 'pulse-hex 2s infinite ease-in-out' : 'none'
                             }}>
-                                <Fingerprint size={32} color={passkeyLoading ? '#A855F7' : 'rgba(255, 255, 255, 0.4)'} />
+                                <Fingerprint size={32} color={passkeyLoading ? '#6366F1' : 'rgba(255, 255, 255, 0.4)'} />
                             </Box>
                         </Box>
 
@@ -492,7 +492,7 @@ export function SudoModal({
                                         bgcolor: 'rgba(255, 255, 255, 0.03)',
                                         '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
                                         '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                                        '&.Mui-focused fieldset': { borderColor: '#A855F7' },
+                                        '&.Mui-focused fieldset': { borderColor: '#6366F1' },
                                     },
                                     '& .MuiInputBase-input': { color: 'white' }
                                 }}
@@ -507,15 +507,15 @@ export function SudoModal({
                             sx={{
                                 py: 1.8,
                                 borderRadius: '16px',
-                                background: 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)',
-                                color: '#FFFFFF',
+                                background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                color: '#000000',
                                 fontWeight: 800,
                                 fontFamily: 'var(--font-satoshi)',
                                 textTransform: 'none',
                                 '&:hover': {
-                                    background: 'linear-gradient(135deg, #9333EA 0%, #6B21A8 100%)',
+                                    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
                                     transform: 'translateY(-1px)',
-                                    boxShadow: '0 8px 25px rgba(168, 85, 247, 0.25)'
+                                    boxShadow: '0 8px 25px rgba(99, 102, 241, 0.25)'
                                 }
                             }}
                         >
