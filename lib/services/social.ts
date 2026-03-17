@@ -190,7 +190,7 @@ export const SocialService = {
         // Fetch public moments or moments from followed users
         const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
             Query.orderDesc('createdAt'),
-            Query.limit(50)
+            Query.limit(100)
         ]);
 
         // Enrich moments
@@ -198,7 +198,41 @@ export const SocialService = {
             return this.enrichMoment(moment, userId);
         }));
 
-        return { ...moments, rows: enrichedRows };
+        // Algorithmic Feed Ranking Logic
+        // Weights: Post (1.0), Quote (1.0), Pulse/Repost (0.75), Reply (0.5)
+        // High engagement (likes/replies) can boost lower-weight types into the feed
+        const rankedRows = enrichedRows.map((m: any) => {
+            let baseWeight = 1.0;
+            const type = m.metadata?.type || 'post';
+
+            if (type === 'pulse') baseWeight = 0.75;
+            if (type === 'reply') baseWeight = 0.5;
+            
+            // Engagement Boost: Each like/reply adds to the "importance" score
+            const engagementScore = (m.stats?.likes || 0) * 0.2 + (m.stats?.replies || 0) * 0.4;
+            const finalScore = baseWeight + engagementScore;
+
+            return { ...m, _rankScore: finalScore };
+        });
+
+        // Filter: Only show replies if they have significant engagement (score > 1.0)
+        // This ensures "high value" comments show up tied to their threads in the feed
+        const filteredRows = rankedRows.filter((m: any) => {
+            if (m.metadata?.type === 'reply') {
+                return m._rankScore > 1.0; 
+            }
+            return true;
+        });
+
+        // Sort by final score then by date
+        const sortedRows = filteredRows.sort((a, b) => {
+            if (Math.abs(b._rankScore - a._rankScore) > 0.1) {
+                return b._rankScore - a._rankScore;
+            }
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        return { ...moments, rows: sortedRows.slice(0, 50), total: sortedRows.length };
     },
 
     subscribeToFeed(callback: (event: { type: 'create' | 'update' | 'delete', payload: any }) => void) {
