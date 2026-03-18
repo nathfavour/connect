@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CallService } from '@/lib/services/calls';
+import { CallService } from '@/lib/services/call';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -32,6 +32,7 @@ import AddIcCallIcon from '@mui/icons-material/AddIcCall';
 import DeleteIcon from '@mui/icons-material/Delete';
 import StopIcon from '@mui/icons-material/Stop';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import HistoryIcon from '@mui/icons-material/History';
 import toast from 'react-hot-toast';
 
 export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
@@ -45,6 +46,9 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         if (!user) return;
         setLoading(true);
         try {
+            // Run cleanup of old logs
+            await CallService.cleanupOldCallLogs();
+
             const [history, ongoing] = await Promise.all([
                 CallService.getCallHistory(user.$id),
                 CallService.getActiveCalls(user.$id)
@@ -59,11 +63,22 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
                         const profile = otherId ? await UsersService.getProfileById(otherId) : null;
                         return {
                             ...call,
-                            otherUser: profile || { username: 'Guest/Unknown', $id: otherId },
+                            otherUser: profile || { 
+                                username: call.isLink ? 'Public Link' : 'Guest/Unknown', 
+                                displayName: call.isLink ? 'Public Link Session' : undefined,
+                                $id: otherId 
+                            },
                             direction: isCaller ? 'outgoing' : 'incoming'
                         };
                     } catch (_e: unknown) {
-                        return { ...call, otherUser: { username: 'Unknown', $id: otherId }, direction: isCaller ? 'outgoing' : 'incoming' };
+                        return { 
+                            ...call, 
+                            otherUser: { 
+                                username: call.isLink ? 'Public Link' : 'Unknown', 
+                                $id: otherId 
+                            }, 
+                            direction: isCaller ? 'outgoing' : 'incoming' 
+                        };
                     }
                 }));
             };
@@ -110,12 +125,16 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         }
     };
 
-    const startCall = (userId: string) => {
-        if (!userId) {
+    const startCall = (call: any) => {
+        if (call.isLink) {
+            router.push(`/call/${call.$id}`);
+            return;
+        }
+        if (!call.otherUser?.$id) {
             toast.error("User ID not available for this call");
             return;
         }
-        router.push(`/chat/${userId}`);
+        router.push(`/chat/${call.otherUser.$id}`);
     };
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
@@ -182,7 +201,15 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
             )}
 
             <Divider sx={{ opacity: 0.1, mb: 1 }} />
-            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">Recent History</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">Recent History</Typography>
+                <Tooltip title="Call logs are cleared every 7 days">
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ opacity: 0.5, cursor: 'help' }}>
+                        <HistoryIcon sx={{ fontSize: 14 }} />
+                        <Typography variant="caption" fontWeight="bold">7D Retention</Typography>
+                    </Stack>
+                </Tooltip>
+            </Box>
 
             {calls.filter(c => c.status !== 'ongoing').length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
@@ -196,7 +223,7 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
                             <ListItem
                                 secondaryAction={
                                     <Stack direction="row" spacing={1}>
-                                        <IconButton edge="end" onClick={() => startCall(call.otherUser.$id)} color="primary">
+                                        <IconButton edge="end" onClick={() => startCall(call)} color="primary">
                                             <CallIcon />
                                         </IconButton>
                                         <IconButton edge="end" onClick={() => handleDeleteCall(call.$id)} size="small" sx={{ opacity: 0.3 }}>

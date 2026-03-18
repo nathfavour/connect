@@ -34,7 +34,7 @@ import toast from 'react-hot-toast';
 import { client, account as authAccount } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
-export function PublicCall({ code }: { code: string }) {
+export function PublicCall({ id }: { id: string }) {
     const { user, login } = useAuth();
     const router = useRouter();
     const [linkData, setLinkData] = useState<any>(null);
@@ -52,7 +52,14 @@ export function PublicCall({ code }: { code: string }) {
 
     const loadCallDetails = useCallback(async () => {
         try {
-            const link = await CallService.getCallLinkByCode(code);
+            // First try by ID (new way)
+            let link = await CallService.getCallLink(id);
+            
+            // Fallback to code (legacy support)
+            if (!link) {
+                link = await CallService.getCallLinkByCode(id);
+            }
+
             if (!link) {
                 setLoading(false);
                 return;
@@ -67,7 +74,7 @@ export function PublicCall({ code }: { code: string }) {
         } finally {
             setLoading(false);
         }
-    }, [code]);
+    }, [id]);
 
     useEffect(() => {
         loadCallDetails();
@@ -137,13 +144,17 @@ export function PublicCall({ code }: { code: string }) {
         </Box>
     );
 
-    if (!linkData) return (
+    if (!linkData || linkData.isExpired) return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
             <Paper sx={{ p: 6, textAlign: 'center', maxWidth: 500, bgcolor: '#161412', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <ShieldAlert size={64} color="#EF4444" style={{ marginBottom: '24px' }} />
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, fontFamily: 'var(--font-clash)' }}>Link Expired</Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, fontFamily: 'var(--font-clash)' }}>
+                    {linkData?.isExpired ? 'Call Ended' : 'Link Not Found'}
+                </Typography>
                 <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', mb: 4 }}>
-                    This call link is no longer active or never existed. Check with the host for a new link.
+                    {linkData?.isExpired 
+                        ? "This call has expired. Links last for 3 hours. Please ask the host for a new link." 
+                        : "This call link is no longer active or never existed. Check with the host for a new link."}
                 </Typography>
                 <Button 
                     variant="outlined" 
@@ -164,7 +175,7 @@ export function PublicCall({ code }: { code: string }) {
                 isCaller={localUser?.$id === linkData.userId} 
                 callType={linkData.type} 
                 targetId={localUser?.$id === linkData.userId ? undefined : linkData.userId}
-                callCode={code}
+                callCode={id}
             />
         );
     }

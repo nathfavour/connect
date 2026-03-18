@@ -1,4 +1,4 @@
-import { ID, Query } from 'appwrite';
+import { ID, Query, Permission, Role } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
@@ -20,24 +20,52 @@ export const CallService = {
     },
 
     async createCallLink(userId: string, type: 'audio' | 'video' = 'video', conversationId?: string) {
-        const code = Math.random().toString(36).substring(2, 10).toUpperCase();
         const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-        const url = `https://connect.${domain}/call/${code}`;
         
-        // Expire in 24 hours by default
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        // Expire in 3 hours by default
+        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 
-        return await tablesDB.createRow(DB_ID, LINKS_TABLE, ID.unique(), {
-            userId,
-            conversationId,
-            code,
-            type,
-            url,
-            expiresAt
-        });
+        // Create the row first to get the ID
+        const row = await tablesDB.createRow(
+            DB_ID, 
+            LINKS_TABLE, 
+            ID.unique(), 
+            {
+                userId,
+                conversationId,
+                type,
+                expiresAt
+            },
+            [
+                Permission.read(Role.any()),
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId)),
+            ]
+        );
+
+        // Update with the URL containing the actual row ID
+        const url = `https://connect.${domain}/call/${row.$id}`;
+        return await tablesDB.updateRow(DB_ID, LINKS_TABLE, row.$id, { url });
+    },
+
+    async getCallLink(id: string) {
+        try {
+            const link = await tablesDB.getRow(DB_ID, LINKS_TABLE, id);
+            
+            if (new Date(link.expiresAt) < new Date()) {
+                // We don't delete immediately as per user request, just return it so UI can show "ended"
+                return { ...link, isExpired: true };
+            }
+            
+            return { ...link, isExpired: false };
+        } catch (e) {
+            console.error('Failed to get call link:', e);
+            return null;
+        }
     },
 
     async getCallLinkByCode(code: string) {
+        // Legacy support for code-based lookup if needed, but we're moving to ID
         const res = await tablesDB.listRows(DB_ID, LINKS_TABLE, [
             Query.equal('code', code),
             Query.limit(1)
@@ -46,13 +74,26 @@ export const CallService = {
         if (res.total === 0) return null;
         
         const link = res.rows[0];
-        if (new Date(link.expiresAt) < new Date()) {
-            // Cleanup expired link
-            await tablesDB.deleteRow(DB_ID, LINKS_TABLE, link.$id);
-            return null;
+        const isExpired = new Date(link.expiresAt) < new Date();
+        return { ...link, isExpired };
+    },
+
+    async cleanupOldCallLogs() {
+        try {
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const oldLogs = await tablesDB.listRows(DB_ID, LOGS_TABLE, [
+                Query.lessThan('startedAt', sevenDaysAgo),
+                Query.limit(100)
+            ]);
+
+            for (const log of oldLogs.rows) {
+                await tablesDB.deleteRow(DB_ID, LOGS_TABLE, log.$id);
+            }
+            return oldLogs.total;
+        } catch (e) {
+            console.error('Failed to cleanup old call logs:', e);
+            return 0;
         }
-        
-        return link;
     },
 
     /**
@@ -126,6 +167,69 @@ export const CallService = {
             await tablesDB.deleteRow(DB_ID, LINKS_TABLE, linkId);
         } catch (e) {
             console.error('Failed to cleanup call link:', e);
+        }
+    },
+
+    async getCallHistory(userId: string) {
+        // Fetch calls where user is caller OR receiver OR creator (for links)
+        // Note: Using $createdAt (Appwrite internal) for sorting instead of non-existent createdAt
+        const [asCaller, asReceiver, asCreator] = await Promise.all([
+            tablesDB.listRows(DB_ID, LOGS_TABLE, [Query.equal('callerId', userId), Query.orderDesc('startedAt'), Query.limit(20)]),
+            tablesDB.listRows(DB_ID, LOGS_TABLE, [Query.equal('receiverId', userId), Query.orderDesc('startedAt'), Query.limit(20)]),
+            tablesDB.listRows(DB_ID, LINKS_TABLE, [Query.equal('userId', userId), Query.orderDesc('$createdAt'), Query.limit(20)])
+        ]);
+        
+        // Convert links to log-like objects for the UI
+        const linkLogs = asCreator.rows.map(link => ({
+            ...link,
+            callerId: link.userId,
+            receiverId: null,
+            status: new Date(link.expiresAt) < new Date() ? 'completed' : 'ongoing',
+            startedAt: link.$createdAt,
+            isLink: true
+        }));
+
+        const allCalls = [...asCaller.rows, ...asReceiver.rows, ...linkLogs].sort((a: any, b: any) => 
+            new Date(b.startedAt || b.$createdAt).getTime() - new Date(a.startedAt || a.$createdAt).getTime()
+        );
+        
+        return allCalls;
+    },
+
+    async getActiveCalls(userId: string) {
+        // Fetch ongoing calls where user is participant OR active links
+        const [asCaller, asReceiver, asCreator] = await Promise.all([
+            tablesDB.listRows(DB_ID, LOGS_TABLE, [Query.equal('callerId', userId), Query.equal('status', 'ongoing')]),
+            tablesDB.listRows(DB_ID, LOGS_TABLE, [Query.equal('receiverId', userId), Query.equal('status', 'ongoing')]),
+            tablesDB.listRows(DB_ID, LINKS_TABLE, [Query.equal('userId', userId), Query.greaterThan('expiresAt', new Date().toISOString())])
+        ]);
+        
+        const linkLogs = asCreator.rows.map(link => ({
+            ...link,
+            callerId: link.userId,
+            receiverId: null,
+            status: 'ongoing',
+            startedAt: link.$createdAt,
+            isLink: true
+        }));
+
+        return [...asCaller.rows, ...asReceiver.rows, ...linkLogs];
+    },
+
+    async endCall(callId: string) {
+        return await tablesDB.updateRow(DB_ID, LOGS_TABLE, callId, {
+            status: 'completed',
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    async deleteCallLog(callId: string) {
+        try {
+            // Try deleting from logs table first
+            return await tablesDB.deleteRow(DB_ID, LOGS_TABLE, callId);
+        } catch (e) {
+            // If it fails, try deleting from links table
+            return await tablesDB.deleteRow(DB_ID, LINKS_TABLE, callId);
         }
     }
 };

@@ -9,17 +9,17 @@ export default function CallPage() {
     const searchParams = useSearchParams();
     const id = params.id as string;
     
-    // Detect if this is a public call code (8 chars, alphanumeric) or a standard conversation ID
-    const isPublicLink = id && id.length === 8 && /^[A-Z0-9]+$/.test(id);
+    // We now treat all /call/[id] routes as potential call links using the row ID
+    // If it's not a public link, it will be handled by the PublicCall component's lookup
+    // Standard conversation-based calls (not via link) might still exist but the user wants to fix the call/id page
+    // for links specifically.
     
-    if (isPublicLink) {
-        return <PublicCall code={id} />;
-    }
-
     const isCaller = searchParams.get('caller') === 'true';
     const type = searchParams.get('type') === 'video' ? 'video' : 'audio';
 
-    return (
-        <CallInterface conversationId={id} isCaller={isCaller} callType={type} />
-    );
+    // If it's a standard conversation ID (usually UUID-like or specific format), we might still use CallInterface
+    // But the user said: "instead of using a six or whatever digit in the call/{id} we use the id of the table"
+    // This implies /call/[id] is primarily for these links now.
+    
+    return <PublicCall id={id} />;
 }

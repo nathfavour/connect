@@ -3685,6 +3685,22 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "startsAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "title",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
