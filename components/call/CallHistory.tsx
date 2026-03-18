@@ -17,7 +17,11 @@ import {
     Paper,
     CircularProgress,
     Chip,
-    Fab
+    Fab,
+    Tooltip,
+    Stack,
+    Divider,
+    Badge
 } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -25,36 +29,55 @@ import _CallMissedIcon from '@mui/icons-material/CallMissed';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import AddIcCallIcon from '@mui/icons-material/AddIcCall';
+import DeleteIcon from '@mui/icons-material/Delete';
+import StopIcon from '@mui/icons-material/Stop';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import toast from 'react-hot-toast';
 
 export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     const { user } = useAuth();
     const [calls, setCalls] = useState<any[]>([]);
+    const [activeCalls, setActiveCalls] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     const loadCalls = React.useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
         try {
-            const history = await CallService.getCallHistory(user!.$id);
+            const [history, ongoing] = await Promise.all([
+                CallService.getCallHistory(user.$id),
+                CallService.getActiveCalls(user.$id)
+            ]);
             
-            const enriched = await Promise.all(history.map(async (call: any) => {
-                const isCaller = call.callerId === user!.$id;
-                const otherId = isCaller ? call.receiverId : call.callerId;
-                
-                try {
-                    const profile = await UsersService.getProfileById(otherId);
-                    return {
-                        ...call,
-                        otherUser: profile || { username: 'Unknown', $id: otherId },
-                        direction: isCaller ? 'outgoing' : 'incoming'
-                    };
-                } catch (_e: unknown) {
-                    return { ...call, otherUser: { username: 'Unknown', $id: otherId }, direction: isCaller ? 'outgoing' : 'incoming' };
-                }
-            }));
+            const enrich = async (callList: any[]) => {
+                return await Promise.all(callList.map(async (call: any) => {
+                    const isCaller = call.callerId === user!.$id;
+                    const otherId = isCaller ? call.receiverId : call.callerId;
+                    
+                    try {
+                        const profile = otherId ? await UsersService.getProfileById(otherId) : null;
+                        return {
+                            ...call,
+                            otherUser: profile || { username: 'Guest/Unknown', $id: otherId },
+                            direction: isCaller ? 'outgoing' : 'incoming'
+                        };
+                    } catch (_e: unknown) {
+                        return { ...call, otherUser: { username: 'Unknown', $id: otherId }, direction: isCaller ? 'outgoing' : 'incoming' };
+                    }
+                }));
+            };
             
-            setCalls(enriched);
+            const [enrichedHistory, enrichedActive] = await Promise.all([
+                enrich(history),
+                enrich(ongoing)
+            ]);
+
+            setCalls(enrichedHistory);
+            setActiveCalls(enrichedActive);
         } catch (error: unknown) {
             console.error('Failed to load call history:', error);
+            toast.error('Failed to load calls');
         } finally {
             setLoading(false);
         }
@@ -66,28 +89,120 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         }
     }, [user, loadCalls]);
 
-    const startCall = (_userId: string) => {
-        alert("Please go to the chat with this user to start a call.");
+    const handleEndCall = async (callId: string) => {
+        try {
+            await CallService.endCall(callId);
+            toast.success('Call ended');
+            loadCalls();
+        } catch (e) {
+            toast.error('Failed to end call');
+        }
+    };
+
+    const handleDeleteCall = async (callId: string) => {
+        if (!confirm('Are you sure you want to delete this call log?')) return;
+        try {
+            await CallService.deleteCallLog(callId);
+            toast.success('Call log deleted');
+            loadCalls();
+        } catch (e) {
+            toast.error('Failed to delete call log');
+        }
+    };
+
+    const startCall = (userId: string) => {
+        if (!userId) {
+            toast.error("User ID not available for this call");
+            return;
+        }
+        router.push(`/chat/${userId}`);
     };
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, position: 'relative', minHeight: '50vh' }}>
-            {calls.length === 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
+                    {activeCalls.length > 0 ? `Ongoing Sessions (${activeCalls.length})` : 'No active sessions'}
+                </Typography>
+                <IconButton size="small" onClick={loadCalls} sx={{ opacity: 0.6 }}>
+                    <RefreshIcon fontSize="small" />
+                </IconButton>
+            </Box>
+
+            {activeCalls.length > 0 && (
+                <List sx={{ mb: 2 }}>
+                    {activeCalls.map((call) => (
+                        <Paper key={call.$id} sx={{ mb: 1.5, borderRadius: 3, border: '1px solid #6366F1' }} elevation={0} variant="outlined">
+                            <ListItem
+                                secondaryAction={
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="End Call">
+                                            <IconButton edge="end" onClick={() => handleEndCall(call.$id)} color="warning">
+                                                <StopIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete Permanently">
+                                            <IconButton edge="end" onClick={() => handleDeleteCall(call.$id)} color="error">
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Stack>
+                                }
+                            >
+                                <ListItemAvatar>
+                                    <Badge
+                                        overlap="circular"
+                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                        variant="dot"
+                                        sx={{ '& .MuiBadge-badge': { bgcolor: '#10B981', boxShadow: '0 0 0 2px #161412' } }}
+                                    >
+                                        <Avatar sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                                            {call.type === 'video' ? <VideocamIcon /> : <CallIcon />}
+                                        </Avatar>
+                                    </Badge>
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={
+                                        <Typography fontWeight="bold" sx={{ color: '#6366F1' }}>
+                                            {call.otherUser.displayName || call.otherUser.username}
+                                        </Typography>
+                                    }
+                                    secondary={
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                            Started {new Date(call.startedAt).toLocaleTimeString()}
+                                        </Typography>
+                                    }
+                                />
+                            </ListItem>
+                        </Paper>
+                    ))}
+                </List>
+            )}
+
+            <Divider sx={{ opacity: 0.1, mb: 1 }} />
+            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">Recent History</Typography>
+
+            {calls.filter(c => c.status !== 'ongoing').length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
                     <CallIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
                     <Typography>No recent calls</Typography>
                 </Box>
             ) : (
                 <List>
-                    {calls.map((call) => (
+                    {calls.filter(c => c.status !== 'ongoing').map((call) => (
                         <Paper key={call.$id} sx={{ mb: 1.5, borderRadius: 3 }} elevation={0} variant="outlined">
                             <ListItem
                                 secondaryAction={
-                                    <IconButton edge="end" onClick={() => startCall(call.otherUser.$id)} color="primary">
-                                        <CallIcon />
-                                    </IconButton>
+                                    <Stack direction="row" spacing={1}>
+                                        <IconButton edge="end" onClick={() => startCall(call.otherUser.$id)} color="primary">
+                                            <CallIcon />
+                                        </IconButton>
+                                        <IconButton edge="end" onClick={() => handleDeleteCall(call.$id)} size="small" sx={{ opacity: 0.3 }}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
                                 }
                             >
                                 <ListItemAvatar>

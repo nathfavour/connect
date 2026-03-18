@@ -36,8 +36,6 @@ export const CallService = {
 
     async getCallHistory(userId: string) {
         // Fetch calls where user is caller OR receiver
-        // Appwrite currently supports OR queries in newer versions, or we do two queries.
-        // For MVP, let's fetch where user is caller and where user is receiver and merge.
         const [asCaller, asReceiver] = await Promise.all([
             tablesDB.listRows(DB_ID, CALL_LOGS_TABLE, [Query.equal('callerId', userId), Query.orderDesc('startedAt'), Query.limit(20)]),
             tablesDB.listRows(DB_ID, CALL_LOGS_TABLE, [Query.equal('receiverId', userId), Query.orderDesc('startedAt'), Query.limit(20)])
@@ -48,5 +46,26 @@ export const CallService = {
         );
         
         return allCalls;
+    },
+
+    async getActiveCalls(userId: string) {
+        // Fetch ongoing calls where user is participant
+        const [asCaller, asReceiver] = await Promise.all([
+            tablesDB.listRows(DB_ID, CALL_LOGS_TABLE, [Query.equal('callerId', userId), Query.equal('status', 'ongoing')]),
+            tablesDB.listRows(DB_ID, CALL_LOGS_TABLE, [Query.equal('receiverId', userId), Query.equal('status', 'ongoing')])
+        ]);
+        
+        return [...asCaller.rows, ...asReceiver.rows];
+    },
+
+    async endCall(callId: string) {
+        return await tablesDB.updateRow(DB_ID, CALL_LOGS_TABLE, callId, {
+            status: 'completed',
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    async deleteCallLog(callId: string) {
+        return await tablesDB.deleteRow(DB_ID, CALL_LOGS_TABLE, callId);
     }
 };
