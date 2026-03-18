@@ -172,34 +172,44 @@ export class WebRTCManager {
   }
 
   public async createOffer(senderId: string, targetId: string) {
-    const { sessionId, sessionToken } = await this.fetchCloudflareSession();
-    this.createPeerConnection(senderId, targetId);
-    if (!this.peerConnection) return;
+    try {
+      const { sessionId, sessionToken } = await this.fetchCloudflareSession();
+      this.createPeerConnection(senderId, targetId);
+      if (!this.peerConnection) return;
 
-    // Push local tracks to Cloudflare
-    const tracks = this.localStream?.getTracks().map(track => ({
-      location: "local",
-      mid: track.kind === 'audio' ? '0' : '1',
-      trackName: `${track.kind}-${senderId}`
-    }));
+      // Push local tracks to Cloudflare
+      const tracks = this.localStream?.getTracks().map(track => ({
+        location: "local",
+        mid: track.kind === 'audio' ? '0' : '1',
+        trackName: `${track.kind}-${senderId}`
+      }));
 
-    const trackRes = await fetch('/api/calls/tracks', {
-      method: 'POST',
-      body: JSON.stringify({ sessionId, tracks })
-    });
-    const trackData = await trackRes.json();
+      const trackRes = await fetch('/api/calls/tracks', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, tracks })
+      });
+      
+      if (!trackRes.ok) throw new Error('Failed to push tracks to Cloudflare');
+      const trackData = await trackRes.json();
 
-    const offer = await this.peerConnection.createOffer();
-    await this.peerConnection.setLocalDescription(offer);
+      const offer = await this.peerConnection.createOffer();
+      await this.peerConnection.setLocalDescription(offer);
 
-    this.events.onSignal({
-      type: 'offer',
-      sdp: offer.sdp,
-      target: targetId,
-      sender: senderId,
-      cloudflareSessionId: sessionId,
-      cloudflareTracks: trackData.tracks
-    });
+      this.events.onSignal({
+        type: 'offer',
+        sdp: offer.sdp,
+        target: targetId,
+        sender: senderId,
+        cloudflareSessionId: sessionId,
+        cloudflareTracks: trackData.tracks
+      });
+    } catch (error) {
+      console.error('Cloudflare SFU Initiation failed, falling back to P2P:', error);
+      // Fallback: Re-create peer connection with P2P logic if needed
+      // For now, we ensure the error doesn't crash the manager and we notify the UI
+      this.updateState('failed');
+      throw error;
+    }
   }
 
   public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[] }) {

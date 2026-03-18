@@ -37,13 +37,15 @@ import {
     MapPin,
     Clock,
     Link2,
-    Send
+    Send,
+    Edit,
+    X
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { TextField, InputAdornment, Alert } from '@mui/material';
+import { TextField, InputAdornment, Alert, Menu, MenuItem } from '@mui/material';
 import Image from 'next/image';
 
 export function PostViewClient() {
@@ -55,6 +57,7 @@ export function PostViewClient() {
     const [loading, setLoading] = useState(true);
     const [replying, setReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+    const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
 
     const fetchUserAvatar = useCallback(async () => {
@@ -180,9 +183,22 @@ export function PostViewClient() {
         try {
             await SocialService.createMoment(user.$id, '', 'pulse', [], 'public', undefined, undefined, moment.$id);
             toast.success('Pulsed to your feed');
+            setPulseMenuAnchorEl(null);
             loadMoment();
         } catch (_e) {
             toast.error('Failed to pulse');
+        }
+    };
+
+    const handleQuote = () => {
+        if (!user || !moment) return;
+        setPulseMenuAnchorEl(null);
+        // UI logic to switch to quote mode
+        // For now, we scroll to the reply box and could potentially change its label/behavior
+        const replyBox = document.getElementById('reply-box');
+        if (replyBox) {
+            replyBox.scrollIntoView({ behavior: 'smooth' });
+            setReplyContent(`Quoting @${moment.creator?.username}: `);
         }
     };
 
@@ -504,12 +520,48 @@ export function PostViewClient() {
                             </Tooltip>
                             <Tooltip title="Pulse">
                                 <IconButton 
-                                    onClick={handlePulse}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePulse();
+                                    }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setPulseMenuAnchorEl(e.currentTarget);
+                                    }}
                                     sx={{ '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.1) } }}
                                 >
                                     <Repeat2 size={24} strokeWidth={1.5} />
                                 </IconButton>
                             </Tooltip>
+                            
+                            <Menu
+                                anchorEl={pulseMenuAnchorEl}
+                                open={Boolean(pulseMenuAnchorEl)}
+                                onClose={() => setPulseMenuAnchorEl(null)}
+                                PaperProps={{
+                                    sx: {
+                                        mt: 1,
+                                        borderRadius: '16px',
+                                        bgcolor: 'rgba(15, 15, 15, 0.95)',
+                                        backdropFilter: 'blur(20px)',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        minWidth: 180
+                                    }
+                                }}
+                            >
+                                <MenuItem 
+                                    onClick={handlePulse}
+                                    sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10B981' }}
+                                >
+                                    <Repeat2 size={18} strokeWidth={2} /> Pulse Now
+                                </MenuItem>
+                                <MenuItem 
+                                    onClick={handleQuote}
+                                    sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                >
+                                    <Edit size={18} strokeWidth={2} style={{ opacity: 0.7 }} /> Quote Moment
+                                </MenuItem>
+                            </Menu>
                             <Tooltip title="Heart">
                                 <IconButton 
                                     onClick={() => handleToggleLike()}
@@ -538,7 +590,7 @@ export function PostViewClient() {
                 </Card>
 
                 {user && (
-                    <Box sx={{ mt: 3, p: 2, bgcolor: '#161412', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Box id="reply-box" sx={{ mt: 3, p: 2, bgcolor: '#161412', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <Stack direction="row" spacing={2}>
                             <Avatar src={userAvatarUrl || undefined} sx={{ width: 40, height: 40, borderRadius: '10px' }}>
                                 {user.name?.charAt(0)}

@@ -26,7 +26,8 @@ import {
     Stack,
     Fab,
     useMediaQuery,
-    useTheme
+    useTheme,
+    Skeleton
 } from '@mui/material';
 import {
     Heart,
@@ -57,6 +58,78 @@ import { EventViewDrawer } from './EventViewDrawer';
 
 import toast from 'react-hot-toast';
 
+const CACHE_KEY = 'kylrix_feed_cache';
+const profileRegistry = new Map<string, any>();
+
+const FeedSkeleton = () => (
+    <Stack spacing={3}>
+        {[1, 2, 3].map((i) => (
+            <Card key={i} sx={{ borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                <CardHeader
+                    avatar={<Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
+                    title={<Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
+                    subheader={<Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
+                />
+                <CardContent>
+                    <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                </CardContent>
+            </Card>
+        ))}
+    </Stack>
+);
+
+const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], onClick: () => void }) => {
+    return (
+        <Box 
+            onClick={onClick}
+            sx={{ 
+                position: 'fixed', 
+                top: 80, 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 1000,
+                bgcolor: '#F59E0B',
+                color: 'black',
+                px: 2,
+                py: 1,
+                borderRadius: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                cursor: 'pointer',
+                boxShadow: '0 8px 32px rgba(245, 158, 11, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { transform: 'translateX(-50%) translateY(-2px)', bgcolor: alpha('#F59E0B', 0.9) },
+                '&:active': { transform: 'translateX(-50%) scale(0.95)' }
+            }}
+        >
+            <Box sx={{ display: 'flex', ml: -0.5 }}>
+                {pendingMoments.slice(0, 3).map((m, i) => (
+                    <Avatar 
+                        key={m.$id} 
+                        src={m.creator?.avatar} 
+                        sx={{ 
+                            width: 24, 
+                            height: 24, 
+                            border: '2px solid #F59E0B', 
+                            ml: i === 0 ? 0 : -1,
+                            zIndex: 3 - i,
+                            fontSize: '0.65rem',
+                            bgcolor: '#161412',
+                            color: '#F59E0B'
+                        }}
+                    >
+                        {m.creator?.username?.charAt(0).toUpperCase()}
+                    </Avatar>
+                ))}
+            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.02em' }}>
+                {pendingMoments.length} new {pendingMoments.length === 1 ? 'post' : 'posts'}
+            </Typography>
+        </Box>
+    );
+};
+
 interface FeedProps {
     view?: 'personal' | 'trending' | 'search';
 }
@@ -64,43 +137,55 @@ interface FeedProps {
 export const Feed = ({ view = 'personal' }: FeedProps) => {
     const { user } = useAuth();
     const router = useRouter();
-    const [moments, setMoments] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [moments, setMoments] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
+            return cached ? JSON.parse(cached) : [];
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(false);
     const [newMoment, setNewMoment] = useState('');
     const [posting, setPosting] = useState(false);
     const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
-
+    const [pendingMoments, setPendingMoments] = useState<any[]>([]);
+    const [showNewPosts, setShowNewPosts] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
-
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
-    const [postMenuAnchorEl, setPostMenuAnchorEl] = useState<null | HTMLElement>(null);
-    const [menuMoment, setMenuMoment] = useState<any>(null);
-
-    const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [selectedNote, setSelectedNote] = useState<any>(null);
+    const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [pulseTarget, setPulseTarget] = useState<any>(null);
-
+    const [isNoteModalOpen, setIsNoteSelectorOpen] = useState(false);
+    const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
+    const [viewingNote, setViewingNote] = useState<any>(null);
+    const [isEventModalOpen, setIsEventSelectorOpen] = useState(false);
+    const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
+    const [viewingEvent, setViewingEvent] = useState<any>(null);
+    const [postMenuAnchorEl, setPostMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuMoment, setMenuMoment] = useState<any>(null);
     const [selectedMoment, setSelectedMoment] = useState<any>(null);
 
-    // Note Integration State
-    const [isNoteModalOpen, setIsNoteSelectorOpen] = useState(false);
-    const [selectedNote, setSelectedNote] = useState<any>(null);
-    const [viewingNote, setViewingNote] = useState<any>(null);
-    const [isNoteDrawerOpen, setIsNoteDrawerOpen] = useState(false);
-
-    // Event Integration State
-    const [isEventModalOpen, setIsEventSelectorOpen] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState<any>(null);
-    const [viewingEvent, setViewingEvent] = useState<any>(null);
-    const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
-
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    useEffect(() => {
+        // Hydrate from localStorage immediately on mount
+        const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
+        if (cached) {
+            setMoments(JSON.parse(cached));
+        }
+    }, [view]);
+
+    const saveToCache = useCallback((data: any[]) => {
+        localStorage.setItem(`${CACHE_KEY}_${view}`, JSON.stringify(data.slice(0, 50)));
+    }, [view]);
 
     const fetchUserAvatar = useCallback(async () => {
+
         const picId = getUserProfilePicId(user);
         if (picId) {
             try {
@@ -147,57 +232,85 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     };
 
     const loadFeed = useCallback(async () => {
-        setLoading(true);
+        // Do not set global loading if we already have cached content to show
+        if (moments.length === 0) setLoading(true);
+        
         try {
             const response = view === 'trending' ? 
                 await SocialService.getTrendingFeed(user?.$id) : 
                 await SocialService.getFeed(user?.$id);
                 
-            // Enrich with creator details and avatars
             const rows = response?.rows || [];
-            const enriched = await Promise.all(rows.map(async (moment: any) => {
-                const creatorId = moment.userId || moment.creatorId;
+            
+            // Phase 1: Render raw posts immediately (O(N) for render, O(1) for feeling)
+            setMoments(prev => {
+                const combined = rows.map((row: any) => {
+                    const cached = prev.find(p => p.$id === row.$id);
+                    return cached ? { ...row, ...cached } : row;
+                });
+                saveToCache(combined);
+                return combined;
+            });
+            setLoading(false);
+
+            // Phase 2: Background Hydration using Profile Registry Singleton
+            const uniqueCreatorIds = Array.from(new Set(rows.map((m: any) => m.userId || m.creatorId)));
+            
+            await Promise.all(uniqueCreatorIds.map(async (id: any) => {
+                if (profileRegistry.has(id)) return;
+                
                 try {
-                    const creator = await UsersService.getProfileById(creatorId);
-
+                    const profile = await UsersService.getProfileById(id);
                     let avatar = null;
-                    const picId = creator?.avatar;
-                    if (picId && typeof picId === 'string' && picId.length > 5) {
-                        try {
-                            const url = await fetchProfilePreview(picId, 64, 64);
-                            avatar = url as unknown as string;
-                        } catch (_e: unknown) { }
+                    if (profile?.avatar && profile.avatar.length > 5) {
+                        avatar = await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
                     }
-
-                    if (creator) {
-                        return { ...moment, creator: { ...creator, avatar } };
-                    }
-                    throw new Error('Creator not found');
-                } catch (_e: unknown) {
-                    return {
-                        ...moment,
-                        creator: {
-                            username: `user_${creatorId.slice(0, 5)}`,
-                            displayName: 'Kylrix User',
-                            $id: creatorId
-                        }
-                    };
+                    profileRegistry.set(id, { ...profile, avatar });
+                    
+                    // Trigger a single state update for all posts by this creator
+                    setMoments(prev => {
+                        return prev.map(m => {
+                            let updated = m;
+                            if (m.userId === id || m.creatorId === id) {
+                                updated = { ...updated, creator: profileRegistry.get(id) };
+                            }
+                            // Also hydrate sourceMoment creators if they match this ID
+                            if (updated.sourceMoment && (updated.sourceMoment.userId === id || updated.sourceMoment.creatorId === id)) {
+                                updated = { 
+                                    ...updated, 
+                                    sourceMoment: { ...updated.sourceMoment, creator: profileRegistry.get(id) } 
+                                };
+                            }
+                            return updated;
+                        });
+                    });
+                } catch (e) {
+                    profileRegistry.set(id, { username: `user_${id.slice(0, 5)}`, displayName: 'Kylrix User', $id: id });
                 }
             }));
-            setMoments(enriched);
+            
+            // Final Cache Save
+            setMoments(prev => {
+                saveToCache(prev);
+                return prev;
+            });
+
         } catch (error: unknown) {
             console.error('Failed to load feed:', error);
-            setMoments([]);
+            if (moments.length === 0) setMoments([]);
         } finally {
             setLoading(false);
         }
-    }, [user, view]);
+    }, [user, view, moments.length, saveToCache]);
 
 
     useEffect(() => {
-        loadFeed();
         fetchUserAvatar();
-    }, [loadFeed, fetchUserAvatar]);
+    }, [fetchUserAvatar]);
+
+    useEffect(() => {
+        loadFeed();
+    }, [view, user?.$id]);
 
     useEffect(() => {
         // Real-time subscription for new posts
@@ -232,10 +345,30 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         }
                     }, user?.$id);
 
-                    setMoments(prev => {
-                        if (prev.some(m => m.$id === enrichedMoment.$id)) return prev;
-                        return [enrichedMoment, ...prev];
-                    });
+                    // Phase 3: Check for sourceMoment enrichment if it's a reply/pulse/quote
+                    if (enrichedMoment.sourceMoment && !enrichedMoment.sourceMoment.creator) {
+                        const sourceCreatorId = enrichedMoment.sourceMoment.userId || enrichedMoment.sourceMoment.creatorId;
+                        try {
+                            const sourceCreator = await UsersService.getProfileById(sourceCreatorId);
+                            let sourceAvatar = null;
+                            if (sourceCreator?.avatar) {
+                                sourceAvatar = await fetchProfilePreview(sourceCreator.avatar, 64, 64) as unknown as string;
+                            }
+                            enrichedMoment.sourceMoment.creator = { ...sourceCreator, avatar: sourceAvatar };
+                        } catch (_e) {}
+                    }
+
+                    if (window.scrollY > 300) {
+                        setPendingMoments(prev => [enrichedMoment, ...prev]);
+                        setShowNewPosts(true);
+                    } else {
+                        setMoments(prev => {
+                            if (prev.some(m => m.$id === enrichedMoment.$id)) return prev;
+                            const updated = [enrichedMoment, ...prev];
+                            saveToCache(updated);
+                            return updated;
+                        });
+                    }
                 } catch (_e: unknown) {
                     console.warn('Failed to enrich real-time moment', _e);
                 }
@@ -284,6 +417,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             setSelectedEvent(null);
             setPulseTarget(null);
             setSelectedFiles([]);
+            // Scroll to top to see own post
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             loadFeed();
         } catch (error: unknown) {
             console.error('Failed to post:', error);
@@ -300,23 +435,46 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         }
     };
 
-    const handlePulse = async (moment: any) => {
-        if (!user) return;
-        try {
-            await SocialService.createMoment(user.$id, '', 'pulse', [], 'public', undefined, undefined, moment.$id);
-            toast.success('Pulsed to your feed');
-            loadFeed();
-        } catch (_e) {
-            toast.error('Failed to pulse');
-        }
-        setPulseMenuAnchorEl(null);
-    };
-
     const handleQuote = (moment: any) => {
         // Open composer with sourceMoment set
         setPulseTarget(moment);
         setPulseMenuAnchorEl(null);
+        // Ensure composer is visible and focused
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handlePulse = async (moment: any) => {
+        if (!user) return;
+        const pulse = moments.find(m => m.metadata?.type === 'pulse' && m.metadata?.sourceId === moment.$id && (m.userId === user.$id || m.creatorId === user.$id));
+        
+        if (pulse) {
+            // Undo Pulse (Unpulse)
+            try {
+                const success = await SocialService.unpulseMoment(user.$id, moment.$id);
+                if (success) {
+                    toast.success('Removed from your feed');
+                    setMoments(prev => prev.filter(m => m.$id !== pulse.$id));
+                    // Update the source moment's count locally
+                    setMoments(prev => prev.map(m => m.$id === moment.$id ? {
+                        ...m,
+                        stats: { ...m.stats, pulses: Math.max(0, (m.stats?.pulses || 0) - 1) }
+                    } : m));
+                }
+            } catch (_e) {
+                toast.error('Failed to remove pulse');
+            }
+        } else {
+            // Create Pulse
+            try {
+                // Instant Pulse (Repost) logic - minimal payload
+                await SocialService.createMoment(user.$id, '', 'pulse', [], 'public', undefined, undefined, moment.$id);
+                toast.success('Pulsed to your feed');
+                loadFeed();
+            } catch (_e) {
+                toast.error('Failed to pulse');
+            }
+        }
+        setPulseMenuAnchorEl(null);
     };
 
     const handleOpenNote = (note: any) => {
@@ -396,7 +554,18 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         }
     }, [searchQuery, handleSearch, view]);
 
-    if (loading && view !== 'search') return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress sx={{ color: '#F59E0B' }} /></Box>;
+    const handleNewPostsClick = () => {
+        setMoments(prev => {
+            const updated = [...pendingMoments, ...prev];
+            saveToCache(updated);
+            return updated;
+        });
+        setPendingMoments([]);
+        setShowNewPosts(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const isEmpty = !loading && moments.length === 0;
 
     if (view === 'search') {
         return (
@@ -471,7 +640,13 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     }
 
     return (
-        <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 1, sm: 2 } }}>
+        <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 1, sm: 2 }, position: 'relative' }}>
+            {showNewPosts && pendingMoments.length > 0 && (
+                <NewPostsWidget 
+                    pendingMoments={pendingMoments} 
+                    onClick={handleNewPostsClick} 
+                />
+            )}
             {/* Create Post */}
             {user && (
                 <Card sx={{ mb: 4, borderRadius: '24px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }} elevation={0}>
@@ -691,6 +866,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             )}
 
             {/* Feed */}
+            {moments.length === 0 && loading && <FeedSkeleton />}
+            
             {moments.map((moment) => {
                 const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
                 const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || 'Unknown');
@@ -764,8 +941,65 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             </Box>
                         )}
 
+                        {/* Comment Thread Context */}
+                        {moment.metadata?.type === 'reply' && moment.sourceMoment && (
+                            <Box sx={{ mb: 2, position: 'relative' }}>
+                                <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5, 
+                                    mb: 1, 
+                                    opacity: 0.6,
+                                    '&:hover': { opacity: 1 },
+                                    cursor: 'pointer'
+                                }} onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/post/${moment.sourceMoment.$id}`);
+                                }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                                        Replying to @{moment.sourceMoment.creator?.username || 'user'}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ 
+                                    position: 'absolute', 
+                                    left: 9, 
+                                    top: 22, 
+                                    bottom: -10, 
+                                    width: '2px', 
+                                    bgcolor: 'rgba(255,255,255,0.1)',
+                                    borderRadius: '1px'
+                                }} />
+                                <Paper sx={{ 
+                                    p: 1.5, 
+                                    ml: 3,
+                                    borderRadius: '12px', 
+                                    bgcolor: 'rgba(255,255,255,0.02)', 
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    pointerEvents: 'none'
+                                }}>
+                                    <Typography variant="caption" sx={{ 
+                                        opacity: 0.7, 
+                                        display: '-webkit-box', 
+                                        WebkitLineClamp: 2, 
+                                        WebkitBoxOrient: 'vertical', 
+                                        overflow: 'hidden',
+                                        fontSize: '0.75rem',
+                                        lineHeight: 1.4
+                                    }}>
+                                        {moment.sourceMoment.caption}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+                        )}
+
                         {moment.caption && moment.caption.trim() !== "" && (
-                            <Typography variant="body1" sx={{ lineHeight: 1.6, fontSize: '1.05rem', mb: (moment.attachedNote || moment.sourceMoment || moment.metadata?.attachments?.length) ? 2 : 0 }}>
+                            <Typography variant="body1" sx={{ 
+                                lineHeight: 1.6, 
+                                fontSize: '1.05rem', 
+                                mb: (moment.attachedNote || (moment.sourceMoment && moment.metadata?.type !== 'reply') || moment.metadata?.attachments?.length) ? 2 : 0,
+                                mt: moment.metadata?.type === 'reply' ? 1 : 0 
+                            }}>
                                 {moment.caption}
                             </Typography>
                         )}
@@ -803,6 +1037,25 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
                         {/* Pulsed/Reposted Content */}
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
+                            <Paper sx={{ 
+                                p: 2, 
+                                borderRadius: 4, 
+                                bgcolor: 'rgba(255,255,255,0.01)', 
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                            }}>
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
+                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username}</Typography>
+                                </Stack>
+                                <Typography variant="body2" sx={{ opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {moment.sourceMoment.caption}
+                                </Typography>
+                            </Paper>
+                        )}
+
+                        {moment.metadata?.type === 'quote' && moment.sourceMoment && (
                             <Paper sx={{ 
                                 p: 2, 
                                 borderRadius: 4, 
@@ -1028,7 +1281,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             </Box>
                         </Tooltip>
 
-                        <Tooltip title="Pulse">
+                        <Tooltip title="Pulse or Quote">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <IconButton 
                                     size="small"
@@ -1039,6 +1292,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     }}
                                     sx={{ 
                                         p: 1,
+                                        color: moments.some(m => m.metadata?.type === 'pulse' && m.metadata?.sourceId === moment.$id && (m.userId === user?.$id || m.creatorId === user?.$id)) ? '#10B981' : 'inherit',
                                         '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.1) } 
                                     }}
                                 >
@@ -1144,7 +1398,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     onClick={() => menuMoment && handlePulse(menuMoment)}
                     sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10B981' }}
                 >
-                    <Repeat2 size={18} strokeWidth={2} /> Pulse Now
+                    <Repeat2 size={18} strokeWidth={2} /> {moments.some(m => m.metadata?.type === 'pulse' && m.metadata?.sourceId === menuMoment?.$id && (m.userId === user?.$id || m.creatorId === user?.$id)) ? 'Unpulse Moment' : 'Pulse Now'}
                 </MenuItem>
                 <MenuItem 
                     onClick={() => menuMoment && handleQuote(menuMoment)}

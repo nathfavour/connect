@@ -371,6 +371,27 @@ export const SocialService = {
         return await tablesDB.deleteRow(DB_ID, MOMENTS_TABLE, momentId);
     },
 
+    async unpulseMoment(userId: string, sourceId: string) {
+        const existing = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+            Query.equal('userId', userId),
+            Query.orderDesc('createdAt'),
+            Query.limit(100)
+        ]);
+
+        const pulseToDelete = existing.rows.find((m: any) => {
+            try {
+                const meta = JSON.parse(m.fileId);
+                return meta.type === 'pulse' && meta.sourceId === sourceId;
+            } catch (_e) { return false; }
+        });
+
+        if (pulseToDelete) {
+            await this.deleteMoment(pulseToDelete.$id);
+            return true;
+        }
+        return false;
+    },
+
     async updateMomentVisibility(momentId: string, visibility: 'public' | 'private' | 'followers') {
         return await tablesDB.updateRow(DB_ID, MOMENTS_TABLE, momentId, { visibility });
     },
