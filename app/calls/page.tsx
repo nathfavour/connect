@@ -14,22 +14,12 @@ export default function CallsPage() {
     return (
         <AppShell>
             <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ mb: 3 }}>
                     <Typography variant="h5" fontWeight="bold">Call History</Typography>
-                    <Tooltip title="New Call">
-                        <Fab 
-                            size="medium" 
-                            color="primary" 
-                            onClick={() => setModalOpen(true)}
-                            sx={{ bgcolor: '#6366F1', '&:hover': { bgcolor: '#4F46E5' } }}
-                        >
-                            <Plus size={24} />
-                        </Fab>
-                    </Tooltip>
                 </Box>
                 
                 <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-                    <CallHistory />
+                    <CallHistory onNewCall={() => setModalOpen(true)} />
                 </Suspense>
 
                 <CallActionModal open={modalOpen} onClose={() => setModalOpen(false)} />

@@ -26,7 +26,7 @@ import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import AddIcCallIcon from '@mui/icons-material/AddIcCall';
 
-export const CallHistory = () => {
+export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     const { user } = useAuth();
     const [calls, setCalls] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -122,8 +122,14 @@ export const CallHistory = () => {
             <Fab 
                 color="primary" 
                 aria-label="add call" 
-                sx={{ position: 'fixed', bottom: 80, right: 24 }}
-                onClick={() => router.push('/chats')}
+                sx={{ 
+                    position: 'fixed', 
+                    bottom: 80, 
+                    right: 24,
+                    bgcolor: '#6366F1',
+                    '&:hover': { bgcolor: '#4F46E5' }
+                }}
+                onClick={() => onNewCall ? onNewCall() : router.push('/chats')}
             >
                 <AddIcCallIcon />
             </Fab>
