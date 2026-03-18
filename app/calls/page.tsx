@@ -4,13 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Box, Typography, Container, CircularProgress, Fab, Tooltip } from '@mui/material';
-import { Phone, Plus } from 'lucide-react';
+import { Box, Typography, Container, CircularProgress, Paper, TextField, Button } from '@mui/material';
+import { Hash, ArrowRight } from 'lucide-react';
 import { Suspense } from 'react';
-
-import { Phone, Plus, Hash, ArrowRight } from 'lucide-react';
-import { Suspense } from 'react';
-import { TextField, Button, Stack, Paper, alpha } from '@mui/material';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
