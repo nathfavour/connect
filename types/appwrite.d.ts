@@ -480,6 +480,8 @@ export type CallLinks = Models.Row & {
     type: CallLinksType;
     url: string | null;
     expiresAt: string | null;
+    startsAt: string | null;
+    title: string | null;
 }
 
 export type Interactions = Models.Row & {
