@@ -839,8 +839,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     };
 
     const renderMessageContent = (msg: Messages) => {
-        if (msg.metadata?.type === 'attachment') {
-            return <AttachmentCard metadata={msg.metadata as unknown as AttachmentMetadata} />;
+        if ((msg as any).metadata?.type === 'attachment') {
+            return <AttachmentCard metadata={(msg as any).metadata as unknown as AttachmentMetadata} />;
         }
         // Handle gibberish display when vault is locked
         const isLikelyEncrypted = (val: string) => {

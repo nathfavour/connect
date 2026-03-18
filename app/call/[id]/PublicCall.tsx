@@ -83,7 +83,7 @@ export function PublicCall({ id }: { id: string }) {
     const loadCallDetails = useCallback(async () => {
         try {
             // First try by ID (new way)
-            let link = await CallService.getCallLink(id);
+            let link: any = await CallService.getCallLink(id);
             
             // Fallback to code (legacy support)
             if (!link) {
@@ -103,7 +103,7 @@ export function PublicCall({ id }: { id: string }) {
             // Detect companion mode
             if (user) {
                 const participants = await CallService.getActiveParticipants(id);
-                const isAlreadyIn = participants.some(p => p.userId === user.$id);
+                const isAlreadyIn = participants.some((p: any) => p.userId === user.$id);
                 setIsCompanionDetected(isAlreadyIn);
             }
         } catch (e) {
