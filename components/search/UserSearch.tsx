@@ -166,7 +166,7 @@ export const UserSearch = () => {
                             transition: 'all 0.2s ease',
                             '&:hover': {
                                 bgcolor: 'rgba(255, 255, 255, 0.04)',
-                                borderColor: 'rgba(99, 102, 241, 0.2)'
+                                borderColor: 'rgba(0, 240, 255, 0.2)'
                             }
                         }}
                         elevation={0}
