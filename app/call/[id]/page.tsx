@@ -1,12 +1,10 @@
 'use client';
 
-import { CallInterface } from '@/components/call/CallInterface';
 import { PublicCall } from './PublicCall';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 export default function CallPage() {
     const params = useParams();
-    const searchParams = useSearchParams();
     const id = params.id as string;
     
     // We now treat all /call/[id] routes as potential call links using the row ID
@@ -14,9 +12,6 @@ export default function CallPage() {
     // Standard conversation-based calls (not via link) might still exist but the user wants to fix the call/id page
     // for links specifically.
     
-    const isCaller = searchParams.get('caller') === 'true';
-    const type = searchParams.get('type') === 'video' ? 'video' : 'audio';
-
     // If it's a standard conversation ID (usually UUID-like or specific format), we might still use CallInterface
     // But the user said: "instead of using a six or whatever digit in the call/{id} we use the id of the table"
     // This implies /call/[id] is primarily for these links now.

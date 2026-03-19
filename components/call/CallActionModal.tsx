@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -32,8 +32,6 @@ import {
     X,
     User,
     Users,
-    ChevronRight,
-    Search,
     Clock,
     Type,
     Timer,
@@ -43,7 +41,6 @@ import {
 import { useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import { UsersService } from '@/lib/services/users';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
 
@@ -73,20 +70,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
 
-    useEffect(() => {
-        if (open && user) {
-            loadConversations();
-            setShowScheduleForm(false);
-            setShowJoinWithId(false);
-            setScheduleTitle('');
-            setInstantTitle('');
-            setScheduleTime('');
-            setJoinId('');
-            setDuration(120);
-        }
-    }, [open, user]);
-
-    const loadConversations = async () => {
+    const loadConversations = useCallback(async () => {
         if (!user) return;
         setLoading(true);
         try {
@@ -103,7 +87,20 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (open && user) {
+            loadConversations();
+            setShowScheduleForm(false);
+            setShowJoinWithId(false);
+            setScheduleTitle('');
+            setInstantTitle('');
+            setScheduleTime('');
+            setJoinId('');
+            setDuration(120);
+        }
+    }, [open, user, loadConversations]);
 
     const handleStartPublicCall = async () => {
         if (!user) return;

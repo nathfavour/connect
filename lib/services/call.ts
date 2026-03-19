@@ -72,13 +72,13 @@ export const CallService = {
             }
             
             return { ...link, isExpired: false, isScheduled: false };
-        } catch (e) {
-            console.error('Failed to get call link:', e);
+        } catch (_e) {
+            console.error('Failed to get call link:', _e);
             return null;
         }
     },
 
-    async getCallLinkByCode(code: string) {
+    async getCallLinkByCode(_code: string) {
         // This method is now redundant as we use Row ID, but keeping it as a no-op 
         // or removing it if no longer called.
         return null;
@@ -96,8 +96,8 @@ export const CallService = {
                 await tablesDB.deleteRow(DB_ID, LOGS_TABLE, log.$id);
             }
             return oldLogs.total;
-        } catch (e) {
-            console.error('Failed to cleanup old call logs:', e);
+        } catch (_e) {
+            console.error('Failed to cleanup old call logs:', _e);
             return 0;
         }
     },
@@ -163,16 +163,16 @@ export const CallService = {
     async cleanupCall(callId: string) {
         try {
             await tablesDB.deleteRow(DB_ID, LOGS_TABLE, callId);
-        } catch (e) {
-            console.error('Failed to cleanup call log:', e);
+        } catch (_e) {
+            console.error('Failed to cleanup call log:', _e);
         }
     },
 
     async cleanupLink(linkId: string) {
         try {
             await tablesDB.deleteRow(DB_ID, LINKS_TABLE, linkId);
-        } catch (e) {
-            console.error('Failed to cleanup call link:', e);
+        } catch (_e) {
+            console.error('Failed to cleanup call link:', _e);
         }
     },
 
@@ -277,7 +277,7 @@ export const CallService = {
         try {
             // Try deleting from logs table first
             return await tablesDB.deleteRow(DB_ID, LOGS_TABLE, callId);
-        } catch (e) {
+        } catch (_e) {
             // If it fails, try deleting from links table
             return await tablesDB.deleteRow(DB_ID, LINKS_TABLE, callId);
         }

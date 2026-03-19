@@ -38,8 +38,7 @@ import {
     Clock,
     Link2,
     Send,
-    Edit,
-    X
+    Edit
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';

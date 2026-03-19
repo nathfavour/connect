@@ -108,7 +108,13 @@ export const CallInterface = ({
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const rtcManager = useRef<WebRTCManager | null>(null);
     const router = useRouter();
-    const callStartTime = useRef<number>(Date.now());
+    const callStartTime = useRef<number | null>(null);
+    
+    useEffect(() => {
+        if (callStartTime.current === null) {
+            callStartTime.current = Date.now();
+        }
+    }, []);
 
     const handleDeviceMenuOpen = async (event: React.MouseEvent<HTMLElement>) => {
         const devs = await rtcManager.current?.getDevices();
@@ -174,7 +180,7 @@ export const CallInterface = ({
         }
     };
 
-    const initDirectCall = useCallback(async () => {
+    const initDirectCall = async () => {
         if (!user || !conversationId || targetId) return;
         try {
             const conv = await ChatService.getConversationById(conversationId, user.$id);
@@ -188,19 +194,23 @@ export const CallInterface = ({
         } catch (e) {
             console.error('Failed to init direct call:', e);
         }
-    }, [user, conversationId, targetId, isCaller]);
+    };
 
     useEffect(() => {
         if (conversationId && !targetId) {
-            initDirectCall();
+            // Use a separate effect or a timeout to avoid synchronous state updates during render
+            const timer = setTimeout(() => {
+                initDirectCall();
+            }, 0);
+            return () => clearTimeout(timer);
         }
-    }, [conversationId, targetId, initDirectCall]);
+    }, [conversationId, targetId]);
 
-    const cleanupCall = useCallback(async () => {
+    const cleanupCall = () => {
         if (rtcManager.current) {
             rtcManager.current.cleanup();
         }
-    }, []);
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -290,9 +300,11 @@ export const CallInterface = ({
 
         return () => {
             unsubscribe();
-            cleanupCall();
+            if (rtcManager.current) {
+                rtcManager.current.cleanup();
+            }
         };
-    }, [user, isCaller, callType, targetId, callCode, cleanupCall, isChatOpen]);
+    }, [user, isCaller, callType, targetId, callCode, isChatOpen, conversationId, initialMediaSettings.audio, initialMediaSettings.video, isCompanion]);
 
     const handleAcceptRequest = async (request: JoinRequest) => {
         if (!user) return;
@@ -309,10 +321,10 @@ export const CallInterface = ({
         setJoinRequests(prev => prev.filter(r => r.senderId !== request.senderId));
     };
 
-    const endCall = () => {
+    const endCall = useCallback(() => {
         cleanupCall();
         router.back();
-    };
+    }, [cleanupCall, router]);
 
     // Timer for call expiration
     useEffect(() => {
@@ -348,7 +360,7 @@ export const CallInterface = ({
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [expiresAt]);
+    }, [expiresAt, endCall]);
 
     const handleCopyLink = () => {
         const url = `${window.location.origin}/call/${callCode || conversationId}`;

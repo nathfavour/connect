@@ -13,20 +13,16 @@ import {
     Typography, 
     Button, 
     Avatar, 
-    alpha, 
     CircularProgress,
     TextField,
-    IconButton,
     Stack,
     Badge
 } from '@mui/material';
 import { 
     Video, 
-    Mic, 
     User, 
     ArrowLeft, 
     ShieldAlert, 
-    CheckCircle2,
     Users,
     LogIn,
     Calendar,
@@ -106,8 +102,8 @@ export function PublicCall({ id }: { id: string }) {
                 const isAlreadyIn = participants.some((p: any) => p.userId === user.$id);
                 setIsCompanionDetected(isAlreadyIn);
             }
-        } catch (e) {
-            console.error('Failed to load call details:', e);
+        } catch (_e) {
+            console.error('Failed to load call details:', _e);
         } finally {
             setLoading(false);
         }
@@ -115,7 +111,7 @@ export function PublicCall({ id }: { id: string }) {
 
     useEffect(() => {
         loadCallDetails();
-    }, [loadCallDetails]);
+    }, [loadCallDetails, id]);
 
     // Handle signals while in landing state (specifically waiting for 'let_in')
     useEffect(() => {
@@ -177,7 +173,7 @@ export function PublicCall({ id }: { id: string }) {
 
             setRequestStatus('pending');
             toast("Request sent to host. Please wait...", { icon: '⏳' });
-        } catch (e) {
+        } catch (_e) {
             setJoining(false);
             toast.error("Failed to send join request");
         }

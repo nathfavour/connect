@@ -284,7 +284,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             return updated;
                         });
                     });
-                } catch (e) {
+                } catch (_e) {
                     profileRegistry.set(id, { username: `user_${id.slice(0, 5)}`, displayName: 'Kylrix User', $id: id });
                 }
             }));

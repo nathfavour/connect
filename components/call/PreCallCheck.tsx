@@ -8,7 +8,6 @@ import {
     Paper, 
     Stack, 
     IconButton, 
-    CircularProgress, 
     alpha,
     Tooltip,
     Avatar
@@ -18,11 +17,8 @@ import {
     VideoOff, 
     Mic, 
     MicOff, 
-    Monitor, 
     ShieldCheck, 
     ShieldAlert,
-    CheckCircle2,
-    AlertCircle,
     Smartphone,
     Laptop,
     User as UserIcon
@@ -49,41 +45,40 @@ export function PreCallCheck({ onJoin, userProfile, isCompanionDetected = false 
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [companionMode, setCompanionMode] = useState(isCompanionDetected);
-    const [checking, setChecking] = useState(true);
     const [permissions, setPermissions] = useState<{ video: boolean, audio: boolean }>({ video: false, audio: false });
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
-    useEffect(() => {
-        checkPermissions();
-        return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
-        };
-    }, []);
-
-    const checkPermissions = async () => {
-        setChecking(true);
+    const checkPermissions = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             streamRef.current = stream;
             if (videoRef.current) videoRef.current.srcObject = stream;
             setPermissions({ video: true, audio: true });
-        } catch (e) {
-            console.error('Permission denied:', e);
+        } catch (_e) {
+            console.error('Permission denied:', _e);
             // Try audio only if both failed
             try {
                 const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 streamRef.current = audioStream;
                 setPermissions({ video: false, audio: true });
-            } catch (e2) {
+            } catch (_e2) {
                 setPermissions({ video: false, audio: false });
             }
-        } finally {
-            setChecking(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            checkPermissions();
+        }, 0);
+        return () => {
+            clearTimeout(timer);
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [checkPermissions]);
 
     const toggleVideo = () => {
         if (!permissions.video) return;
