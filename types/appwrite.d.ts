@@ -78,25 +78,13 @@ export enum AppActivityStatus {
     BUSY = "busy"
 }
 
-export enum CallLinksType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsStatus {
-    MISSED = "missed",
-    COMPLETED = "completed",
-    DECLINED = "declined",
-    ONGOING = "ongoing"
-}
-
 export enum MomentsType {
     IMAGE = "image",
+    VIDEO = "video"
+}
+
+export enum CallsType {
+    AUDIO = "audio",
     VIDEO = "video"
 }
 
@@ -473,31 +461,11 @@ export type AppActivity = Models.Row & {
     customStatus: string | null;
 }
 
-export type CallLinks = Models.Row & {
-    userId: string;
-    conversationId: string | null;
-    type: CallLinksType;
-    url: string | null;
-    expiresAt: string | null;
-    startsAt: string | null;
-    title: string | null;
-}
-
 export type Interactions = Models.Row & {
     messageId: string;
     userId: string;
     emoji: string;
     createdAt: string;
-}
-
-export type CallLogs = Models.Row & {
-    callerId: string;
-    receiverId: string | null;
-    conversationId: string | null;
-    type: CallLogsType;
-    status: CallLogsStatus;
-    duration: number;
-    startedAt: string;
 }
 
 export type Moments = Models.Row & {
@@ -507,6 +475,15 @@ export type Moments = Models.Row & {
     caption: string | null;
     createdAt: string;
     expiresAt: string;
+}
+
+export type Calls = Models.Row & {
+    userId: string;
+    type: CallsType;
+    title: string | null;
+    startsAt: string | null;
+    expiresAt: string | null;
+    metadata: string | null;
 }
 
 export type FocusSessions = Models.Row & {

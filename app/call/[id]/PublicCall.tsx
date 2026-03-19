@@ -130,7 +130,7 @@ export function PublicCall({ id }: { id: string }) {
                     
                     try {
                         const signal = JSON.parse(activity.customStatus);
-                        if (signal.target === localUser.$id && signal.type === 'let_in') {
+                        if (signal.target === localUser.$id && signal.type === 'let_in' && (signal.callId === id || !signal.callId)) {
                             setShowPreCheck(true);
                             setJoining(false);
                             toast.success("Host admitted you to the call!");
@@ -171,7 +171,8 @@ export function PublicCall({ id }: { id: string }) {
             // 3. Send join request signal to the host
             await CallService.sendSignal(activeUser.$id, linkData.userId, {
                 type: 'join_request',
-                senderName: displayName || activeUser.name || 'Guest'
+                senderName: displayName || activeUser.name || 'Guest',
+                callId: id
             });
 
             setRequestStatus('pending');

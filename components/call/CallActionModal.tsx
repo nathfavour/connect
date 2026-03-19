@@ -113,14 +113,16 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                 user.$id, 
                 'video', 
                 undefined, 
-                instantTitle || 'Quick Meeting', 
+                instantTitle || undefined, 
                 undefined, 
                 duration
             );
             router.push(`/call/${link.$id}?caller=true`);
             onClose();
-        } catch (e) {
-            toast.error("Failed to start public call");
+        } catch (e: any) {
+            console.error('[CallActionModal] Failed to start public call:', e);
+            const errorMessage = e.message || "Failed to start public call";
+            toast.error(errorMessage);
         } finally {
             setCreating(false);
         }
@@ -139,15 +141,17 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                 user.$id, 
                 'video', 
                 undefined, 
-                scheduleTitle || 'Scheduled Meeting', 
+                scheduleTitle || undefined, 
                 new Date(scheduleTime).toISOString(),
                 duration
             );
             toast.success("Call scheduled successfully!");
             router.push(`/calls`);
             onClose();
-        } catch (e) {
-            toast.error("Failed to schedule call");
+        } catch (e: any) {
+            console.error('[CallActionModal] Failed to schedule call:', e);
+            const errorMessage = e.message || "Failed to schedule call";
+            toast.error(errorMessage);
         } finally {
             setCreating(false);
         }

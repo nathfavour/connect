@@ -15,7 +15,7 @@ export const APPWRITE_CONFIG = {
             MESSAGES: 'messages',
             CALL_LOGS: 'call_logs',
             APP_ACTIVITY: 'app_activity',
-            CALL_LINKS: 'call_links',
+            CALL_LINKS: 'calls',
             FOLLOWS: 'follows',
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',

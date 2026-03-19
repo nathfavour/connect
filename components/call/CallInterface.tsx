@@ -216,7 +216,8 @@ export const CallInterface = ({
             onSignal: async (signal: any) => {
                 if (signal.target) {
                     try {
-                        await CallService.sendSignal(user.$id, signal.target, signal);
+                        // Include callId in signal for better tracking
+                        await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: callCode || conversationId });
                     } catch (e) {
                         console.error('Failed to send signal:', e);
                     }
@@ -259,11 +260,13 @@ export const CallInterface = ({
                         if (Date.now() - signal.ts > 10000) return;
 
                         if (signal.type === 'join_request') {
-                            setJoinRequests(prev => [...prev, { 
-                                senderId: signal.sender, 
-                                senderName: signal.senderName || 'Guest' 
-                            }]);
-                            toast(`Join Request from ${signal.senderName || 'Guest'}`, { icon: '👋' });
+                            if (signal.callId === (callCode || conversationId) || !signal.callId) {
+                                setJoinRequests(prev => [...prev, { 
+                                    senderId: signal.sender, 
+                                    senderName: signal.senderName || 'Guest' 
+                                }]);
+                                toast(`Join Request from ${signal.senderName || 'Guest'}`, { icon: '👋' });
+                            }
                         } else if (signal.type === 'let_in') {
                             setStatus('Joining...');
                             setTargetId(signal.sender);
@@ -295,7 +298,7 @@ export const CallInterface = ({
         if (!user) return;
         setJoinRequests(prev => prev.filter(r => r.senderId !== request.senderId));
         try {
-            await CallService.sendSignal(user.$id, request.senderId, { type: 'let_in' });
+            await CallService.sendSignal(user.$id, request.senderId, { type: 'let_in', callId: callCode || conversationId });
             setStatus('Connecting to guest...');
         } catch (e) {
             toast.error("Failed to admit guest");

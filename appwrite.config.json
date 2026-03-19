@@ -3619,96 +3619,6 @@
             ]
         },
         {
-            "$id": "call_links",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"any\")",
-                "update(\"users\")",
-                "delete(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "CallLinks",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "type",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "video",
-                    "format": "enum",
-                    "elements": [
-                        "audio",
-                        "video"
-                    ]
-                },
-                {
-                    "key": "url",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": "url"
-                },
-                {
-                    "key": "expiresAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "startsAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "title",
-                    "type": "text",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_call_links_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "interactions",
             "$permissions": [
                 "create(\"users\")",
@@ -3781,124 +3691,6 @@
                     "orders": [
                         "ASC",
                         "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "call_logs",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "CallLogs",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "callerId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "receiverId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "type",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "audio",
-                    "format": "enum",
-                    "elements": [
-                        "audio",
-                        "video"
-                    ]
-                },
-                {
-                    "key": "status",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "completed",
-                    "format": "enum",
-                    "elements": [
-                        "missed",
-                        "completed",
-                        "declined",
-                        "ongoing"
-                    ]
-                },
-                {
-                    "key": "duration",
-                    "type": "integer",
-                    "required": false,
-                    "array": false,
-                    "default": 0,
-                    "min": 0,
-                    "max": 2147483647
-                },
-                {
-                    "key": "startedAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_call_logs_conversation",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "conversationId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_call_logs_caller",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "callerId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_call_logs_receiver",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "receiverId"
-                    ],
-                    "orders": [
                         "ASC"
                     ]
                 }
@@ -3991,6 +3783,87 @@
                     "status": "available",
                     "columns": [
                         "expiresAt"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "calls",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"any\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Calls",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "video",
+                    "format": "enum",
+                    "elements": [
+                        "audio",
+                        "video"
+                    ]
+                },
+                {
+                    "key": "title",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "startsAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_calls_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
                     ],
                     "orders": [
                         "ASC"

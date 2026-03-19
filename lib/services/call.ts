@@ -20,44 +20,48 @@ export const CallService = {
     },
 
     async createCallLink(userId: string, type: 'audio' | 'video' = 'video', conversationId?: string, title?: string, startsAt?: string, durationMinutes: number = 120) {
-        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-        
-        // Default to starting now if not provided
-        const startTime = startsAt ? new Date(startsAt) : new Date();
-        // Expire based on duration (default 2 hours)
-        const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
+        try {
+            // Default to starting now if not provided
+            const startTime = startsAt ? new Date(startsAt) : new Date();
+            // Expire based on duration (default 2 hours)
+            const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
 
-        // Create the row first to get the ID
-        const row = await tablesDB.createRow(
-            DB_ID, 
-            LINKS_TABLE, 
-            ID.unique(), 
-            {
+            // Create the row with the new concise structure
+            const payload: any = {
                 userId,
-                conversationId,
                 type,
                 expiresAt,
-                title: title || 'Quick Meeting',
                 startsAt: startTime.toISOString()
-            },
-            [
-                Permission.read(Role.any()),
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId)),
-            ]
-        );
+            };
 
-        // Update with the URL containing the actual row ID
-        const url = `https://connect.${domain}/call/${row.$id}`;
-        return await tablesDB.updateRow(DB_ID, LINKS_TABLE, row.$id, { url });
+            if (title) payload.title = title;
+            if (conversationId) payload.metadata = JSON.stringify({ conversationId });
+
+            console.log('[CallService] Creating call in new table with payload:', payload);
+
+            return await tablesDB.createRow(
+                DB_ID,
+                LINKS_TABLE,
+                ID.unique(),
+                payload,
+                [
+                    Permission.read(Role.any()),
+                    Permission.update(Role.user(userId)),
+                    Permission.delete(Role.user(userId)),
+                ]
+            );
+        } catch (e) {
+            console.error('[CallService] createCallLink failed:', e);
+            throw e;
+        }
     },
 
     async getCallLink(id: string) {
         try {
-            const link = await tablesDB.getRow(DB_ID, LINKS_TABLE, id);
+            const link = await tablesDB.getRow(DB_ID, LINKS_TABLE, id) as any;
             const now = new Date();
-            const startsAt = new Date(link.startsAt);
-            const expiresAt = new Date(link.expiresAt);
+            const startsAt = link.startsAt ? new Date(link.startsAt) : new Date(link.$createdAt);
+            const expiresAt = link.expiresAt ? new Date(link.expiresAt) : new Date(startsAt.getTime() + 3 * 60 * 60 * 1000);
             
             if (now > expiresAt) {
                 return { ...link, isExpired: true, isScheduled: false };
@@ -182,14 +186,25 @@ export const CallService = {
         ]);
         
         // Convert links to log-like objects for the UI
-        const linkLogs = asCreator.rows.map(link => ({
-            ...link,
-            callerId: link.userId,
-            receiverId: null,
-            status: new Date(link.expiresAt) < new Date() ? 'completed' : 'ongoing',
-            startedAt: link.$createdAt,
-            isLink: true
-        }));
+        const linkLogs = asCreator.rows.map(link => {
+            let conversationId = undefined;
+            try {
+                if (link.metadata) {
+                    const meta = JSON.parse(link.metadata);
+                    conversationId = meta.conversationId;
+                }
+            } catch (e) {}
+
+            return {
+                ...link,
+                callerId: link.userId,
+                receiverId: null,
+                conversationId,
+                status: new Date(link.expiresAt) < new Date() ? 'completed' : 'ongoing',
+                startedAt: link.startsAt || link.$createdAt,
+                isLink: true
+            };
+        });
 
         const allCalls = [...asCaller.rows, ...asReceiver.rows, ...linkLogs].sort((a: any, b: any) => 
             new Date(b.startedAt || b.$createdAt).getTime() - new Date(a.startedAt || a.$createdAt).getTime()
@@ -206,14 +221,25 @@ export const CallService = {
             tablesDB.listRows(DB_ID, LINKS_TABLE, [Query.equal('userId', userId), Query.greaterThan('expiresAt', new Date().toISOString())])
         ]);
         
-        const linkLogs = asCreator.rows.map(link => ({
-            ...link,
-            callerId: link.userId,
-            receiverId: null,
-            status: 'ongoing',
-            startedAt: link.$createdAt,
-            isLink: true
-        }));
+        const linkLogs = asCreator.rows.map(link => {
+            let conversationId = undefined;
+            try {
+                if (link.metadata) {
+                    const meta = JSON.parse(link.metadata);
+                    conversationId = meta.conversationId;
+                }
+            } catch (e) {}
+
+            return {
+                ...link,
+                callerId: link.userId,
+                receiverId: null,
+                conversationId,
+                status: 'ongoing',
+                startedAt: link.startsAt || link.$createdAt,
+                isLink: true
+            };
+        });
 
         return [...asCaller.rows, ...asReceiver.rows, ...linkLogs];
     },
@@ -225,9 +251,9 @@ export const CallService = {
         });
     },
 
-    async getActiveParticipants(conversationId: string) {
+    async getActiveParticipants(callId: string) {
         try {
-            // We use AppActivity to see who is currently 'online' and has this conversationId in their customStatus
+            // We use AppActivity to see who is currently 'online' and has this callId in their customStatus
             const res = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
                 Query.equal('status', 'online'),
                 Query.limit(100)
@@ -237,7 +263,7 @@ export const CallService = {
                 try {
                     if (!row.customStatus) return false;
                     const status = JSON.parse(row.customStatus);
-                    return status.conversationId === conversationId || status.callCode === conversationId;
+                    return status.callId === callId || status.conversationId === callId || status.callCode === callId;
                 } catch (e) {
                     return false;
                 }
