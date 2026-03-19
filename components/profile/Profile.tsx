@@ -280,7 +280,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                             color: 'var(--color-titanium)',
                                             bgcolor: 'rgba(255, 255, 255, 0.03)',
                                             '&:hover': { 
-                                                borderColor: 'var(--color-primary)',
+                                                borderColor: '#6366F1',
                                                 bgcolor: alpha('#6366F1', 0.05)
                                             }
                                         }}
@@ -327,7 +327,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                             color: 'var(--color-titanium)',
                                             bgcolor: 'rgba(255, 255, 255, 0.03)',
                                             '&:hover': { 
-                                                borderColor: 'var(--color-primary)',
+                                                borderColor: '#6366F1',
                                                 bgcolor: alpha('#6366F1', 0.05)
                                             }
                                         }}

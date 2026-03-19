@@ -128,10 +128,10 @@ export const ChatList = () => {
                                 return {
                                     ...conv,
                                     otherUserId: otherId,
-                                    name: profile ? (profile.displayName || profile.username) : ('User ' + otherId.substring(0, 5))
+                                    name: profile ? (profile.displayName || profile.username) : 'User'
                                 };
                             } catch (_e: unknown) {
-                                return { ...conv, name: 'User ' + otherId.substring(0, 5) };
+                                return { ...conv, name: 'User' };
                             }
                         }
                     } else {

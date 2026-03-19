@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { Client, Account } from 'appwrite';
 import { APPWRITE_CONFIG } from './appwrite/config';

@@ -29,7 +29,6 @@ export const SocialService = {
             // For replies and pulses, we have to look at the moments table
             // This is slightly inefficient but works for now
             const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
-                Query.equal('type', 'image'), // Filter by type to reduce rows if possible
                 Query.limit(100)
             ]);
 

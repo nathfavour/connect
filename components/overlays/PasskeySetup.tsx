@@ -61,7 +61,7 @@ export function PasskeySetup({
     const fetchUsername = async () => {
       try {
         const { rows } = await databases.use('chat').use('profiles').list({
-          queries: (q: any) => [q.equal('username', userId), q.limit(1)]
+          queries: (q: any) => [q.equal('userId', userId), q.limit(1)]
         });
         if (rows.length > 0 && (rows[0] as any).username) {
           setUsername((rows[0] as any).username);

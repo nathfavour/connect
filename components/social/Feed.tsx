@@ -275,25 +275,29 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     }
                     profileRegistry.set(id, { ...profile, avatar });
                     
-                    // Trigger a single state update for all posts by this creator
+            // Trigger a single state update for all posts by this creator
                     setMoments(prev => {
                         return prev.map(m => {
                             let updated = m;
-                            if (m.userId === id || m.creatorId === id) {
+                            const mCreatorId = m.userId || m.creatorId;
+                            if (mCreatorId === id) {
                                 updated = { ...updated, creator: profileRegistry.get(id) };
                             }
                             // Also hydrate sourceMoment creators if they match this ID
-                            if (updated.sourceMoment && (updated.sourceMoment.userId === id || updated.sourceMoment.creatorId === id)) {
-                                updated = { 
-                                    ...updated, 
-                                    sourceMoment: { ...updated.sourceMoment, creator: profileRegistry.get(id) } 
-                                };
+                            if (updated.sourceMoment) {
+                                const sCreatorId = updated.sourceMoment.userId || updated.sourceMoment.creatorId;
+                                if (sCreatorId === id) {
+                                    updated = { 
+                                        ...updated, 
+                                        sourceMoment: { ...updated.sourceMoment, creator: profileRegistry.get(id) } 
+                                    };
+                                }
                             }
                             return updated;
                         });
                     });
                 } catch (_e) {
-                    profileRegistry.set(id, { username: `user_${id.slice(0, 5)}`, displayName: 'Kylrix User', $id: id });
+                    profileRegistry.set(id, { username: 'user', displayName: 'Kylrix User', $id: id });
                 }
             }));
             
@@ -346,7 +350,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     const enrichedMoment = await SocialService.enrichMoment({
                         ...moment,
                         creator: creator ? { ...creator, avatar } : {
-                            username: `user_${creatorId.slice(0, 5)}`,
+                            username: 'user',
                             displayName: 'Kylrix User',
                             avatar: null,
                             $id: creatorId

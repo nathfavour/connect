@@ -1,5 +1,5 @@
 import { ID, Query, Permission, Role } from 'appwrite';
-import { tablesDB, storage } from '../appwrite/client';
+import { tablesDB, storage, getCurrentUser } from '../appwrite/client';
 import { databases as genDB } from '../../generated/appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 
@@ -38,17 +38,45 @@ export const UsersService = {
     /**
      * Get profile from the global Chat directory by User ID.
      * This is the primary lookup for the feed.
+     * If multiple profiles are found, they are all purged to heal the state.
      */
     async getProfileById(userId: string) {
         if (!userId) return null;
         try {
             const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
                 Query.equal('userId', userId),
-                Query.limit(1)
+                Query.limit(2) // Check if more than one exists
             ]);
+            
+            if (result.total > 1) {
+                console.warn(`[UsersService] Duplicate profiles detected for ${userId}. Purging for state integrity.`);
+                await this.purgeAllProfilesForUser(userId);
+                return null;
+            }
+            
             return result.rows[0] || null;
         } catch (_e: unknown) {
             return null;
+        }
+    },
+
+    /**
+     * Deletes all profiles associated with a specific User ID.
+     * Used for healing corrupted state.
+     */
+    async purgeAllProfilesForUser(userId: string) {
+        try {
+            const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
+                Query.equal('userId', userId),
+                Query.limit(100)
+            ]);
+            
+            for (const row of result.rows) {
+                await tablesDB.deleteRow(DB_ID, USERS_TABLE, row.$id);
+            }
+            console.log(`[UsersService] Purged ${result.total} profiles for user ${userId}`);
+        } catch (err) {
+            console.error(`[UsersService] Failed to purge profiles for user ${userId}:`, err);
         }
     },
 
@@ -124,9 +152,15 @@ export const UsersService = {
             }
         } else {
             // Should not normally happen if they are calling update, but fallback to creating
-            const base = data.username || (userId.slice(0, 8));
-            const candidate = normalizeUsername(base) || 'user';
-            return await this.createProfile(userId, candidate, data);
+            // We try to get the full user object to derive a proper username
+            const user = await getCurrentUser();
+            if (user && user.$id === userId) {
+                return await this.ensureProfileForUser(user);
+            }
+            
+            // If we can't get the user, we can't derive a proper username, so we don't create a profile
+            console.warn('[UsersService] updateProfile called for non-existent profile and user session unavailable for', userId);
+            return null;
         }
     },
 
@@ -174,21 +208,80 @@ export const UsersService = {
         if (!user?.$id) return null;
 
         const existing = await this.getProfileById(user.$id);
-        if (existing) return existing;
+        
+        const email = user.email || (user as any).email;
+        const name = user.name || (user as any).name;
 
-        // Derive username: Use email prefix, stripping everything from '@' onwards and all non-alphabetic characters
-        const base = user?.email ? user.email.split('@')[0].replace(/[^a-zA-Z]/g, '') : (user?.name ? user.name.replace(/[^a-zA-Z]/g, '') : 'user');
-        let candidate = normalizeUsername(base) || 'user';
+        // --- IDENTITY DERIVATION ---
+        let derivedUsername = '';
+        let derivedDisplayName = '';
 
-        // Handle collision
-        if (!await this.isUsernameAvailable(candidate)) {
-            candidate = normalizeUsername(`${candidate}${user.$id.slice(0, 4)}`) || candidate;
+        if (name) {
+            const parts = name.trim().split(/\s+/);
+            const first = parts[0] || '';
+            const second = parts[1] || '';
+            
+            // Username logic: max 2 parts, normalized
+            let usernameBase = '';
+            if (first.length > 10) {
+                usernameBase = first;
+            } else if (second) {
+                usernameBase = first + second;
+            } else {
+                usernameBase = first;
+            }
+
+            // Normalize (lowercase, remove non-alphanumeric)
+            const normalized = normalizeUsername(usernameBase);
+            // Check against a reasonable limit (e.g., 32 chars for Appwrite string fields)
+            if (normalized && normalized.length <= 32) {
+                derivedUsername = normalized;
+            }
+
+            // Display Name logic: max 2 parts
+            if (first && second) {
+                derivedDisplayName = `${first} ${second}`;
+            } else {
+                derivedDisplayName = first;
+            }
+        }
+
+        // Fallback to Email if Name logic failed or name doesn't exist
+        if (!derivedUsername && email) {
+            const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z]/g, '');
+            const normalized = normalizeUsername(emailPrefix);
+            if (normalized) {
+                derivedUsername = normalized;
+                if (!derivedDisplayName) {
+                    derivedDisplayName = emailPrefix;
+                }
+            }
+        }
+
+        // Handle collision for new profiles
+        if (derivedUsername && !await this.isUsernameAvailable(derivedUsername)) {
+            if (existing?.username !== derivedUsername) {
+                derivedUsername = normalizeUsername(`${derivedUsername}${user.$id.slice(0, 4)}`) || derivedUsername;
+            }
+        }
+
+        if (existing) {
+            // Healing: If existing profile has a generic/placeholder username but we found a better one, update it
+            const isGeneric = existing.username.startsWith('u') && existing.username.length > 5;
+            const isPlaceholder = existing.username === 'user';
+            
+            if ((isGeneric || isPlaceholder) && derivedUsername && derivedUsername !== existing.username) {
+                console.log('[UsersService] Healing profile for', user.$id, 'to', derivedUsername);
+                return await this.updateProfile(user.$id, { 
+                    username: derivedUsername,
+                    displayName: derivedDisplayName || existing.displayName
+                });
+            }
+            return existing;
         }
 
         try {
             const avatarId = user?.prefs?.avatar || user?.prefs?.profilePicId || null;
-            
-            // If we have an avatar ID, ensure it's public so others can see it in the feed
             if (avatarId) {
                 try {
                     await this.setAvatarVisible(user.$id, avatarId, true);
@@ -197,16 +290,20 @@ export const UsersService = {
                 }
             }
 
-            console.log('[UsersService] Creating profile for', user.$id, 'with handle', candidate);
-            const result = await this.createProfile(user.$id, candidate, {
-                displayName: user?.name || (candidate.charAt(0).toUpperCase() + candidate.slice(1)),
+            const createData: any = {
+                displayName: derivedDisplayName || undefined,
                 avatar: avatarId
-            });
-            console.log('[UsersService] Profile created successfully:', result.$id);
-            return result;
+            };
+
+            // If we have no derived identity, we do not create a profile
+            if (!derivedUsername) {
+                console.warn('[UsersService] Could not derive identity for', user.$id, 'skipping profile creation');
+                return null;
+            }
+
+            return await this.createProfile(user.$id, derivedUsername, createData);
         } catch (err: unknown) {
             console.error('[UsersService] ensureProfileForUser failed:', err);
-            // Handle race condition if profile was created simultaneously
             return await this.getProfileById(user.$id);
         }
     },

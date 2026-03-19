@@ -224,7 +224,7 @@ export const DiscoverabilitySettings = () => {
             } else {
                 // Ensure profile for user handles creation with safe defaults
                 const p = await UsersService.createProfile(user.$id, normalized, {
-                    displayName: user.name || normalized,
+                    displayName: user.name || (normalized.charAt(0).toUpperCase() + normalized.slice(1)),
                     publicKey
                 });
                 setProfile(p);
