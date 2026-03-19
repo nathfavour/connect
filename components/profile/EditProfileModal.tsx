@@ -81,17 +81,18 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
         setLoading(true);
         setError('');
         try {
+            const userId = profile.userId || profile.$id; // Fallback to $id if userId is missing for some reason
             let publicKey: string | undefined;
             try {
                 if (ecosystemSecurity.status.isUnlocked) {
-                    const pub = await ecosystemSecurity.ensureE2EIdentity(profile.$id);
+                    const pub = await ecosystemSecurity.ensureE2EIdentity(userId);
                     if (pub) publicKey = pub;
                 }
             } catch (e) {
                 console.warn("Could not sync public key during profile update", e);
             }
 
-            await UsersService.updateProfile(profile.$id, {
+            await UsersService.updateProfile(userId, {
                 username,
                 bio,
                 displayName,

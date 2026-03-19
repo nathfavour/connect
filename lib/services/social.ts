@@ -67,7 +67,8 @@ async toggleLike(userId: string, momentId: string, creatorId?: string, contentSn
             await tablesDB.createRow(DB_ID, INTERACTIONS_TABLE, ID.unique(), {
                 userId,
                 messageId: momentId,
-                emoji: 'like'
+                emoji: 'like',
+                createdAt: new Date().toISOString()
             });
 
             // Record in Activity Log for Notifications (if not our own post)
@@ -343,6 +344,7 @@ async toggleLike(userId: string, momentId: string, creatorId?: string, contentSn
             caption: content,
             type: 'image', // Database schema only accepts image/video
             fileId: effectiveFileId, 
+            createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() 
         }, permissions);
 
@@ -424,7 +426,8 @@ async toggleLike(userId: string, momentId: string, creatorId?: string, contentSn
         return await tablesDB.createRow(DB_ID, FOLLOWS_TABLE, ID.unique(), {
             followerId,
             followingId,
-            status: 'accepted'
+            status: 'accepted',
+            createdAt: new Date().toISOString()
         });
     },
 

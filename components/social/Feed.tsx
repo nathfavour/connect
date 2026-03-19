@@ -297,7 +297,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         });
                     });
                 } catch (_e) {
-                    profileRegistry.set(id, { username: 'user', displayName: 'Kylrix User', $id: id });
+                    profileRegistry.set(id, { 
+                        username: id.slice(0, 7), 
+                        displayName: `@${id.slice(0, 7)}`, 
+                        $id: id 
+                    });
                 }
             }));
             
@@ -350,8 +354,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     const enrichedMoment = await SocialService.enrichMoment({
                         ...moment,
                         creator: creator ? { ...creator, avatar } : {
-                            username: 'user',
-                            displayName: 'Kylrix User',
+                            username: creatorId.slice(0, 7),
+                            displayName: `@${creatorId.slice(0, 7)}`,
                             avatar: null,
                             $id: creatorId
                         }
@@ -916,7 +920,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                        Quoting @{pulseTarget.creator?.username}
+                                        Quoting @{pulseTarget.creator?.username || (pulseTarget.userId || pulseTarget.creatorId)?.slice(0, 7)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                                         {pulseTarget.caption?.substring(0, 60)}...
@@ -1135,7 +1139,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 }}>
                                     <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
                                     <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                                        Replying to @{moment.sourceMoment.creator?.username || 'user'}
+                                        Replying to @{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ 

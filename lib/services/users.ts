@@ -93,72 +93,78 @@ export const UsersService = {
         }
     },
 
-    /**
-     * Updates the global Chat directory profile.
-     */
     async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string }) {
-        const currentProfile = await this.getProfileById(userId);
+        // Try to find by userId first (as expected)
+        let currentProfile = await this.getProfileById(userId);
+
+        // Robustness: If not found by userId, check if the passed ID was actually a document ID
+        if (!currentProfile) {
+            try {
+                const doc = await genDB.use('chat').use('profiles').get(userId);
+                if (doc) currentProfile = doc;
+            } catch (_e) {
+                // Not a document ID either
+            }
+        }
+
+        const updatePayload: any = {};
+        const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey'];
 
         if (data.username) {
             const normalized = normalizeUsername(data.username);
             if (!normalized) throw new Error('Invalid username');
 
-            const available = await this.isUsernameAvailable(normalized);
-            if (!available && currentProfile?.username !== normalized) {
-                throw new Error('Username already taken');
+            // Only check availability if the username is actually changing
+            if (currentProfile && normalized !== currentProfile.username) {
+                const available = await this.isUsernameAvailable(normalized);
+                if (!available) {
+                    throw new Error('Username already taken');
+                }
+                updatePayload.username = normalized;
             }
-            data.username = normalized;
         }
 
         if (currentProfile) {
-            // Explicitly only allow schema fields to prevent 'Unknown attribute' errors
-            const updatePayload: any = {};
-            const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey'];
+            // Use the actual userId from the profile if we found it via document ID
+            const targetUserId = currentProfile.userId || userId;
 
+            // Explicitly only allow schema fields to prevent 'Unknown attribute' errors
             allowedFields.forEach(field => {
+                // Skip username as it's handled above
+                if (field === 'username') return;
+
                 if (Object.prototype.hasOwnProperty.call(data, field)) {
                     const value = (data as any)[field];
-                    // Skip undefined and null (unless schema allows nulls, but here we be safe)
                     if (value !== undefined) {
                         updatePayload[field] = value;
                     }
                 }
             });
 
-            // Ensure userId is always present if missing from currentProfile
-            if (!currentProfile.userId) {
-                updatePayload.userId = userId;
-            }
+            // Ensure userId is always present
+            updatePayload.userId = targetUserId;
 
-            // Ensure updatedAt is always handled by Appwrite, not payload
-            // updatePayload.updatedAt = new Date().toISOString();
-
-            // Explicitly delete ghost fields that might be lingering
+            // Explicitly delete ghost fields
             delete (updatePayload as any).avatarFileId;
             delete (updatePayload as any).avatarUrl;
             delete (updatePayload as any).createdAt;
             delete (updatePayload as any).updatedAt;
 
-            console.log('[UsersService] [PAYLOAD_AUDIT] Keys being sent:', Object.keys(updatePayload));
-            console.log('[UsersService] Updating profile for', userId, 'with payload:', JSON.stringify(updatePayload));
+            console.log('[UsersService] Updating profile for', targetUserId, 'with payload:', JSON.stringify(updatePayload));
             try {
                 const result = await genDB.use('chat').use('profiles').update(currentProfile.$id, updatePayload);
-                console.log('[UsersService] Update result:', result);
                 return result;
             } catch (err: any) {
-                console.error('[UsersService] Update failed with error:', err);
-                if (err?.response) console.error('[UsersService] Error response:', err.response);
+                console.error('[UsersService] Update failed:', err);
                 throw err;
             }
         } else {
             // Should not normally happen if they are calling update, but fallback to creating
-            // We try to get the full user object to derive a proper username
             const user = await getCurrentUser();
             if (user && user.$id === userId) {
                 return await this.ensureProfileForUser(user);
             }
             
-            // If we can't get the user, we can't derive a proper username, so we don't create a profile
             console.warn('[UsersService] updateProfile called for non-existent profile and user session unavailable for', userId);
             return null;
         }
@@ -181,7 +187,8 @@ export const UsersService = {
             displayName: data.displayName || username,
             bio: data.bio || '',
             avatar: data.avatar || null,
-            publicKey: data.publicKey || null
+            publicKey: data.publicKey || null,
+            createdAt: new Date().toISOString()
         };
 
         delete (createData as any).avatarFileId;
@@ -196,7 +203,13 @@ export const UsersService = {
             DB_ID,
             USERS_TABLE,
             ID.unique(),
-            createData
+            createData,
+            [
+                Permission.read(Role.any()),
+                Permission.read(Role.user(userId)),
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId))
+            ]
         );
     },
 

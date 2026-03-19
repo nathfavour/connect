@@ -250,7 +250,8 @@ export function PostViewClient() {
     );
 
     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
-    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || 'Unknown');
+    const creatorId = moment.userId || moment.creatorId;
+    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || `@${creatorId.slice(0, 7)}`);
     const creatorAvatar = isOwnPost ? userAvatarUrl : moment.creator?.avatar;
 
     return (
@@ -312,8 +313,8 @@ export function PostViewClient() {
                             </Box>
                             <Box sx={{ flex: 1, pt: 0.2 }}>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username}</Typography>
+                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username || `@${(moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}`}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
                                     <Typography variant="caption" sx={{ opacity: 0.3 }}>· {format(new Date(moment.sourceMoment.$createdAt || moment.sourceMoment.createdAt), 'MMM d')}</Typography>
                                 </Stack>
                                 <FormattedText 
@@ -360,7 +361,7 @@ export function PostViewClient() {
                                     zIndex: 1
                                 }}
                             >
-                                {creatorName.charAt(0).toUpperCase()}
+                                {creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                             </Avatar>
                         }
                         title={
@@ -370,7 +371,7 @@ export function PostViewClient() {
                         }
                         subheader={
                             <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                                @{moment.creator?.username}
+                                @{moment.creator?.username || creatorId.slice(0, 7)}
                             </Typography>
                         }
                         action={
@@ -632,7 +633,8 @@ export function PostViewClient() {
 
                 <Stack spacing={2} sx={{ mt: 4 }}>
                     {replies.map((reply) => {
-                        const rCreatorName = reply.creator?.displayName || reply.creator?.username || 'Unknown';
+                        const rCreatorId = reply.userId || reply.creatorId;
+                        const rCreatorName = reply.creator?.displayName || reply.creator?.username || `@${rCreatorId.slice(0, 7)}`;
                         return (
                             <Box 
                                 key={reply.$id} 
@@ -651,12 +653,12 @@ export function PostViewClient() {
                                     src={reply.creator?.avatar} 
                                     sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.05)' }}
                                 >
-                                    {rCreatorName.charAt(0)}
+                                    {rCreatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                                 </Avatar>
                                 <Box sx={{ flex: 1 }}>
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>{rCreatorName}</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.4 }}>@{reply.creator?.username}</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.4 }}>@{reply.creator?.username || rCreatorId.slice(0, 7)}</Typography>
                                         <Typography variant="caption" sx={{ opacity: 0.4 }}>· {format(new Date(reply.$createdAt), 'MMM d')}</Typography>
                                     </Stack>
                                     <FormattedText 

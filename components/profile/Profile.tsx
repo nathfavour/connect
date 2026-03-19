@@ -81,20 +81,22 @@ export const Profile = ({ username }: ProfileProps) => {
 
     const normalizedUsername = normalizeUsername(username);
 
-    const isOwnProfile = currentUser && !profile?.__external && (
-        normalizedUsername === profile?.username ||
-        (!normalizedUsername && profile?.$id === currentUser.$id)
+    const isOwnProfile = currentUser && (
+        (normalizedUsername === normalizeUsername(profile?.username)) ||
+        (!normalizedUsername && profile?.userId === currentUser.$id)
     );
 
     const loadProfile = useCallback(async () => {
-        setLoading(true);
+        // Only show global loading on first load
+        if (!profile) setLoading(true);
+        
         try {
             let data;
             if (username) {
                 data = await UsersService.getProfile(username);
             } else if (currentUser) {
                 // Use the profile from context if it's our own profile
-                if (myProfile && myProfile.$id === currentUser.$id) {
+                if (myProfile && myProfile.userId === currentUser.$id) {
                     data = myProfile;
                 } else {
                     data = await UsersService.getProfileById(currentUser.$id);
@@ -102,14 +104,21 @@ export const Profile = ({ username }: ProfileProps) => {
             }
 
             if (data) {
-                setProfile(data);
+                // Only update profile state if it actually changed to prevent re-renders
+                setProfile((prev: any) => {
+                    // Use a more robust check for profile equality
+                    if (prev && prev.$id === data.$id && prev.username === data.username && prev.bio === data.bio && prev.displayName === data.displayName && prev.avatar === data.avatar) {
+                        return prev;
+                    }
+                    return data;
+                });
                 
                 // Load Stats & Moments
                 setMomentsLoading(true);
                 const [feedRes, followStats, followingStatus] = await Promise.all([
-                    SocialService.getFeed(currentUser?.$id, data.$id),
-                    SocialService.getFollowStats(data.$id),
-                    currentUser ? SocialService.isFollowing(currentUser.$id, data.$id) : Promise.resolve(false)
+                    SocialService.getFeed(currentUser?.$id, data.userId || data.$id),
+                    SocialService.getFollowStats(data.userId || data.$id),
+                    currentUser ? SocialService.isFollowing(currentUser.$id, data.userId || data.$id) : Promise.resolve(false)
                 ]);
 
                 setMoments(feedRes.rows);
@@ -128,7 +137,7 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [username, currentUser, myProfile]);
+    }, [username, currentUser?.$id, myProfile?.$id, myProfile?.username, myProfile?.bio, myProfile?.displayName, myProfile?.avatar]); // Only depend on currentUser.$id, not the whole object
 
     useEffect(() => {
         loadProfile();

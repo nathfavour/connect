@@ -7,9 +7,10 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     try {
         const id = Array.isArray(params.id) ? params.id[0] : params.id;
         const moment = await SocialService.getMomentById(id);
-        const creator = await UsersService.getProfileById(moment.userId || moment.creatorId);
+        const creatorId = moment.userId || moment.creatorId;
+        const creator = await UsersService.getProfileById(creatorId);
         
-        const title = `@${creator?.username || 'user'} on Kylrix Connect`;
+        const title = `@${creator?.username || creatorId.slice(0, 7)} on Kylrix Connect`;
         const description = moment.caption?.substring(0, 160) || "Check out this Moment on Kylrix Connect.";
         const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
         const url = `https://connect.${domain}/post/${id}`;

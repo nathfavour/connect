@@ -61,22 +61,25 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         const isInitialized = localStorage.getItem(`${PROFILE_SETUP_KEY}_${user.$id}`);
         
         if (isInitialized) {
-            // Tiny check: just fetch existing
+            // We have a cached initialization signal.
+            // Just fetch the profile once to hydrate the context.
+            // No need to run the full ensureProfileForUser logic which checks/heals.
             UsersService.getProfileById(user.$id).then(data => {
                 if (data) {
                     setProfile(data);
                     setIsLoading(false);
                 } else {
-                    // If local says initialized but DB is empty (e.g. deleted), re-run setup
+                    // If local says initialized but DB is empty (e.g. manually deleted), re-run setup
                     refreshProfile();
                 }
             }).catch(() => {
                 setIsLoading(false);
             });
         } else {
+            // First time this session/device - run the full setup
             refreshProfile();
         }
-    }, [user?.$id, refreshProfile]);
+    }, [user?.$id]); // Removed refreshProfile from dependencies to prevent re-runs
 
     return (
         <ProfileContext.Provider value={{ profile, isLoading, refreshProfile }}>

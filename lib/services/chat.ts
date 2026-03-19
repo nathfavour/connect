@@ -175,6 +175,7 @@ export const ChatService = {
     },
 
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
+        const now = new Date().toISOString();
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
@@ -214,8 +215,6 @@ export const ChatService = {
             encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
-        // const now = new Date().toISOString();
-
         const newConv = await tablesDB.createRow(DB_ID, CONV_TABLE, ID.unique(), {
             participants: uniqueParticipants,
             participantCount: uniqueParticipants.length,
@@ -229,7 +228,9 @@ export const ChatService = {
             tags: [],
             isEncrypted: !!encryptionKeyMap,
             encryptionKey: encryptionKeyMap || '',
-            encryptionVersion: '1.0'
+            encryptionVersion: '1.0',
+            createdAt: now,
+            updatedAt: now
         });
 
         // Cache the local key for this session
@@ -283,7 +284,8 @@ export const ChatService = {
             attachments,
             replyTo,
             readBy: [senderId],
-            metadata: finalMetadata
+            metadata: finalMetadata,
+            createdAt: now
         });
 
         // 2. Update Conversation Last Message (with encrypted snippet)

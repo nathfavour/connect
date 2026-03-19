@@ -33,13 +33,15 @@ export const ActivityService = {
             if (existing.total > 0) {
                 return await tablesDB.updateRow(DB_ID, ACTIVITY_TABLE, existing.rows[0].$id, {
                     status,
-                    customStatus
+                    customStatus,
+                    lastSeen: new Date().toISOString()
                 });
             } else {
                 return await tablesDB.createRow(DB_ID, ACTIVITY_TABLE, ID.unique(), {
                     userId,
                     status,
-                    customStatus
+                    customStatus,
+                    lastSeen: new Date().toISOString()
                 });
             }
         } catch (error: unknown) {

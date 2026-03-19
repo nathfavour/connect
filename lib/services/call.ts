@@ -29,7 +29,8 @@ export const CallService = {
             const payload: any = {
                 userId,
                 type,
-                expiresAt
+                expiresAt,
+                createdAt: new Date().toISOString()
             };
 
             if (startTime) payload.startsAt = startTime.toISOString();
@@ -148,6 +149,7 @@ export const CallService = {
             userId: callerId,
             type,
             expiresAt: new Date(Date.now() + 120 * 60 * 1000).toISOString(), // Default 2 hours
+            createdAt: new Date().toISOString()
         };
 
         if (receiverId || conversationId) {
