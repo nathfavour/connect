@@ -975,12 +975,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             sx={{
                                 width: 36,
                                 height: 36,
-                                bgcolor: isSelf ? alpha('#6366F1', 0.1) : '#161412',
+                                bgcolor: isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
+                                color: isSelf ? '#6366F1' : '#F59E0B',
                                 border: '1px solid rgba(255, 255, 255, 0.05)',
                                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)'
                             }}
                         >
-                            {isSelf ? <Bookmark size={18} color="#6366F1" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || <User size={20} strokeWidth={1.5} />))}
+                            {isSelf ? <Bookmark size={18} color="#6366F1" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || <User size={20} color="#F59E0B" strokeWidth={1.5} />))}
                         </Avatar>
                         <Box>
                             <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#6366F1' : 'text.primary' }}>
@@ -1111,9 +1112,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.2,
                                 px: 1.8,
                                 borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.1) : '#161412',
+                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.15) : alpha('#F59E0B', 0.1),
                                 border: '1px solid',
-                                borderColor: msg.senderId === user?.$id ? alpha('#6366F1', 0.2) : 'rgba(255, 255, 255, 0.05)',
+                                borderColor: msg.senderId === user?.$id ? alpha('#6366F1', 0.3) : alpha('#F59E0B', 0.2),
                                 color: 'text.primary',
                                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                                 position: 'relative',
@@ -1124,7 +1125,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                     left: 0,
                                     right: 0,
                                     height: '1px',
-                                    background: 'rgba(255,255,255,0.05)',
+                                    background: msg.senderId === user?.$id ? 'rgba(99, 102, 241, 0.1)' : 'rgba(245, 158, 11, 0.05)',
                                     borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                                 }
                             }}>

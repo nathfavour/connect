@@ -18,6 +18,7 @@ import {
     Box,
     CircularProgress,
     alpha,
+    Badge,
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -36,6 +37,11 @@ export const ChatList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+
+    const isLikelyEncrypted = (val: string) => {
+        if (!val) return false;
+        return val.length > 40 && !val.includes(' ');
+    };
 
     const loadConversations = React.useCallback(async () => {
         try {
@@ -329,20 +335,20 @@ export const ChatList = () => {
                                         <Avatar
                                             src={conv.avatarUrl}
                                             sx={{
-                                                bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : '#161412',
-                                                color: conv.isSelf ? '#6366F1' : 'text.secondary',
-                                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                                                width: 44,
-                                                height: 44
-                                            }}
-                                        >
-                                            {conv.isSelf ? <BookmarkIcon sx={{ fontSize: 20 }} /> : (conv.type === 'group' ? <GroupIcon sx={{ fontSize: 22 }} /> : (conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || <PersonIcon sx={{ fontSize: 22 }} />))}
-                                        </Avatar>
+                                            bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
+                                            color: conv.isSelf ? '#6366F1' : '#F59E0B',
+                                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                                            boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                            width: 44,
+                                            height: 44
+                                        }}
+                                    >
+                                        {conv.isSelf ? <BookmarkIcon sx={{ fontSize: 20 }} /> : (conv.type === 'group' ? <GroupIcon sx={{ fontSize: 22 }} /> : (conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || <PersonIcon sx={{ fontSize: 22, color: '#F59E0B' }} />))}
+                                    </Avatar>
                                     <ListItemText
                                         primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
                                         secondary={
-                                            (conv.isEncrypted && !isUnlocked && conv.lastMessageText) ? (
+                                            (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(conv.lastMessageText)) ? (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <LockIcon sx={{ fontSize: 12, opacity: 0.5 }} />
                                                     <span>Encrypted message</span>
@@ -361,11 +367,26 @@ export const ChatList = () => {
                                             sx: { opacity: 0.5, mt: 0.3 }
                                         }}
                                     />
-                                    {conv.lastMessageAt && (
-                                        <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
-                                            {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                        </Typography>
-                                    )}
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                        {conv.lastMessageAt && (
+                                            <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
+                                                {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                            </Typography>
+                                        )}
+                                        {/* Unread Bubble placeholder - visible if last message is not from us and not read */}
+                                        {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (
+                                            <Badge 
+                                                variant="dot" 
+                                                color="primary" 
+                                                sx={{ 
+                                                    '& .MuiBadge-badge': { 
+                                                        bgcolor: '#6366F1',
+                                                        boxShadow: '0 0 8px rgba(99, 102, 241, 0.5)'
+                                                    } 
+                                                }} 
+                                            />
+                                        )}
+                                    </Box>
                                 </ListItemButton>
                             </ListItem>
                         ))}
