@@ -12,7 +12,6 @@ import {
     List,
     ListItem,
     ListItemButton,
-    ListItemAvatar,
     Avatar,
     ListItemText,
     Typography,
@@ -201,56 +200,37 @@ export const ChatList = () => {
     }, [isUnlocked, loadConversations]);
 
     useEffect(() => {
-        if (user) {
-            loadConversations();
+        if (!user) return;
 
-            // Real-time subscription for chat list updates
-            const channel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.rows`;
-            const unsub = realtime.subscribe([channel], (response) => {
-                const payload = response.payload as any;
-                // Check if the user is a participant in the updated conversation
-                const isParticipant = payload.participants?.includes(user.$id);
-                
-                if (isParticipant) {
-                    console.log('[ChatList] Real-time update for conversation:', payload.$id);
-                    
-                    if (response.events.some(e => e.includes('.create'))) {
-                        // New conversation created (e.g. someone started a chat with us)
-                        loadConversations();
-                    } else if (response.events.some(e => e.includes('.update'))) {
-                        // Message sent, conversation re-sorted
-                        setConversations(prev => {
-                            const exists = prev.find(c => c.$id === payload.$id);
-                            if (exists) {
-                                // Update snippet and timestamp, then re-sort
-                                const updated = prev.map(c => c.$id === payload.$id ? { 
-                                    ...c, 
-                                    lastMessageText: payload.lastMessageText,
-                                    lastMessageAt: payload.lastMessageAt,
-                                    updatedAt: payload.updatedAt
-                                } : c);
-                                return updated.sort((a, b) => {
-                                    const timeA = new Date(a.lastMessageAt || a.updatedAt || a.$createdAt || 0).getTime();
-                                    const timeB = new Date(b.lastMessageAt || b.updatedAt || b.$createdAt || 0).getTime();
-                                    return timeB - timeA;
-                                });
-                            } else {
-                                // If it doesn't exist in our current list (e.g. new chat), full reload
-                                loadConversations();
-                                return prev;
-                            }
-                        });
-                    } else if (response.events.some(e => e.includes('.delete'))) {
-                        setConversations(prev => prev.filter(c => c.$id !== payload.$id));
-                    }
+        loadConversations();
+
+        const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.rows`;
+        const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`;
+
+        const subscription: any = realtime.subscribe([conversationChannel, messageChannel], async (response) => {
+            const payload = response.payload as any;
+            const isConversationEvent = Array.isArray(payload?.participants);
+            const relatedConversationId = isConversationEvent ? payload?.$id : payload?.conversationId;
+
+            if (!relatedConversationId) return;
+
+            try {
+                const conversation = await ChatService.getConversationById(relatedConversationId, user.$id);
+                if (!conversation?.participants?.includes(user.$id)) return;
+
+                console.log('[ChatList] Real-time update for conversation:', relatedConversationId);
+                loadConversations();
+            } catch (_e) {
+                if (isConversationEvent && response.events.some(e => e.includes('.delete'))) {
+                    setConversations(prev => prev.filter(c => c.$id !== relatedConversationId));
                 }
-            });
+            }
+        });
 
-            return () => {
-                if (typeof unsub === 'function') unsub();
-                else if ((unsub as any)?.unsubscribe) (unsub as any).unsubscribe();
-            };
-        }
+        return () => {
+            if (typeof subscription === 'function') subscription();
+            else if (subscription?.unsubscribe) subscription.unsubscribe();
+        };
     }, [user, loadConversations]);
 
     if (loading) return <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>;

@@ -1,12 +1,93 @@
-import { ID, Query } from 'appwrite';
+import { ID, Permission, Query, Role } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { ecosystemSecurity } from '../ecosystem/security';
+import { UsersService } from './users';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
 const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+const participantIdCache = new Map<string, string>();
+
+const arraysEqual = (left: string[], right: string[]) =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+
+const canonicalizeParticipantsForMatch = (participants: string[]) =>
+    Array.from(new Set((participants || []).filter(Boolean))).sort();
+
+const hasSharedReadAccess = (row: any) =>
+    Array.isArray(row?.$permissions) && row.$permissions.some((permission: string) =>
+        permission === 'read("users")' || permission === 'read("any")'
+    );
+
+const getConversationActivityAt = (row: any) =>
+    row?.lastMessageAt || row?.updatedAt || row?.createdAt || row?.$updatedAt || row?.$createdAt || null;
+
+const getMessageActivityAt = (row: any) =>
+    row?.createdAt || row?.updatedAt || row?.$createdAt || row?.$updatedAt || null;
+
+const resolveParticipantId = async (participantId: string) => {
+    if (!participantId) return participantId;
+    const cached = participantIdCache.get(participantId);
+    if (cached) return cached;
+
+    try {
+        const profile = await UsersService.getProfileById(participantId);
+        const resolved = profile?.userId || participantId;
+
+        participantIdCache.set(participantId, resolved);
+        if (profile?.$id) participantIdCache.set(profile.$id, resolved);
+        if (profile?.userId) participantIdCache.set(profile.userId, resolved);
+
+        return resolved;
+    } catch (_e) {
+        participantIdCache.set(participantId, participantId);
+        return participantId;
+    }
+};
+
+const normalizeConversationRow = async (conversation: any) => {
+    if (!conversation) return conversation;
+
+    const participants = Array.isArray(conversation.participants) ? conversation.participants : [];
+    const normalizedParticipants = await Promise.all(participants.map((participantId: string) => resolveParticipantId(participantId)));
+    const creatorId = conversation.creatorId ? await resolveParticipantId(conversation.creatorId) : conversation.creatorId;
+
+    if (arraysEqual(participants, normalizedParticipants) && creatorId === conversation.creatorId) {
+        return conversation;
+    }
+
+    return {
+        ...conversation,
+        participants: normalizedParticipants,
+        creatorId
+    };
+};
+
+const getMessagePreview = async (message: any, conversationId: string) => {
+    if (!message) return '';
+    if (message.type && message.type !== 'text' && message.type !== 'attachment') {
+        return `[${message.type}]`;
+    }
+
+    const rawContent = message.content || '';
+    if (!rawContent) return '';
+
+    if (!ecosystemSecurity.status.isUnlocked || rawContent.length <= 40) {
+        return rawContent;
+    }
+
+    try {
+        const convKey = ecosystemSecurity.getConversationKey(conversationId);
+        if (convKey) {
+            return await ecosystemSecurity.decryptWithKey(rawContent, convKey);
+        }
+        return await ecosystemSecurity.decrypt(rawContent);
+    } catch (_e) {
+        return '[Encrypted message]';
+    }
+};
 
 export const ChatService = {
     /**
@@ -21,15 +102,15 @@ export const ChatService = {
 
         // Fetch public keys for all participants from the unified profiles table
         const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('$id', participants),
+            Query.equal('userId', participants),
         ]);
 
         for (const doc of res.rows) {
             try {
-                if (doc.publicKey) {
-                    wrappedKeys[doc.$id] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
+                if (doc.publicKey && doc.userId) {
+                    wrappedKeys[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
                 } else {
-                    console.warn(`User ${doc.$id} does not have a publicKey published yet`);
+                    console.warn(`User ${doc.userId || doc.$id} does not have a publicKey published yet`);
                 }
             } catch (e: unknown) {
                 console.error('Failed to wrap key for user:', doc.userId, e);
@@ -60,8 +141,11 @@ export const ChatService = {
             const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
             try {
-                const creatorDoc = await tablesDB.getRow(CHAT_DB, USERS_TABLE, conv.creatorId);
-                const creatorPubKey = creatorDoc?.publicKey;
+                const creatorRes = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
+                    Query.equal('userId', conv.creatorId),
+                    Query.limit(1)
+                ]);
+                const creatorPubKey = creatorRes.rows[0]?.publicKey;
                 if (!creatorPubKey) throw new Error("Creator public key not found");
 
                 key = await ecosystemSecurity.unwrapKeyWithECDH(myWrappedKey, creatorPubKey);
@@ -100,17 +184,17 @@ export const ChatService = {
         const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
         const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('$id', participants),
+            Query.equal('userId', participants),
         ]);
 
         let updated = false;
         for (const doc of res.rows) {
-            if (doc.publicKey) {
+            if (doc.publicKey && doc.userId) {
                 // Check if the key needs updating (either missing or creator rotated)
                 // For simplicity, we re-wrap if it's missing or if we are the creator and want to ensure everyone is synced
-                if (!currentKeyMap[doc.$id]) {
+                if (!currentKeyMap[doc.userId]) {
                     try {
-                        currentKeyMap[doc.$id] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
+                        currentKeyMap[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
                         updated = true;
                     } catch (e) {
                         console.error(`Failed to re-wrap key for user ${doc.$id}`, e);
@@ -127,7 +211,8 @@ export const ChatService = {
     },
     async getConversationById(conversationId: string, userId?: string) {
         const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
-        return await this._decryptConversation(conv, userId);
+        const normalizedConversation = await normalizeConversationRow(conv);
+        return await this._decryptConversation(normalizedConversation, userId);
     },
 
     async _decryptConversation(conv: any, userId?: string) {
@@ -165,44 +250,42 @@ export const ChatService = {
 
     async getConversations(userId: string) {
         console.log('[ChatService] getConversations for:', userId);
-        
+
+        const conversationMap = new Map<string, any>();
+
         // 1. Standard fetch of existing conversations
         const res = await tablesDB.listRows(DB_ID, CONV_TABLE, [
             Query.contains('participants', userId),
-            Query.orderDesc('lastMessageAt'),
             Query.limit(100)
         ]);
+        res.rows.forEach((conversation: any) => conversationMap.set(conversation.$id, conversation));
 
-        // 2. Proactive Scan: Check for recent messages sent to us that might not have a conversation yet
-        // This handles the "first message" scenario where the conversation doc might be delayed or missing
+        // 2. Proactive Scan: recent messages can reveal conversations that were created
+        // with legacy participant IDs or whose metadata was never updated after the first send.
+        let recentMessages: any[] = [];
         try {
-            // We fetch messages where we are NOT the sender.
-            // Since we can't filter by 'recipient' directly in the DB, we scan the latest 100 messages globally
-            // and filter for conversations we are part of but don't have in our 'res' list yet.
-            const recentMessages = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-                Query.orderDesc('$createdAt'),
+            const recentMessagesResult = await tablesDB.listRows(DB_ID, MSG_TABLE, [
+                Query.orderDesc('createdAt'),
                 Query.limit(100)
             ]);
+            recentMessages = recentMessagesResult.rows;
 
-            const missingConvIds = new Set<string>();
-            recentMessages.rows.forEach((msg: any) => {
-                if (msg.senderId !== userId && !res.rows.some(c => c.$id === msg.conversationId)) {
-                    missingConvIds.add(msg.conversationId);
+            const missingConversationIds = new Set<string>();
+            recentMessages.forEach((message: any) => {
+                if (message.conversationId && !conversationMap.has(message.conversationId)) {
+                    missingConversationIds.add(message.conversationId);
                 }
             });
 
-            if (missingConvIds.size > 0) {
-                console.log('[ChatService] Found messages for potential missing conversations:', Array.from(missingConvIds));
+            if (missingConversationIds.size > 0) {
+                console.log('[ChatService] Found messages for potential missing conversations:', Array.from(missingConversationIds));
                 const potentialConvs = await Promise.all(
-                    Array.from(missingConvIds).map(id => tablesDB.getRow(DB_ID, CONV_TABLE, id).catch(() => null))
+                    Array.from(missingConversationIds).map(id => tablesDB.getRow(DB_ID, CONV_TABLE, id).catch(() => null))
                 );
-                
-                potentialConvs.forEach(c => {
-                    // CRITICAL: Only add if we are actually a participant!
-                    if (c && c.participants?.includes(userId)) {
-                        console.log('[ChatService] Discovered missing conversation via message scan:', c.$id);
-                        res.rows.push(c);
-                        res.total++;
+
+                potentialConvs.forEach(conversation => {
+                    if (conversation?.$id) {
+                        conversationMap.set(conversation.$id, conversation);
                     }
                 });
             }
@@ -210,16 +293,37 @@ export const ChatService = {
             console.warn('[ChatService] Proactive message scan failed');
         }
 
-        res.rows = await Promise.all(res.rows.map(c => this._decryptConversation(c, userId)));
-        
-        // Re-sort after potential additions
-        res.rows.sort((a, b) => {
-            const timeA = new Date(a.lastMessageAt || a.updatedAt || a.$createdAt || 0).getTime();
-            const timeB = new Date(b.lastMessageAt || b.updatedAt || b.$createdAt || 0).getTime();
+        let rows = await Promise.all(Array.from(conversationMap.values()).map((conversation: any) => normalizeConversationRow(conversation)));
+        rows = rows.filter((conversation: any) => conversation?.participants?.includes(userId));
+
+        const latestMessageByConversation = new Map<string, any>();
+        recentMessages.forEach((message: any) => {
+            if (message?.conversationId && !latestMessageByConversation.has(message.conversationId)) {
+                latestMessageByConversation.set(message.conversationId, message);
+            }
+        });
+
+        rows = await Promise.all(rows.map(async (conversation: any) => {
+            const latestMessage = latestMessageByConversation.get(conversation.$id);
+            const hydratedConversation = latestMessage ? {
+                ...conversation,
+                lastMessageAt: getMessageActivityAt(latestMessage) || conversation.lastMessageAt,
+                lastMessageText: await getMessagePreview(latestMessage, conversation.$id)
+            } : conversation;
+
+            return this._decryptConversation(hydratedConversation, userId);
+        }));
+
+        rows.sort((a, b) => {
+            const timeA = new Date(getConversationActivityAt(a) || 0).getTime();
+            const timeB = new Date(getConversationActivityAt(b) || 0).getTime();
             return timeB - timeA;
         });
 
-        return res;
+        return {
+            total: rows.length,
+            rows
+        };
     },
 
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
@@ -228,20 +332,27 @@ export const ChatService = {
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
-        // GUARD: Prevent duplicate self-chats by checking server-side first
-        if (isSelf) {
+        // GUARD: Prevent duplicate direct chats by checking server-side first
+        if (type === 'direct') {
             const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
                 Query.contains('participants', creatorId),
                 Query.equal('type', 'direct'),
-                Query.limit(50)
+                Query.limit(100)
             ]);
-            const existingSelf = existing.rows.find((c: any) =>
-                c.participants && (c.participants.length === 1 || c.participants.length === 2) &&
-                c.participants.every((p: string) => p === creatorId)
-            );
-            if (existingSelf) {
-                console.log('[ChatService] Self-chat already exists, returning existing:', existingSelf.$id);
-                return existingSelf;
+
+            const targetParticipantSet = canonicalizeParticipantsForMatch(uniqueParticipants);
+            for (const conversation of existing.rows) {
+                const normalizedConversation = await normalizeConversationRow(conversation);
+                const existingParticipantSet = canonicalizeParticipantsForMatch(normalizedConversation?.participants || []);
+
+                if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
+                    if (hasSharedReadAccess(normalizedConversation)) {
+                        console.log('[ChatService] Direct chat already exists, returning existing:', normalizedConversation.$id);
+                        return normalizedConversation;
+                    }
+
+                    console.warn('[ChatService] Found legacy direct chat without shared read access, creating a replacement conversation');
+                }
             }
         }
 
@@ -263,6 +374,12 @@ export const ChatService = {
             encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
+        const conversationPermissions = [
+            Permission.read(Role.users()),
+            Permission.update(Role.user(creatorId)),
+            Permission.delete(Role.user(creatorId))
+        ];
+
         const newConv = await tablesDB.createRow(DB_ID, CONV_TABLE, ID.unique(), {
             participants: uniqueParticipants,
             participantCount: uniqueParticipants.length,
@@ -279,7 +396,7 @@ export const ChatService = {
             encryptionVersion: '1.0',
             createdAt: now,
             updatedAt: now
-        });
+        }, conversationPermissions);
 
         // Cache the local key for this session
         if (convKey) {
@@ -299,6 +416,7 @@ export const ChatService = {
         metadata?: any
     ) {
         const now = new Date().toISOString();
+        let conversation: any = null;
 
         // E2E Layer: Universal Handshake Protocol
         let finalContent = content;
@@ -321,11 +439,18 @@ export const ChatService = {
             }
         }
 
-        // 0. Fetch conversation to get participants for permissions
-        const conversation = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
-        const participants = conversation.participants || [];
-        
-        const permissions = [`read("users")`];
+        try {
+            const rawConversation = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
+            conversation = await normalizeConversationRow(rawConversation);
+        } catch (_e) {
+            conversation = null;
+        }
+
+        if (conversation?.participants?.length && !conversation.participants.includes(senderId)) {
+            throw new Error('You are not a participant in this conversation');
+        }
+
+        const permissions = [Permission.read(Role.users())];
         permissions.push(`update("user:${senderId}")`);
         permissions.push(`delete("user:${senderId}")`);
 
@@ -343,16 +468,24 @@ export const ChatService = {
             updatedAt: now
         }, permissions);
 
-        // 2. Update Conversation Last Message
-        await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
-            lastMessageId: message.$id,
-            lastMessageAt: now,
-            lastMessageText: type === 'text' ? finalContent : `[${type}]`,
-            updatedAt: now 
-        });
+        // 2. Best-effort conversation preview update.
+        // In a client-only model only the creator can mutate the shared row, so list UIs must
+        // derive freshness from message activity instead of depending on this always succeeding.
+        if (conversation?.creatorId === senderId) {
+            try {
+                await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
+                    lastMessageId: message.$id,
+                    lastMessageAt: now,
+                    lastMessageText: type === 'text' ? finalContent : `[${type}]`,
+                    updatedAt: now
+                });
+            } catch (_e) {
+                console.warn('[ChatService] Conversation preview update skipped');
+            }
+        }
 
         // 3. (Background) Re-keying check
-        if (ecosystemSecurity.status.isUnlocked) {
+        if (ecosystemSecurity.status.isUnlocked && conversation?.creatorId === senderId) {
             this.rewrapConversationKeys(conversationId).catch(err =>
                 console.warn("[ChatService] Background re-wrap failed:", err)
             );

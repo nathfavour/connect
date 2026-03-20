@@ -105,7 +105,7 @@ export const UsersService = {
         }
     },
 
-    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string }) {
+    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string }): Promise<any> {
         // Try to find by userId first (as expected)
         let currentProfile = await this.getProfileById(userId);
 

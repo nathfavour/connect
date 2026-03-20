@@ -75,7 +75,7 @@ export const UserSearch = () => {
 
     const startChat = async (targetUser: any) => {
         if (!user) return;
-        const targetUserId = targetUser.$id;
+        const targetUserId = targetUser.userId || targetUser.$id;
 
         if (!targetUser.publicKey) {
             toast.error(`${targetUser.displayName || targetUser.username} hasn't set up their account for secure chatting yet.`);
@@ -100,7 +100,11 @@ export const UserSearch = () => {
                 );
             }
 
-            if (found) {
+            const canReuseFound = found?.$permissions?.some((permission: string) =>
+                permission === 'read("users")' || permission === 'read("any")'
+            );
+
+            if (found && canReuseFound) {
                 router.push(`/chat/${found.$id}`);
                 return; // Instant jump
             }

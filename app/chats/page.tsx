@@ -38,21 +38,24 @@ function ChatHandler() {
             return;
           }
 
+          const actualTargetUserId = targetProfile.userId || userId;
+          if (!actualTargetUserId) {
+            toast.error("User ID missing from profile.");
+            router.replace('/chats');
+            return;
+          }
+
           const existing = await ChatService.getConversations(user.$id);
           const found = existing.rows.find((c: any) => 
-            c.type === 'direct' && c.participants.includes(userId)
+            c.type === 'direct' && c.participants.includes(actualTargetUserId)
+          );
+          const canReuseFound = found?.$permissions?.some((permission: string) =>
+            permission === 'read("users")' || permission === 'read("any")'
           );
 
-          if (found) {
+          if (found && canReuseFound) {
             router.push(`/chat/${found.$id}`);
           } else {
-            // Ensure we use the actual userId from the profile, not the document ID
-            const actualTargetUserId = targetProfile.userId;
-            if (!actualTargetUserId) {
-                toast.error("User ID missing from profile.");
-                return;
-            }
-
             // Ensure Sudo is unlocked before creating (needed for E2E keys)
             requestSudo({
               onSuccess: async () => {

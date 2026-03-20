@@ -62,6 +62,7 @@ import { SudoModal } from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
 import { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';
+import { fetchProfilePreview } from '@/lib/profile-preview';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
