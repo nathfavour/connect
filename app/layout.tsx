@@ -33,6 +33,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PresenceProvider } from '@/components/providers/PresenceProvider';
 import { ProfileProvider } from '@/components/providers/ProfileProvider';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
+import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { EcosystemClient } from '@/components/ecosystem/EcosystemClient';
 import { IslandProvider } from '@/components/common/DynamicIsland';
 import { SudoProvider } from '@/context/SudoContext';
@@ -63,7 +64,8 @@ export default function RootLayout({
                 <SudoProvider>
                   <ProfileProvider>
                     <PresenceProvider>
-                      <AuthOverlay />
+                      <ChatNotificationProvider>
+                        <AuthOverlay />
                       <Toaster 
                         position="bottom-right"
                         toastOptions={{
@@ -78,6 +80,7 @@ export default function RootLayout({
                       <Suspense fallback={null}>
                         {children}
                       </Suspense>
+                      </ChatNotificationProvider>
                     </PresenceProvider>
                   </ProfileProvider>
                 </SudoProvider>
