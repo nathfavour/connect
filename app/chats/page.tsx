@@ -12,6 +12,8 @@ import { UsersService } from '@/lib/services/users';
 import toast from 'react-hot-toast';
 
 import { useSudo } from '@/context/SudoContext';
+import { KeychainService } from '@/lib/appwrite/keychain';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 function ChatHandler() {
   const searchParams = useSearchParams();
@@ -57,21 +59,39 @@ function ChatHandler() {
             router.push(`/chat/${found.$id}`);
           } else {
             // Ensure Sudo is unlocked before creating (needed for E2E keys)
-            requestSudo({
-              onSuccess: async () => {
-                try {
-                  const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
-                  router.push(`/chat/${newConv.$id}`);
-                } catch (err: any) {
-                  console.error("Failed to create chat:", err);
-                  toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
-                  router.replace('/chats');
-                }
-              },
-              onCancel: () => {
+            // Additionally: if the vault is locked and there is no masterpass yet,
+            // requestSudo should open in 'initialize' intent so the modal redirects
+            // to the vault setup flow. We detect masterpass presence via KeychainService.hasMasterpass
+            // and use ecosystemSecurity.status.isUnlocked to short-circuit when unlocked.
+            if (ecosystemSecurity.status.isUnlocked) {
+              // If already unlocked, proceed directly
+              try {
+                const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
+                router.push(`/chat/${newConv.$id}`);
+              } catch (err: any) {
+                console.error("Failed to create chat:", err);
+                toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
                 router.replace('/chats');
               }
-            });
+            } else {
+              const hasMaster = await KeychainService.hasMasterpass(user.$id);
+              requestSudo({
+                intent: hasMaster ? undefined : 'initialize',
+                onSuccess: async () => {
+                  try {
+                    const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
+                    router.push(`/chat/${newConv.$id}`);
+                  } catch (err: any) {
+                    console.error("Failed to create chat:", err);
+                    toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
+                    router.replace('/chats');
+                  }
+                },
+                onCancel: () => {
+                  router.replace('/chats');
+                }
+              });
+            }
           }
         } catch (e) {
           console.error("Failed to auto-init chat", e);
