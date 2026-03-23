@@ -44,12 +44,19 @@ interface WalletSidebarProps {
 export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const { requestSudo, isUnlocked } = useSudo();
+    const { requestSudo } = useSudo();
+    const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [isExpanded, setIsExpanded] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Desktop: Sidebar (Drawer right)
-    // Mobile: Bottom Sheet (Drawer bottom)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
+                setIsUnlocked(ecosystemSecurity.status.isUnlocked);
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [isUnlocked]);
 
     const handleUnlock = () => {
         requestSudo({
