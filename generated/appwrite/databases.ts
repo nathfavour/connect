@@ -51,6 +51,8 @@ tableIdMap["passwordManagerDb"]["user"] = "user";
 tableIdMap["passwordManagerDb"]["Folders"] = "folders";
 tableIdMap["passwordManagerDb"]["TOTP Secrets"] = "totpSecrets";
 tableIdMap["passwordManagerDb"]["Keychain"] = "keychain";
+tableIdMap["passwordManagerDb"]["key_mapping"] = "key_mapping";
+tableIdMap["passwordManagerDb"]["wallets"] = "wallets";
 tableIdMap["chat"] = Object.create(null);
 tableIdMap["chat"]["Messages"] = "messages";
 tableIdMap["chat"]["Conversations"] = "conversations";
@@ -61,6 +63,7 @@ tableIdMap["chat"]["Interactions"] = "interactions";
 tableIdMap["chat"]["Moments"] = "moments";
 tableIdMap["chat"]["Calls"] = "calls";
 tableIdMap["chat"]["profiles"] = "profiles";
+tableIdMap["chat"]["epochs"] = "epochs";
 tableIdMap["whisperrflow"] = Object.create(null);
 tableIdMap["whisperrflow"]["focusSessions"] = "focusSessions";
 tableIdMap["whisperrflow"]["eventGuests"] = "eventGuests";
@@ -69,6 +72,9 @@ tableIdMap["whisperrflow"]["calendars"] = "calendars";
 tableIdMap["whisperrflow"]["tasks"] = "tasks";
 tableIdMap["whisperrflow"]["forms"] = "forms";
 tableIdMap["whisperrflow"]["formSubmissions"] = "formSubmissions";
+tableIdMap["whisperrflow"]["agents"] = "agents";
+
+const tablesWithRelationships = new Set<string>();
 
 const roleBuilder: RoleBuilder = {
   any: () => Role.any() as RoleString,

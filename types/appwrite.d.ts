@@ -373,6 +373,22 @@ export type Keychain = Models.Row & {
     updatedAt: string | null;
 }
 
+export type KeyMapping = Models.Row & {
+    resourceId: string;
+    resourceType: string;
+    grantee: string;
+    wrappedKey: string;
+    metadata: string | null;
+}
+
+export type Wallets = Models.Row & {
+    ownerId: string;
+    address: string;
+    chain: string;
+    encryptedSecret: string;
+    type: string;
+}
+
 export type Messages = Models.Row & {
     conversationId: string;
     senderId: string;
@@ -476,7 +492,6 @@ export type Calls = Models.Row & {
 }
 
 export type Profiles = Models.Row & {
-    userId: string;
     username: string;
     displayName: string | null;
     bio: string | null;
@@ -485,6 +500,13 @@ export type Profiles = Models.Row & {
     publicKey: string | null;
     status: string;
     preferences: string | null;
+    userId: string;
+}
+
+export type Epochs = Models.Row & {
+    resourceId: string;
+    epochNumber: number;
+    createdBy: string;
 }
 
 export type FocusSessions = Models.Row & {
@@ -558,4 +580,12 @@ export type FormSubmissions = Models.Row & {
     payload: string;
     status: FormSubmissionsStatus;
     metadata: string | null;
+}
+
+export type Agents = Models.Row & {
+    ownerId: string;
+    parentId: string | null;
+    publicKey: string;
+    config: string;
+    status: string;
 }
