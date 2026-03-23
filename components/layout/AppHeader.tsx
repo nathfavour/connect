@@ -99,14 +99,19 @@ export const AppHeader = () => {
         bgcolor: 'rgba(11, 9, 8, 0.95)',
         backdropFilter: 'blur(25px) saturate(180%)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        backgroundImage: 'none'
+        backgroundImage: 'none',
+        display: 'flex',
+        alignItems: 'center'
       }}
     >
       <Toolbar sx={{ 
         gap: 2, 
         '@media (min-width: 900px)': { gap: 4 },
         px: { xs: 2, md: 4 }, 
-        minHeight: '88px' 
+        minHeight: '88px',
+        width: '100%',
+        maxWidth: '1440px',
+        margin: '0 auto'
       }}>
         {/* Left: Logo */}
         <Logo 

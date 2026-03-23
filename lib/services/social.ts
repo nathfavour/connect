@@ -414,6 +414,13 @@ async toggleLike(userId: string, momentId: string, creatorId?: string, contentSn
         return await tablesDB.updateRow(DB_ID, MOMENTS_TABLE, momentId, { visibility });
     },
 
+    async updateMoment(momentId: string, content: string) {
+        return await tablesDB.updateRow(DB_ID, MOMENTS_TABLE, momentId, {
+            caption: content,
+            updatedAt: new Date().toISOString()
+        });
+    },
+
     async likeMoment(userId: string, momentId: string) {
         return await tablesDB.createRow(DB_ID, INTERACTIONS_TABLE, ID.unique(), {
             userId,

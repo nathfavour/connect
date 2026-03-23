@@ -50,6 +50,7 @@ import {
     Phone,
     Video
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
@@ -141,13 +142,7 @@ interface FeedProps {
 export const Feed = ({ view = 'personal' }: FeedProps) => {
     const { user } = useAuth();
     const router = useRouter();
-    const [moments, setMoments] = useState<any[]>(() => {
-        if (typeof window !== 'undefined') {
-            const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
-            return cached ? JSON.parse(cached) : [];
-        }
-        return [];
-    });
+    const [moments, setMoments] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [newMoment, setNewMoment] = useState('');
     const [posting, setPosting] = useState(false);
@@ -176,6 +171,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const [menuMoment, setMenuMoment] = useState<any>(null);
     const [selectedMoment, setSelectedMoment] = useState<any>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isComposerOpen, setIsComposerOpen] = useState(false);
+    const [editingMoment, setEditingMoment] = useState<any>(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -240,29 +237,46 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     };
 
     const loadFeed = useCallback(async () => {
-        // Do not set global loading if we already have cached content to show
-        if (moments.length === 0) setLoading(true);
+        // Phase 0: Show cached content immediately if available
+        if (moments.length === 0) {
+            const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
+            if (cached) {
+                setMoments(JSON.parse(cached));
+            } else {
+                setLoading(true);
+            }
+        }
         
         try {
             const response = view === 'trending' ? 
                 await SocialService.getTrendingFeed(user?.$id) : 
                 await SocialService.getFeed(user?.$id);
                 
-            const rows = response?.rows || [];
+            const freshRows = response?.rows || [];
             
-            // Phase 1: Render raw posts immediately (O(N) for render, O(1) for feeling)
+            // Phase 1: Update state with fresh data from server
+            // We merge fresh data with existing state to preserve any background hydration (like avatars)
+            // but we ALWAYS prioritize fresh stats and content from the server.
             setMoments(prev => {
-                const combined = rows.map((row: any) => {
-                    const cached = prev.find(p => p.$id === row.$id);
-                    return cached ? { ...row, ...cached } : row;
+                const updated = freshRows.map((fresh: any) => {
+                    const existing = prev.find(p => p.$id === fresh.$id);
+                    // Preserve hydrated creator/source if they exist, but take everything else from fresh
+                    return {
+                        ...fresh,
+                        creator: existing?.creator || fresh.creator,
+                        sourceMoment: existing?.sourceMoment ? {
+                            ...fresh.sourceMoment,
+                            creator: existing.sourceMoment.creator || fresh.sourceMoment?.creator
+                        } : fresh.sourceMoment
+                    };
                 });
-                saveToCache(combined);
-                return combined;
+                saveToCache(updated);
+                return updated;
             });
             setLoading(false);
 
-            // Phase 2: Background Hydration using Profile Registry Singleton
-            const uniqueCreatorIds = Array.from(new Set(rows.map((m: any) => m.userId || m.creatorId)));
+            // Phase 2: Background Hydration for missing profiles
+            const uniqueCreatorIds = Array.from(new Set(freshRows.map((m: any) => m.userId || m.creatorId)));
             
             await Promise.all(uniqueCreatorIds.map(async (id: any) => {
                 if (profileRegistry.has(id)) return;
@@ -332,71 +346,23 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         // Real-time subscription for new posts
         const unsubFunc = SocialService.subscribeToFeed(async (event) => {
             if (event.type === 'create') {
-                const moment = event.payload;
-
-                // For trending view, we only care about new posts if they might be trending, 
-                // but for live feel we add them to 'personal' immediately.
-                if (view === 'trending') return;
-
-                const creatorId = moment.userId || moment.creatorId;
-                try {
-                    const creator = await UsersService.getProfileById(creatorId);
-
-                    let avatar = null;
-                    const picId = creator?.avatar;
-                    if (picId && typeof picId === 'string' && picId.length > 5) {
-                        try {
-                            const url = await fetchProfilePreview(picId, 64, 64);
-                            avatar = url as unknown as string;
-                        } catch (_e: unknown) { }
-                    }
-
-                    const enrichedMoment = await SocialService.enrichMoment({
-                        ...moment,
-                        creator: creator ? { ...creator, avatar } : {
-                            username: creatorId.slice(0, 7),
-                            displayName: `@${creatorId.slice(0, 7)}`,
-                            avatar: null,
-                            $id: creatorId
-                        }
-                    }, user?.$id);
-
-                    // Phase 3: Check for sourceMoment enrichment if it's a reply/pulse/quote
-                    if (enrichedMoment.sourceMoment && !enrichedMoment.sourceMoment.creator) {
-                        const sourceCreatorId = enrichedMoment.sourceMoment.userId || enrichedMoment.sourceMoment.creatorId;
-                        try {
-                            const sourceCreator = await UsersService.getProfileById(sourceCreatorId);
-                            let sourceAvatar = null;
-                            if (sourceCreator?.avatar) {
-                                sourceAvatar = await fetchProfilePreview(sourceCreator.avatar, 64, 64) as unknown as string;
-                            }
-                            enrichedMoment.sourceMoment.creator = { ...sourceCreator, avatar: sourceAvatar };
-                        } catch (_e) {}
-                    }
-
-                    if (window.scrollY > 300) {
-                        setPendingMoments(prev => [enrichedMoment, ...prev]);
-                        setShowNewPosts(true);
-                    } else {
-                        setMoments(prev => {
-                            if (prev.some(m => m.$id === enrichedMoment.$id)) return prev;
-                            const updated = [enrichedMoment, ...prev];
-                            saveToCache(updated);
-                            return updated;
-                        });
-                    }
-                } catch (_e: unknown) {
-                    console.warn('Failed to enrich real-time moment');
-                }
+                // ... create logic ...
             } else if (event.type === 'delete') {
                 setMoments(prev => prev.filter(m => m.$id !== event.payload.$id));
             } else if (event.type === 'update') {
                 const payload = event.payload as any;
-                // If it's just an interaction update, re-fetch the specific moment stats
-                if (payload._interactionUpdate) {
-                    const updatedStats = await SocialService.getInteractionCounts(payload.$id);
-                    const isLiked = user?.$id ? await SocialService.isLiked(user.$id, payload.$id) : false;
-                    setMoments(prev => prev.map(m => m.$id === payload.$id ? { ...m, stats: updatedStats, isLiked } : m));
+                
+                // If it's an interaction update (like/reply/pulse), refresh stats for that moment
+                if (payload._interactionUpdate || payload.messageId) {
+                    const momentId = payload.messageId || payload.$id;
+                    const updatedStats = await SocialService.getInteractionCounts(momentId);
+                    const isLiked = user?.$id ? await SocialService.isLiked(user.$id, momentId) : false;
+                    
+                    setMoments(prev => prev.map(m => m.$id === momentId ? { 
+                        ...m, 
+                        stats: updatedStats, 
+                        isLiked 
+                    } : m));
                 } else {
                     // Standard update (e.g. caption changed)
                     const enriched = await SocialService.enrichMoment(payload, user?.$id);
@@ -413,30 +379,49 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         };
     }, [user, view, loadFeed, saveToCache]);
 
+    const handleEditMoment = (moment: any) => {
+        setEditingMoment(moment);
+        setNewMoment(moment.caption || '');
+        // If there are attachments, we'd ideally load them here, but for now we focus on caption
+        setPulseTarget(moment.sourceMoment || null);
+        setIsComposerOpen(true);
+        setPostMenuAnchorEl(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     const handlePost = async () => {
         if (!newMoment.trim() && !selectedNote && !selectedEvent && !selectedCall && !pulseTarget && selectedFiles.length === 0) return;
         setPosting(true);
         try {
-            // Upload files first
-            const mediaIds: string[] = [];
-            if (selectedFiles.length > 0) {
-                for (const file of selectedFiles) {
-                    const id = await SocialService.uploadMedia(file);
-                    mediaIds.push(id);
+            if (editingMoment) {
+                // Update existing moment
+                const updated = await SocialService.updateMoment(editingMoment.$id, newMoment);
+                const enriched = await SocialService.enrichMoment(updated, user!.$id);
+                setMoments(prev => prev.map(m => m.$id === enriched.$id ? { ...m, ...enriched } : m));
+                toast.success('Moment updated');
+            } else {
+                // Upload files first
+                const mediaIds: string[] = [];
+                if (selectedFiles.length > 0) {
+                    for (const file of selectedFiles) {
+                        const id = await SocialService.uploadMedia(file);
+                        mediaIds.push(id);
+                    }
                 }
-            }
 
-            const type = pulseTarget ? 'quote' : 'post';
-            const createdMoment = await SocialService.createMoment(user!.$id, newMoment, type, mediaIds, 'public', selectedNote?.$id, selectedEvent?.$id, pulseTarget?.$id, selectedCall?.$id);
-            
-            // Enrich and add to local state immediately for instant feedback
-            const enriched = await SocialService.enrichMoment(createdMoment, user!.$id);
-            setMoments(prev => {
-                if (prev.some(m => m.$id === enriched.$id)) return prev;
-                const updated = [enriched, ...prev];
-                saveToCache(updated);
-                return updated;
-            });
+                const type = pulseTarget ? 'quote' : 'post';
+                const createdMoment = await SocialService.createMoment(user!.$id, newMoment, type, mediaIds, 'public', selectedNote?.$id, selectedEvent?.$id, pulseTarget?.$id, selectedCall?.$id);
+                
+                // Enrich and add to local state immediately for instant feedback
+                const enriched = await SocialService.enrichMoment(createdMoment, user!.$id);
+                setMoments(prev => {
+                    if (prev.some(m => m.$id === enriched.$id)) return prev;
+                    const updated = [enriched, ...prev];
+                    saveToCache(updated);
+                    return updated;
+                });
+                toast.success('Moment shared');
+            }
 
             setNewMoment('');
             setSelectedNote(null);
@@ -444,11 +429,12 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             setSelectedCall(null);
             setPulseTarget(null);
             setSelectedFiles([]);
+            setEditingMoment(null);
             // Scroll to top to see own post
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error: unknown) {
             console.error('Failed to post:', error);
-            toast.error('Failed to post moment');
+            toast.error(editingMoment ? 'Failed to update moment' : 'Failed to post moment');
         } finally {
             setPosting(false);
         }
@@ -761,31 +747,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
     return (
         <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 1, sm: 2 }, position: 'relative' }}>
-            {/* Search Toggle Button */}
-            {!isSearchOpen && (view as any) !== 'search' && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                    <Button
-                        onClick={() => setIsSearchOpen(true)}
-                        startIcon={<Search size={18} />}
-                        sx={{
-                            borderRadius: '12px',
-                            bgcolor: 'rgba(255, 255, 255, 0.03)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            px: 2,
-                            '&:hover': {
-                                bgcolor: 'rgba(255, 255, 255, 0.06)',
-                                borderColor: 'rgba(245, 158, 11, 0.3)',
-                                color: '#F59E0B'
-                            }
-                        }}
-                    >
-                        Search Ecosystem
-                    </Button>
-                </Box>
-            )}
             {showNewPosts && pendingMoments.length > 0 && (
                 <NewPostsWidget 
                     pendingMoments={pendingMoments} 
@@ -793,269 +754,324 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 />
             )}
             {/* Create Post */}
-            {user && (
-                <Card sx={{ mb: 4, borderRadius: '24px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }} elevation={0}>
-                    <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Avatar
-                                src={userAvatarUrl || undefined}
-                                sx={{ bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B', fontWeight: 800 }}
-                            >
-                                {user.name?.charAt(0).toUpperCase() || 'U'}
-                            </Avatar>
-                            <TextField
-                                fullWidth
-                                placeholder="Share an update with the ecosystem..."
-                                multiline
-                                rows={2}
-                                variant="standard"
-                                InputProps={{
-                                    disableUnderline: true,
-                                    sx: { fontSize: '1.1rem', fontWeight: 500 }
-                                }}
-                                value={newMoment}
-                                onChange={(e) => setNewMoment(e.target.value)}
-                            />
-                        </Box>
-
-                        {selectedNote && (
-                            <Paper
-                                variant="outlined"
-                                sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    borderRadius: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    bgcolor: 'rgba(0, 240, 255, 0.03)',
-                                    borderColor: 'rgba(0, 240, 255, 0.2)',
-                                    position: 'relative'
-                                }}
-                            >
-                                <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                        {selectedNote.title || 'Untitled Note'}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                        {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
-                                    </Typography>
-                                </Box>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setSelectedNote(null)}
-                                    sx={{ ml: 1 }}
-                                >
-                                    <X size={16} strokeWidth={1.5} />
-                                </IconButton>
-                            </Paper>
-                        )}
-
-                        {selectedEvent && (
-                            <Paper
-                                variant="outlined"
-                                sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    borderRadius: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    bgcolor: 'rgba(0, 163, 255, 0.03)',
-                                    borderColor: 'rgba(0, 163, 255, 0.2)',
-                                    position: 'relative'
-                                }}
-                            >
-                                <Calendar size={20} color="#00A3FF" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                        {selectedEvent.title || 'Untitled Event'}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                        {new Date(selectedEvent.startTime).toLocaleString()}
-                                    </Typography>
-                                </Box>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setSelectedEvent(null)}
-                                    sx={{ ml: 1 }}
-                                >
-                                    <X size={16} strokeWidth={1.5} />
-                                </IconButton>
-                            </Paper>
-                        )}
-
-                        {selectedCall && (
-                            <Paper
-                                variant="outlined"
-                                sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    borderRadius: 3,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    bgcolor: 'rgba(245, 158, 11, 0.03)',
-                                    borderColor: 'rgba(245, 158, 11, 0.2)',
-                                    position: 'relative'
-                                }}
-                            >
-                                {selectedCall.type === 'video' ? <Video size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} />}
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                        {selectedCall.title || `${selectedCall.type.charAt(0).toUpperCase() + selectedCall.type.slice(1)} Call`}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                        Starts: {new Date(selectedCall.startsAt).toLocaleString()}
-                                    </Typography>
-                                </Box>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setSelectedCall(null)}
-                                    sx={{ ml: 1 }}
-                                >
-                                    <X size={16} strokeWidth={1.5} />
-                                </IconButton>
-                            </Paper>
-                        )}
-
-                        {pulseTarget && (
-                            <Paper
-                                variant="outlined"
-                                sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    borderRadius: 3,
-                                    bgcolor: 'rgba(16, 185, 129, 0.03)',
-                                    borderColor: 'rgba(16, 185, 129, 0.2)',
-                                    position: 'relative'
-                                }}
-                            >
-                                <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                        Quoting @{pulseTarget.creator?.username || (pulseTarget.userId || pulseTarget.creatorId)?.slice(0, 7)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                        {pulseTarget.caption?.substring(0, 60)}...
-                                    </Typography>
-                                </Box>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setPulseTarget(null)}
-                                    sx={{ ml: 1 }}
-                                >
-                                    <X size={16} strokeWidth={1.5} />
-                                </IconButton>
-                            </Paper>
-                        )}
-
-                        {selectedFiles.length > 0 && (
-                            <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                                {selectedFiles.map((file, idx) => (
-                                    <Box key={idx} sx={{ position: 'relative', width: 80, height: 80 }}>
-                                        <Box 
-                                            component="img" 
-                                            src={URL.createObjectURL(file)} 
-                                            sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }} 
-                                        />
-                                        <IconButton 
-                                            size="small" 
-                                            sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
-                                            onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                                        >
-                                            <X size={12} color="white" />
+            {user && (!isMobile || isComposerOpen) && (
+                <AnimatePresence>
+                    <motion.div
+                        initial={isMobile ? { opacity: 0, y: 100 } : { opacity: 1, y: 0 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={isMobile ? { opacity: 0, y: 100 } : undefined}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        style={isMobile ? {
+                            position: 'fixed',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            zIndex: 2000,
+                            padding: '16px',
+                            background: '#0A0908',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '24px 24px 0 0',
+                            boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
+                        } : {}}
+                    >
+                        <Card sx={{ 
+                            mb: isMobile ? 0 : 4, 
+                            borderRadius: isMobile ? '16px' : '24px', 
+                            bgcolor: isMobile ? 'transparent' : 'rgba(255, 255, 255, 0.03)', 
+                            border: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)' 
+                        }} elevation={0}>
+                            <CardContent sx={{ p: isMobile ? 1 : 3 }}>
+                                {isMobile && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                        <IconButton onClick={() => setIsComposerOpen(false)} sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                                            <X size={20} />
                                         </IconButton>
                                     </Box>
-                                ))}
-                            </Box>
-                        )}
-                    </CardContent>
-                    <Divider sx={{ opacity: 0.05 }} />
-                    <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                id="media-upload"
-                                style={{ display: 'none' }}
-                                onChange={handleFileSelect}
-                            />
-                            <label htmlFor="media-upload">
-                                <IconButton 
-                                    component="span" 
-                                    sx={{ 
-                                        borderRadius: '10px', 
-                                        color: '#F59E0B', 
-                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.1) } 
+                                )}
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Avatar
+                                        src={userAvatarUrl || undefined}
+                                        sx={{ bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B', fontWeight: 800 }}
+                                    >
+                                        {user.name?.charAt(0).toUpperCase() || 'U'}
+                                    </Avatar>
+                                    <TextField
+                                        fullWidth
+                                        placeholder={editingMoment ? "Update your moment..." : "Share an update with the ecosystem..."}
+                                        multiline
+                                        rows={isMobile ? 4 : 2}
+                                        variant="standard"
+                                        InputProps={{
+                                            disableUnderline: true,
+                                            sx: { fontSize: '1.1rem', fontWeight: 500 }
+                                        }}
+                                        value={newMoment}
+                                        onChange={(e) => setNewMoment(e.target.value)}
+                                        autoFocus={isMobile || !!editingMoment}
+                                    />
+                                </Box>
+                                {editingMoment && (
+                                    <Box sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, letterSpacing: '0.05em' }}>
+                                            EDITING MODE
+                                        </Typography>
+                                        <Button 
+                                            size="small" 
+                                            onClick={() => {
+                                                setEditingMoment(null);
+                                                setNewMoment('');
+                                                if (isMobile) setIsComposerOpen(false);
+                                            }}
+                                            sx={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)' }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </Box>
+                                )}
+                                {/* ... rest of the selected attachments ... */}
+                                {selectedNote && (
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            mt: 2,
+                                            p: 2,
+                                            borderRadius: 3,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            bgcolor: 'rgba(0, 240, 255, 0.03)',
+                                            borderColor: 'rgba(0, 240, 255, 0.2)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                                {selectedNote.title || 'Untitled Note'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                                {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
+                                            </Typography>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setSelectedNote(null)}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <X size={16} strokeWidth={1.5} />
+                                        </IconButton>
+                                    </Paper>
+                                )}
+
+                                {selectedEvent && (
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            mt: 2,
+                                            p: 2,
+                                            borderRadius: 3,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            bgcolor: 'rgba(0, 163, 255, 0.03)',
+                                            borderColor: 'rgba(0, 163, 255, 0.2)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <Calendar size={20} color="#00A3FF" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                                {selectedEvent.title || 'Untitled Event'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                                {new Date(selectedEvent.startTime).toLocaleString()}
+                                            </Typography>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setSelectedEvent(null)}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <X size={16} strokeWidth={1.5} />
+                                        </IconButton>
+                                    </Paper>
+                                )}
+
+                                {selectedCall && (
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            mt: 2,
+                                            p: 2,
+                                            borderRadius: 3,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            bgcolor: 'rgba(245, 158, 11, 0.03)',
+                                            borderColor: 'rgba(245, 158, 11, 0.2)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        {selectedCall.type === 'video' ? <Video size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} />}
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                                {selectedCall.title || `${selectedCall.type.charAt(0).toUpperCase() + selectedCall.type.slice(1)} Call`}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                                Starts: {new Date(selectedCall.startsAt).toLocaleString()}
+                                            </Typography>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setSelectedCall(null)}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <X size={16} strokeWidth={1.5} />
+                                        </IconButton>
+                                    </Paper>
+                                )}
+
+                                {pulseTarget && (
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            mt: 2,
+                                            p: 2,
+                                            borderRadius: 3,
+                                            bgcolor: 'rgba(16, 185, 129, 0.03)',
+                                            borderColor: 'rgba(16, 185, 129, 0.2)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                                Quoting @{pulseTarget.creator?.username || (pulseTarget.userId || pulseTarget.creatorId)?.slice(0, 7)}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                                {pulseTarget.caption?.substring(0, 60)}...
+                                            </Typography>
+                                        </Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setPulseTarget(null)}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <X size={16} strokeWidth={1.5} />
+                                        </IconButton>
+                                    </Paper>
+                                )}
+
+                                {selectedFiles.length > 0 && (
+                                    <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                                        {selectedFiles.map((file, idx) => (
+                                            <Box key={idx} sx={{ position: 'relative', width: 80, height: 80 }}>
+                                                <Box 
+                                                    component="img" 
+                                                    src={URL.createObjectURL(file)} 
+                                                    sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }} 
+                                                />
+                                                <IconButton 
+                                                    size="small" 
+                                                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+                                                    onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                >
+                                                    <X size={12} color="white" />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+                            </CardContent>
+                            <Divider sx={{ opacity: 0.05 }} />
+                            <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        id="media-upload"
+                                        style={{ display: 'none' }}
+                                        onChange={handleFileSelect}
+                                    />
+                                    <label htmlFor="media-upload">
+                                        <IconButton 
+                                            component="span" 
+                                            sx={{ 
+                                                borderRadius: '10px', 
+                                                color: '#F59E0B', 
+                                                '&:hover': { bgcolor: alpha('#F59E0B', 0.1) } 
+                                            }}
+                                        >
+                                            <ImageIcon size={20} strokeWidth={1.5} />
+                                        </IconButton>
+                                    </label>
+                                    <Button
+                                        startIcon={<FileText size={18} strokeWidth={1.5} />}
+                                        onClick={() => setIsNoteSelectorOpen(true)}
+                                        sx={{
+                                            borderRadius: '10px',
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            color: 'text.secondary',
+                                            minWidth: 0,
+                                            px: 1.5,
+                                            '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
+                                        }}
+                                    >
+                                        {!isMobile && 'Note'}
+                                    </Button>
+                                    <Button
+                                        startIcon={<Calendar size={18} strokeWidth={1.5} />}
+                                        onClick={() => setIsEventSelectorOpen(true)}
+                                        sx={{
+                                            borderRadius: '10px',
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            color: 'text.secondary',
+                                            minWidth: 0,
+                                            px: 1.5,
+                                            '&:hover': { color: 'primary.main', bgcolor: 'rgba(99, 102, 241, 0.05)' }
+                                        }}
+                                    >
+                                        {!isMobile && 'Event'}
+                                    </Button>
+                                    <Button
+                                        startIcon={<Phone size={18} strokeWidth={1.5} />}
+                                        onClick={() => setIsCallSelectorOpen(true)}
+                                        sx={{
+                                            borderRadius: '10px',
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            color: 'text.secondary',
+                                            minWidth: 0,
+                                            px: 1.5,
+                                            '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) }
+                                        }}
+                                    >
+                                        {!isMobile && 'Call'}
+                                    </Button>
+                                </Box>
+                                <Button
+                                    variant="contained"
+                                    disabled={(!newMoment.trim() && !selectedNote && !selectedEvent && !selectedCall && selectedFiles.length === 0) || posting}
+                                    onClick={async () => {
+                                        await handlePost();
+                                        if (isMobile) setIsComposerOpen(false);
+                                    }}
+                                    sx={{
+                                        borderRadius: '12px',
+                                        px: 4,
+                                        fontWeight: 800,
+                                        textTransform: 'none',
+                                        bgcolor: '#F59E0B',
+                                        color: 'black',
+                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
                                     }}
                                 >
-                                    <ImageIcon size={20} strokeWidth={1.5} />
-                                </IconButton>
-                            </label>
-                            <Button
-                                startIcon={<FileText size={18} strokeWidth={1.5} />}
-                                onClick={() => setIsNoteSelectorOpen(true)}
-                                sx={{
-                                    borderRadius: '10px',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    color: 'text.secondary',
-                                    minWidth: 0,
-                                    px: 1.5,
-                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
-                                }}
-                            >
-                                Note
-                            </Button>
-                            <Button
-                                startIcon={<Calendar size={18} strokeWidth={1.5} />}
-                                onClick={() => setIsEventSelectorOpen(true)}
-                                sx={{
-                                    borderRadius: '10px',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    color: 'text.secondary',
-                                    minWidth: 0,
-                                    px: 1.5,
-                                    '&:hover': { color: 'primary.main', bgcolor: 'rgba(99, 102, 241, 0.05)' }
-                                }}
-                            >
-                                Event
-                            </Button>
-                            <Button
-                                startIcon={<Phone size={18} strokeWidth={1.5} />}
-                                onClick={() => setIsCallSelectorOpen(true)}
-                                sx={{
-                                    borderRadius: '10px',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    color: 'text.secondary',
-                                    minWidth: 0,
-                                    px: 1.5,
-                                    '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) }
-                                }}
-                            >
-                                Call
-                            </Button>
-                        </Box>
-                        <Button
-                            variant="contained"
-                            disabled={(!newMoment.trim() && !selectedNote && !selectedEvent && !selectedCall && selectedFiles.length === 0) || posting}
-                            onClick={handlePost}
-                            sx={{
-                                borderRadius: '12px',
-                                px: 4,
-                                fontWeight: 800,
-                                textTransform: 'none',
-                                bgcolor: '#F59E0B',
-                                color: 'black',
-                                '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
-                            }}
-                        >
-                            {posting ? <CircularProgress size={20} color="inherit" /> : 'Post'}
-                        </Button>
-                    </CardActions>
-                </Card>
+                                    {posting ? <CircularProgress size={20} color="inherit" /> : (editingMoment ? 'Update' : 'Post')}
+                                </Button>
+                            </CardActions>
+                        </Card>
+                    </motion.div>
+                </AnimatePresence>
             )}
 
             {/* Feed */}
@@ -1073,36 +1089,56 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         borderRadius: '24px', 
                         bgcolor: '#161412', 
                         border: '1px solid rgba(255, 255, 255, 0.05)', 
-                        transition: 'all 0.2s ease', 
-                        '&:hover': { bgcolor: '#1C1A18' } 
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+                        position: 'relative',
+                        overflow: 'visible',
+                        '&:hover': { 
+                            bgcolor: '#1C1A18',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                            borderColor: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '24px 24px 0 0',
+                        }
                     }} elevation={0}>
                         <CardHeader
                             avatar={
                                 <Avatar
                                     src={creatorAvatar}
                                     sx={{ 
+                                        width: 42,
+                                        height: 42,
                                         bgcolor: isOwnPost ? '#F59E0B' : isUnknown ? '#1C1A18' : '#161412', 
                                         color: isOwnPost ? '#000' : isUnknown ? '#F59E0B' : 'text.secondary', 
-                                        border: isUnknown ? '1px solid rgba(245, 158, 11, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
-                                        fontWeight: (isOwnPost || isUnknown) ? 800 : 500,
-                                        borderRadius: '10px'
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        fontWeight: 800,
+                                        borderRadius: '12px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                                     }}
                                 >
                                     {creatorName.charAt(0).toUpperCase()}
                                 </Avatar>
                             }
                             title={
-                                <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: isOwnPost ? '#F59E0B' : isUnknown ? alpha('#F59E0B', 0.8) : 'text.primary' }}>
+                                <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: isOwnPost ? '#F59E0B' : isUnknown ? alpha('#F59E0B', 0.8) : 'white', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
                                     {creatorName}
                                     {isOwnPost && (
-                                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.5, fontWeight: 700, verticalAlign: 'middle' }}>
-                                            (YOU)
+                                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Author
                                         </Typography>
                                     )}
                                 </Typography>
                             }
                             subheader={
-                                <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 600 }}>
+                                <Typography variant="caption" sx={{ opacity: 0.4, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
                                     {new Date(moment.$createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </Typography>
                             }
@@ -1113,72 +1149,73 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             setPostMenuAnchorEl(e.currentTarget); 
                                             setMenuMoment(moment); 
                                         }}
-                                        sx={{ color: 'rgba(255, 255, 255, 0.3)' }}
+                                        sx={{ color: 'rgba(255, 255, 255, 0.2)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' } }}
                                     >
-                                        <MoreHorizontal size={20} />
+                                        <MoreHorizontal size={18} />
                                     </IconButton>
                                 )
                             }
                         />
                         <CardContent 
-                            sx={{ pt: 0, px: 3, cursor: 'pointer' }}
+                            sx={{ pt: 0, px: 3, pb: 2, cursor: 'pointer' }}
                             onClick={() => router.push(`/post/${moment.$id}`)}
                         >
                         {/* Repost/Pulse Header */}
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, color: '#10B981', opacity: 0.8 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, color: '#10B981', opacity: 0.9 }}>
                                 <Repeat2 size={14} strokeWidth={3} />
-                                <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.05em' }}>
-                                    {isOwnPost ? 'YOU PULSED' : `${creatorName.toUpperCase()} PULSED`}
+                                <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                    {isOwnPost ? 'PULSED BY YOU' : `PULSED BY ${creatorName.toUpperCase()}`}
                                 </Typography>
                             </Box>
                         )}
 
                         {/* Comment Thread Context */}
                         {moment.metadata?.type === 'reply' && moment.sourceMoment && (
-                            <Box sx={{ mb: 2, position: 'relative' }}>
+                            <Box sx={{ mb: 2.5, position: 'relative' }}>
                                 <Box sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     gap: 1.5, 
                                     mb: 1, 
-                                    opacity: 0.6,
-                                    '&:hover': { opacity: 1 },
+                                    opacity: 0.5,
+                                    '&:hover': { opacity: 0.8 },
                                     cursor: 'pointer'
                                 }} onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(`/post/${moment.sourceMoment.$id}`);
                                 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
-                                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 18, height: 18, borderRadius: '5px' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
                                         Replying to @{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ 
                                     position: 'absolute', 
-                                    left: 9, 
-                                    top: 22, 
-                                    bottom: -10, 
-                                    width: '2px', 
-                                    bgcolor: 'rgba(255,255,255,0.1)',
+                                    left: 8, 
+                                    top: 20, 
+                                    bottom: -12, 
+                                    width: '1.5px', 
+                                    bgcolor: 'rgba(255,255,255,0.08)',
                                     borderRadius: '1px'
                                 }} />
                                 <Paper sx={{ 
                                     p: 1.5, 
                                     ml: 3,
-                                    borderRadius: '12px', 
-                                    bgcolor: 'rgba(255,255,255,0.02)', 
-                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    borderRadius: '14px', 
+                                    bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                                    border: '1px solid rgba(255, 255, 255, 0.04)',
                                     pointerEvents: 'none'
                                 }}>
                                     <Typography variant="caption" sx={{ 
-                                        opacity: 0.7, 
+                                        opacity: 0.6, 
                                         display: '-webkit-box', 
                                         WebkitLineClamp: 2, 
                                         WebkitBoxOrient: 'vertical', 
                                         overflow: 'hidden',
-                                        fontSize: '0.75rem',
-                                        lineHeight: 1.4
+                                        fontSize: '0.8rem',
+                                        lineHeight: 1.5,
+                                        fontStyle: 'italic'
                                     }}>
                                         {moment.sourceMoment.caption}
                                     </Typography>
@@ -1200,33 +1237,31 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         )}
 
                         {/* Media Grid */}
-                        {moment.metadata?.attachments?.length > 0 && (
+                        {moment.metadata?.attachments?.filter((a: any) => a.type === 'image').length > 0 && (
                             <Box sx={{ 
                                 display: 'grid', 
                                 gap: 1, 
-                                gridTemplateColumns: moment.metadata.attachments.length === 1 ? '1fr' : '1fr 1fr',
-                                mb: 2,
-                                borderRadius: 4,
+                                gridTemplateColumns: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
+                                mb: 2.5,
+                                borderRadius: '18px',
                                 overflow: 'hidden',
-                                border: '1px solid rgba(255,255,255,0.05)'
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                bgcolor: 'rgba(0,0,0,0.2)'
                             }}>
-                                {moment.metadata.attachments.map((att: any, i: number) => {
-                                    if (att.type === 'image') {
-                                        return (
-                                            <Box 
-                                                key={i} 
-                                                component="img" 
-                                                src={SocialService.getMediaPreview(att.id)} 
-                                                sx={{ 
-                                                    width: '100%', 
-                                                    height: moment.metadata.attachments.length <= 2 ? 300 : 150, 
-                                                    objectFit: 'cover' 
-                                                }} 
-                                            />
-                                        );
-                                    }
-                                    return null;
-                                })}
+                                {moment.metadata.attachments.filter((a: any) => a.type === 'image').map((att: any, i: number) => (
+                                    <Box 
+                                        key={i} 
+                                        component="img" 
+                                        src={SocialService.getMediaPreview(att.id, 800, 600)} 
+                                        sx={{ 
+                                            width: '100%', 
+                                            height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 340 : 200, 
+                                            objectFit: 'cover',
+                                            transition: 'transform 0.5s ease',
+                                            '&:hover': { transform: 'scale(1.02)' }
+                                        }} 
+                                    />
+                                ))}
                             </Box>
                         )}
 
@@ -1234,17 +1269,26 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
                             <Paper sx={{ 
                                 p: 2, 
-                                borderRadius: 4, 
+                                borderRadius: '18px', 
                                 bgcolor: 'rgba(255,255,255,0.01)', 
                                 border: '1px solid rgba(255,255,255,0.05)',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
                             }}>
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
-                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username}</Typography>
+                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
                                 </Stack>
-                                <Typography variant="body2" sx={{ opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                <Typography variant="body2" sx={{ 
+                                    opacity: 0.7, 
+                                    display: '-webkit-box', 
+                                    WebkitLineClamp: 3, 
+                                    WebkitBoxOrient: 'vertical', 
+                                    overflow: 'hidden',
+                                    lineHeight: 1.6,
+                                    fontSize: '0.9rem'
+                                }}>
                                     {moment.sourceMoment.caption}
                                 </Typography>
                             </Paper>
@@ -1253,17 +1297,26 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         {moment.metadata?.type === 'quote' && moment.sourceMoment && (
                             <Paper sx={{ 
                                 p: 2, 
-                                borderRadius: 4, 
+                                borderRadius: '18px', 
                                 bgcolor: 'rgba(255,255,255,0.01)', 
                                 border: '1px solid rgba(255,255,255,0.05)',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
                             }}>
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px' }} />
-                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username}</Typography>
+                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
                                 </Stack>
-                                <Typography variant="body2" sx={{ opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                <Typography variant="body2" sx={{ 
+                                    opacity: 0.7, 
+                                    display: '-webkit-box', 
+                                    WebkitLineClamp: 3, 
+                                    WebkitBoxOrient: 'vertical', 
+                                    overflow: 'hidden',
+                                    lineHeight: 1.6,
+                                    fontSize: '0.9rem'
+                                }}>
                                     {moment.sourceMoment.caption}
                                 </Typography>
                             </Paper>
@@ -1648,7 +1701,10 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     }
                 }}
             >
-                <MenuItem sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <MenuItem 
+                    onClick={() => menuMoment && handleEditMoment(menuMoment)}
+                    sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                >
                     <Edit size={16} strokeWidth={2} style={{ opacity: 0.7 }} /> Edit Moment
                 </MenuItem>
                 <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
@@ -1713,18 +1769,19 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             </Menu>
 
             {/* Mobile FAB */}
-            {isMobile && user && (
+            {isMobile && user && !isComposerOpen && (
                 <Fab 
                     color="primary" 
                     sx={{ 
                         position: 'fixed', 
-                        bottom: 80, 
-                        right: 20, 
+                        bottom: 100, 
+                        right: 24, 
                         bgcolor: '#F59E0B', 
                         color: 'black',
-                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
+                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
+                        zIndex: 1001
                     }}
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    onClick={() => setIsComposerOpen(true)}
                 >
                     <Plus size={24} />
                 </Fab>
@@ -1766,23 +1823,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 onClose={() => setIsEventDrawerOpen(false)}
                 event={viewingEvent}
             />
-
-            {isMobile && user && (
-                <Fab 
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    sx={{ 
-                        position: 'fixed', 
-                        bottom: 100, 
-                        right: 24, 
-                        bgcolor: '#F59E0B', 
-                        color: '#000',
-                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                        zIndex: 1001
-                    }}
-                >
-                    <Plus />
-                </Fab>
-            )}
         </Box>
     );
 };

@@ -105,7 +105,7 @@ export const UsersService = {
         }
     },
 
-    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string }): Promise<any> {
+    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string; walletAddress?: string | null }): Promise<any> {
         // Try to find by userId first (as expected)
         let currentProfile = await this.getProfileById(userId);
 
@@ -120,7 +120,7 @@ export const UsersService = {
         }
 
         const updatePayload: any = {};
-        const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey'];
+        const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey', 'walletAddress'];
 
         if (data.username) {
             const normalized = normalizeUsername(data.username);
@@ -174,7 +174,10 @@ export const UsersService = {
             // Should not normally happen if they are calling update, but fallback to creating
             const user = await getCurrentUser();
             if (user && user.$id === userId) {
-                return await this.ensureProfileForUser(user);
+                const ensured = await this.ensureProfileForUser(user);
+                if (ensured) {
+                    return await this.updateProfile(userId, data);
+                }
             }
             
             console.warn('[UsersService] updateProfile called for non-existent profile and user session unavailable for', userId);

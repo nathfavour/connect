@@ -22,11 +22,13 @@ export const APPWRITE_CONFIG = {
         },
         KYLRIXNOTE: {
             USERS: '67ff05c900247b5673d3',
-            ACTIVITY_LOG: 'activityLog'
+            ACTIVITY_LOG: 'activityLog',
+            WALLET_MAP: 'walletMap'
         },
         PASSWORD_MANAGER: {
             KEYCHAIN: 'keychain',
-            IDENTITIES: 'identities'
+            IDENTITIES: 'identities',
+            WALLETS: 'wallets'
         }
     },
     BUCKETS: {

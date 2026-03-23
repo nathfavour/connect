@@ -16,6 +16,23 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.kylrix.space',
+        port: '',
+        pathname: '/v1/storage/buckets/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fra.cloud.appwrite.io',
+        port: '',
+        pathname: '/v1/storage/buckets/**',
+      }
+    ],
+  },
+
   // Security Headers
   async headers() {
     return [

@@ -334,62 +334,63 @@ export function PostViewClient() {
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     overflow: 'visible',
                     position: 'relative',
-                    '&::before': moment.metadata?.sourceId ? {
+                    '&::before': {
                         content: '""',
                         position: 'absolute',
-                        top: '-10px',
-                        left: '26px',
-                        width: '2px',
-                        height: '35px',
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                        zIndex: 0
-                    } : {}
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '1px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '24px 24px 0 0',
+                    }
                 }} elevation={0}>
                     <CardHeader
                         avatar={
                             <Avatar
                                 src={creatorAvatar}
                                 sx={{ 
-                                    width: 48, 
-                                    height: 48, 
+                                    width: 52, 
+                                    height: 52, 
                                     bgcolor: isOwnPost ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)',
                                     color: isOwnPost ? '#000' : 'text.secondary',
-                                    borderRadius: '12px',
-                                    fontWeight: 800,
+                                    borderRadius: '14px',
+                                    fontWeight: 900,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     position: 'relative',
-                                    zIndex: 1
+                                    zIndex: 1,
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
                                 }}
                             >
                                 {creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                             </Avatar>
                         }
                         title={
-                            <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: isOwnPost ? '#F59E0B' : 'text.primary', fontFamily: 'var(--font-clash)' }}>
+                            <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: isOwnPost ? '#F59E0B' : 'text.primary', fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>
                                 {creatorName}
                             </Typography>
                         }
                         subheader={
-                            <Typography variant="caption" sx={{ opacity: 0.5, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                            <Typography variant="caption" sx={{ opacity: 0.4, fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '0.02em' }}>
                                 @{moment.creator?.username || creatorId.slice(0, 7)}
                             </Typography>
                         }
                         action={
-                            <IconButton sx={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                            <IconButton sx={{ color: 'rgba(255, 255, 255, 0.2)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' } }}>
                                 <MoreHorizontal size={20} />
                             </IconButton>
                         }
                     />
 
-                    <CardContent sx={{ pt: 1, px: 3 }}>
+                    <CardContent sx={{ pt: 1, px: { xs: 2.5, sm: 4 }, pb: 4 }}>
                         <FormattedText 
                             text={moment.caption}
                             variant="h5"
                             sx={{ 
-                                lineHeight: 1.4, 
-                                fontSize: '1.4rem', 
+                                lineHeight: 1.5, 
+                                fontSize: { xs: '1.25rem', sm: '1.5rem' }, 
                                 fontWeight: 500,
-                                mb: 3,
+                                mb: 4,
                                 color: 'rgba(255,255,255,0.95)',
                                 fontFamily: 'var(--font-satoshi)',
                                 letterSpacing: '-0.01em'
@@ -397,23 +398,28 @@ export function PostViewClient() {
                         />
 
                         {moment.metadata?.attachments?.filter((a: any) => a.type === 'image' || a.type === 'video').length > 0 && (
-                            <Box sx={{ mb: 3, borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
-                                    {moment.metadata.attachments.map((att: any, idx: number) => (
+                            <Box sx={{ mb: 4, borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(0,0,0,0.2)' }}>
+                                <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5, snapType: 'x mandatory' }}>
+                                    {moment.metadata.attachments.filter((a: any) => a.type === 'image' || a.type === 'video').map((att: any, idx: number) => (
                                         <Box key={idx} sx={{ 
                                             minWidth: '100%', 
-                                            height: 300, 
-                                            bgcolor: 'rgba(255,255,255,0.02)',
+                                            height: { xs: 300, sm: 450 }, 
+                                            bgcolor: 'rgba(255,255,255,0.01)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            position: 'relative'
+                                            position: 'relative',
+                                            snapAlign: 'start'
                                         }}>
-                                            <Image 
-                                                src={`https://fra.cloud.appwrite.io/v1/storage/buckets/moments/files/${att.id}/view?project=${APPWRITE_CONFIG.PROJECT_ID}`} 
+                                            <Box 
+                                                component="img"
+                                                src={SocialService.getMediaPreview(att.id, 1200, 800)} 
                                                 alt="Attachment"
-                                                fill
-                                                style={{ objectFit: 'cover' }}
+                                                sx={{ 
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'contain'
+                                                }}
                                             />
                                         </Box>
                                     ))}
@@ -642,45 +648,45 @@ export function PostViewClient() {
                                 sx={{ 
                                     display: 'flex', 
                                     gap: 2, 
-                                    p: 2, 
-                                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                    transition: 'background 0.2s',
+                                    p: 2.5, 
+                                    borderRadius: '20px',
+                                    transition: 'all 0.2s ease',
                                     cursor: 'pointer',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.01)' }
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
                                 }}
                             >
                                 <Avatar 
                                     src={reply.creator?.avatar} 
-                                    sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.05)' }}
+                                    sx={{ width: 42, height: 42, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}
                                 >
                                     {rCreatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                                 </Avatar>
                                 <Box sx={{ flex: 1 }}>
                                     <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography sx={{ fontWeight: 800, fontSize: '0.95rem' }}>{rCreatorName}</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.4 }}>@{reply.creator?.username || rCreatorId.slice(0, 7)}</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.4 }}>· {format(new Date(reply.$createdAt), 'MMM d')}</Typography>
+                                        <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'white' }}>{rCreatorName}</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{reply.creator?.username || rCreatorId.slice(0, 7)}</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.3 }}>· {format(new Date(reply.$createdAt), 'MMM d')}</Typography>
                                     </Stack>
                                     <FormattedText 
                                         text={reply.caption}
                                         variant="body1"
-                                        sx={{ mt: 0.5, color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}
+                                        sx={{ mt: 0.8, color: 'rgba(255,255,255,0.85)', fontSize: '1rem', lineHeight: 1.6 }}
                                     />
                                     
-                                    <Stack direction="row" spacing={4} sx={{ mt: 1.5, color: 'rgba(255,255,255,0.4)' }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <IconButton size="small" sx={{ p: 0.5, '&:hover': { color: '#6366F1' } }}>
-                                                <MessageCircle size={16} />
+                                    <Stack direction="row" spacing={4} sx={{ mt: 2, color: 'rgba(255,255,255,0.3)' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                            <IconButton size="small" sx={{ p: 0.5, '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } }}>
+                                                <MessageCircle size={18} strokeWidth={1.5} />
                                             </IconButton>
-                                            <Typography variant="caption">{reply.stats?.replies || 0}</Typography>
+                                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{reply.stats?.replies || 0}</Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <IconButton size="small" sx={{ p: 0.5, '&:hover': { color: '#10B981' } }}>
-                                                <Repeat2 size={16} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                            <IconButton size="small" sx={{ p: 0.5, '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.1) } }}>
+                                                <Repeat2 size={18} strokeWidth={1.5} />
                                             </IconButton>
-                                            <Typography variant="caption">{reply.stats?.pulses || 0}</Typography>
+                                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{reply.stats?.pulses || 0}</Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                                             <IconButton 
                                                 size="small" 
                                                 onClick={(e) => {
@@ -690,12 +696,12 @@ export function PostViewClient() {
                                                 sx={{ 
                                                     p: 0.5, 
                                                     color: reply.isLiked ? '#F59E0B' : 'inherit',
-                                                    '&:hover': { color: '#F59E0B' } 
+                                                    '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
                                                 }}
                                             >
-                                                <Heart size={16} fill={reply.isLiked ? '#F59E0B' : 'none'} />
+                                                <Heart size={18} fill={reply.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
                                             </IconButton>
-                                            <Typography variant="caption">{reply.stats?.likes || 0}</Typography>
+                                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{reply.stats?.likes || 0}</Typography>
                                         </Box>
                                     </Stack>
                                 </Box>
