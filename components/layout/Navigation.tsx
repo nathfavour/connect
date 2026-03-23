@@ -22,10 +22,12 @@ import {
     MessageSquare, 
     Phone, 
     User, 
-    LogOut
+    LogOut,
+    Wallet
 } from 'lucide-react';
 import { useColorMode } from '@/components/providers/ThemeProvider';
 import { useAuth } from '@/lib/auth';
+import { WalletSidebar } from '../overlays/WalletSidebar';
 
 const drawerWidth = 280;
 
@@ -34,11 +36,13 @@ export const Navigation = () => {
     const theme = useTheme();
     const _colorMode = useColorMode();
     const { user, logout } = useAuth();
+    const [isWalletOpen, setIsWalletOpen] = useState(false);
 
     const navItems = [
         { label: 'Home', href: '/', icon: <Home size={20} strokeWidth={1.5} /> },
         { label: 'Chats', href: '/chats', icon: <MessageSquare size={20} strokeWidth={1.5} /> },
         { label: 'Calls', href: '/calls', icon: <Phone size={20} strokeWidth={1.5} /> },
+        { label: 'Wallet', onClick: () => setIsWalletOpen(true), icon: <Wallet size={20} strokeWidth={1.5} /> },
         { label: 'Profile', href: '/profile', icon: <User size={20} strokeWidth={1.5} /> },
     ];
 
@@ -61,14 +65,16 @@ export const Navigation = () => {
             <Box sx={{ overflow: 'auto', mt: 2, px: 2, flex: 1 }}>
                 <List>
                     {navItems.map((item) => (
-                        <ListItem key={item.href} disablePadding sx={{ mb: 1 }}>
+                        <ListItem key={item.label} disablePadding sx={{ mb: 1 }}>
                             <ListItemButton 
-                                component={Link} 
+                                component={item.href ? Link : 'div'} 
                                 href={item.href}
-                                selected={pathname === item.href}
+                                onClick={item.onClick}
+                                selected={item.href ? pathname === item.href : false}
                                 sx={{ 
                                     borderRadius: 3, 
                                     py: 1.5,
+                                    cursor: 'pointer',
                                     '&.Mui-selected': {
                                         bgcolor: alpha(theme.palette.primary.main, 0.12),
                                         color: 'primary.main',
@@ -80,12 +86,12 @@ export const Navigation = () => {
                                     }
                                 }}
                             >
-                                <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? 'inherit' : 'text.secondary' }}>
+                                <ListItemIcon sx={{ minWidth: 40, color: (item.href && pathname === item.href) ? 'inherit' : 'text.secondary' }}>
                                     {item.icon}
                                 </ListItemIcon>
                                 <ListItemText 
                                     primary={item.label} 
-                                    primaryTypographyProps={{ fontWeight: pathname === item.href ? 600 : 400 }}
+                                    primaryTypographyProps={{ fontWeight: (item.href && pathname === item.href) ? 600 : 400 }}
                                 />
                             </ListItemButton>
                         </ListItem>
@@ -163,6 +169,7 @@ export const Navigation = () => {
                     </Box>
                 )}
             </Box>
+            <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
         </Drawer>
     );
 };

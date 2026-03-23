@@ -28,7 +28,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Search
+  Search,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useNotifications } from '@/components/providers/NotificationProvider';
@@ -36,6 +37,7 @@ import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import EcosystemPortal from '../common/EcosystemPortal';
 import Logo from '../common/Logo';
+import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 
 export const AppHeader = () => {
@@ -44,6 +46,7 @@ export const AppHeader = () => {
   const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);
   const [anchorElNotifications, setAnchorElNotifications] = useState<null | HTMLElement>(null);
   const [isPortalOpen, setIsPortalOpen] = useState(false);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -334,6 +337,16 @@ export const AppHeader = () => {
           <Box sx={{ py: 1 }}>
             <MenuItem 
               onClick={() => {
+                setIsWalletOpen(true);
+                setAnchorElAccount(null);
+              }}
+              sx={{ py: 1.5, px: 3, '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' } }}
+            >
+              <ListItemIcon><Wallet size={18} strokeWidth={1.5} color="rgba(255, 255, 255, 0.4)" /></ListItemIcon>
+              <ListItemText primary="Wallet" primaryTypographyProps={{ variant: 'caption', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'white' }} />
+            </MenuItem>
+            <MenuItem 
+              onClick={() => {
                 const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
               const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
               window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}&tab=profile`;
@@ -472,6 +485,11 @@ export const AppHeader = () => {
         <EcosystemPortal 
           open={isPortalOpen} 
           onClose={() => setIsPortalOpen(false)} 
+        />
+
+        <WalletSidebar 
+          isOpen={isWalletOpen}
+          onClose={() => setIsWalletOpen(false)}
         />
       </Toolbar>
     </AppBar>

@@ -1,8 +1,6 @@
-import { PROJECT_ID, ENDPOINT } from '../../generated/appwrite/constants';
-
 export const APPWRITE_CONFIG = {
-    ENDPOINT,
-    PROJECT_ID,
+    ENDPOINT: 'https://api.kylrix.space/v1',
+    PROJECT_ID: '67fe9627001d97e37ef3',
     DATABASES: {
         CHAT: 'chat',
         KYLRIXNOTE: '67ff05a9000296822396',
@@ -39,6 +37,8 @@ export const APPWRITE_CONFIG = {
         COVERS: 'covers'
     },
     FUNCTIONS: {
+        PERMISSION_UPDATER: 'permission-updater',
+        CLAIM_GHOST_NOTES: 'claim-ghost-notes',
         SEARCH_USERS: '69a582720012957d2027',
         SYNC_USER_PROFILE: '69a583ac002b674685b0',
         NOTIFY_ON_SHARE: '69a58c1c001c39695bf6',
@@ -54,3 +54,5 @@ export const APPWRITE_CONFIG = {
         DOMAIN: 'kylrix.space'
     }
 };
+
+export default APPWRITE_CONFIG;
