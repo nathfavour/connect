@@ -50,6 +50,7 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [pendingAction, setPendingAction] = useState<'setup' | 'wipe' | null>(null);
+    const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
 
     // Passkey state
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
@@ -83,6 +84,16 @@ export default function SettingsPage() {
 
         if (user?.$id) {
             loadPasskeys();
+            // detect whether the user has a master password (Tier 2 / encryption) set
+            (async () => {
+                try {
+                    const present = await KeychainService.hasMasterpass(user.$id);
+                    setHasMasterpass(present);
+                } catch (e) {
+                    console.error('Failed to check masterpass presence', e);
+                    setHasMasterpass(null);
+                }
+            })();
         }
 
         return () => clearInterval(interval);
@@ -199,7 +210,7 @@ export default function SettingsPage() {
                                         startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
                                         sx={{ borderRadius: '12px' }}
                                     >
-                                        {isUnlocked ? "Lock Vault" : "Unlock Vault"}
+                                        {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
                                     </Button>
                                 </Box>
 
@@ -219,6 +230,7 @@ export default function SettingsPage() {
                                             size="small" 
                                             startIcon={<Fingerprint size={16} />}
                                             onClick={() => setPasskeySetupOpen(true)}
+                                            disabled={hasMasterpass === false}
                                             sx={{ borderRadius: '10px' }}
                                         >
                                             Add Passkey
