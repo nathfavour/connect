@@ -175,7 +175,7 @@ export const CallInterface = ({
         }
     };
 
-    const initDirectCall = async () => {
+    const initDirectCall = useCallback(async () => {
         if (!user || !conversationId || targetId) return;
         try {
             const conv = await ChatService.getConversationById(conversationId, user.$id);
@@ -186,10 +186,10 @@ export const CallInterface = ({
                     rtcManager.current?.createOffer(user.$id, other);
                 }
             }
-        } catch (e) {
-            console.error('Failed to init direct call:', e);
+        } catch (_e) {
+            console.error('Failed to init direct call:', _e);
         }
-    };
+    }, [user, conversationId, targetId, isCaller]);
 
     useEffect(() => {
         if (conversationId && !targetId) {
@@ -199,7 +199,7 @@ export const CallInterface = ({
             }, 0);
             return () => clearTimeout(timer);
         }
-    }, [conversationId, targetId]);
+    }, [conversationId, targetId, initDirectCall]);
 
     const cleanupCall = () => {
         if (rtcManager.current) {

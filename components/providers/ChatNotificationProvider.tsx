@@ -116,12 +116,10 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     }, [user, scanComplete]);
 
     useEffect(() => {
-        if (!user?.$id) return;
+        if (!user?.$id || !hasCheckedSession) return;
 
-        // Check if we already scanned this session
-        if (sessionStorage.getItem(`chat_scan_${user.$id}`)) {
-            setScanComplete(true);
-        } else {
+        // Perform proactive scan once per session
+        if (!scanComplete) {
             performProactiveScan();
         }
 
@@ -146,7 +144,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
             if (typeof unsub === 'function') (unsub as any)();
             else (unsub as any)?.unsubscribe?.();
         };
-    }, [user?.$id, performProactiveScan, showDynamicIsland]);
+    }, [user?.$id, scanComplete, hasCheckedSession, performProactiveScan, showDynamicIsland]);
 
     return (
         <ChatNotificationContext.Provider value={{ unreadConversations, lastMessage, scanComplete }}>
