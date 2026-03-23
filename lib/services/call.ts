@@ -208,7 +208,7 @@ export const CallService = {
                     receiverId = meta.receiverId;
                     status = meta.status || (new Date(row.expiresAt) < new Date() ? 'completed' : 'ongoing');
                 }
-            } catch (e) {}
+            } catch {}
 
             return {
                 ...row,
@@ -246,11 +246,11 @@ export const CallService = {
                     if (!row.customStatus) return false;
                     const status = JSON.parse(row.customStatus);
                     return status.callId === callId || status.conversationId === callId || status.callCode === callId;
-                } catch (e) {
+                } catch (_e) {
                     return false;
                 }
             });
-        } catch (e) {
+        } catch (_e) {
             return [];
         }
     },

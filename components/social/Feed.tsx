@@ -606,8 +606,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const isEmpty = !loading && moments.length === 0;
-
     if (view === 'search' || isSearchOpen) {
         return (
             <Box>

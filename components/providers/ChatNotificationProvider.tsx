@@ -34,6 +34,18 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     const [scanComplete, setScanComplete] = useState(false);
     const [activeNotification, setActiveNotification] = useState<ChatNotification | null>(null);
 
+    // Track session-level scan status locally
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
+
+    useEffect(() => {
+        if (user?.$id && !hasCheckedSession) {
+            if (sessionStorage.getItem(`chat_scan_${user.$id}`)) {
+                setScanComplete(true);
+            }
+            setHasCheckedSession(true);
+        }
+    }, [user?.$id, hasCheckedSession]);
+
     const showDynamicIsland = useCallback(async (message: any) => {
         if (!user || message.senderId === user.$id) return;
 
@@ -101,7 +113,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         } catch (err) {
             console.error('[ChatNotification] Proactive scan failed:', err);
         }
-    }, [user?.$id, scanComplete]);
+    }, [user, scanComplete]);
 
     useEffect(() => {
         if (!user?.$id) return;

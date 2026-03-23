@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useAuth } from '@/lib/auth';
 import {
     Box,
@@ -46,7 +45,6 @@ import { format } from 'date-fns';
 import { FormattedText } from '@/components/common/FormattedText';
 import toast from 'react-hot-toast';
 import { TextField, InputAdornment, Alert, Menu, MenuItem } from '@mui/material';
-import Image from 'next/image';
 
 export function PostViewClient() {
     const params = useParams();

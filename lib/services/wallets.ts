@@ -366,7 +366,7 @@ export const WalletService = {
 
         const existingRows = await listWalletRows(userId);
         const cache = new Map<SupportedWalletChain, string>();
-        let root = existingRows[0] ? await parseRootEnvelope(existingRows[0].encryptedSecret) : createRootEnvelope();
+        const root = existingRows[0] ? await parseRootEnvelope(existingRows[0].encryptedSecret) : createRootEnvelope();
         const walletsByChain = new Map(existingRows.map((wallet) => [wallet.chain as SupportedWalletChain, wallet]));
         const createdRows: any[] = [];
 

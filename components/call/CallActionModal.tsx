@@ -134,7 +134,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
 
         setCreating(true);
         try {
-            const link = await CallService.createCallLink(
+            await CallService.createCallLink(
                 user.$id, 
                 'video', 
                 undefined, 

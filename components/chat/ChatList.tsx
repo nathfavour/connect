@@ -20,7 +20,6 @@ import {
     CircularProgress,
     alpha,
     Badge,
-    Paper,
     ListItemAvatar,
     Divider,
 } from '@mui/material';
