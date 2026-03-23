@@ -27,7 +27,10 @@ import FingerprintIcon from "@mui/icons-material/Fingerprint";
 
 interface PasskeySetupProps {
   isOpen: boolean;
+  // Called when the dialog is closed without completing setup (e.g. backdrop or cancel)
   onClose: () => void;
+  // Called specifically when the user clicks Skip
+  onSkip?: () => void;
   userId: string;
   onSuccess: () => void;
   trustUnlocked?: boolean;
@@ -226,10 +229,19 @@ export function PasskeySetup({
   };
 
   const handleClose = () => {
+    resetDialog();
+    onClose();
+  };
+
+  const handleSkip = () => {
     if (userId) {
       localStorage.setItem(`passkey_skip_${userId}`, Date.now().toString());
     }
     resetDialog();
+    if (typeof onSkip === 'function') {
+      onSkip();
+      return;
+    }
     onClose();
   };
 
@@ -376,7 +388,7 @@ export function PasskeySetup({
         {step === 2 && (
           <>
             <Button 
-              onClick={handleClose} 
+              onClick={handleSkip} 
               variant="outlined" 
               fullWidth 
               sx={{ borderRadius: '12px', color: 'text.secondary', borderColor: 'rgba(255,255,255,0.1)' }}

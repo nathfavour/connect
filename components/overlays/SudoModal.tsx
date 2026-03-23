@@ -240,7 +240,13 @@ export function SudoModal({
         return (
             <PasskeySetup
                 isOpen={true}
+                // Closing the dialog without explicit Skip should simply hide the incentive
+                // and NOT complete the Sudo flow. Only an explicit Skip should allow access.
                 onClose={() => {
+                    setShowPasskeyIncentive(false);
+                }}
+                // Explicit Skip -> allow access to the page (complete Sudo)
+                onSkip={() => {
                     setShowPasskeyIncentive(false);
                     onSuccess();
                 }}
