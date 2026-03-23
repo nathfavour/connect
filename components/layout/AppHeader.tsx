@@ -21,6 +21,7 @@ import {
 import {
   Settings,
   LogOut,
+  User,
   LayoutGrid,
   Download,
   Sparkles,
@@ -32,6 +33,8 @@ import {
   Wallet
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import { useProfile } from '@/components/providers/ProfileProvider';
 import { useNotifications } from '@/components/providers/NotificationProvider';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
@@ -84,6 +87,10 @@ export const AppHeader = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const router = useRouter();
+
+  const { profile: myProfile } = useProfile();
 
   const handleLogout = async () => {
     setAnchorElAccount(null);
@@ -340,19 +347,15 @@ export const AppHeader = () => {
           </Box>
           <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
           <Box sx={{ py: 1 }}>
-            <MenuItem 
+            <MenuItem
               onClick={() => {
-                // Navigate to the user's public profile page
-                // Use ProfileProvider context to build the username path if available
+                // Prefer client-side navigation to the user's public profile when available
                 setAnchorElAccount(null);
-                try {
-                  // Friendly fallback: open /u/<username> if profile is available, otherwise open account settings
-                  const profile = (window as any).__KYLRIX_PROFILE__;
-                  if (profile && profile.username) {
-                    window.location.href = `/u/${encodeURIComponent(profile.username)}`;
-                    return;
-                  }
-                } catch (_e) {}
+                if (myProfile && myProfile.username) {
+                  router.push(`/u/${encodeURIComponent(myProfile.username)}`);
+                  return;
+                }
+                // If profile is not yet hydrated, fall back to account settings
                 const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
                 const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
                 window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}&tab=profile`;

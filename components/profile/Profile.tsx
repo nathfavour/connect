@@ -49,11 +49,12 @@ export const Profile = ({ username }: ProfileProps) => {
     const [momentsLoading, setMomentsLoading] = useState(false);
     const [stats, setStats] = useState({ posts: 0, followers: 0, following: 0 });
 
+    // Load the profile avatar preview. Prefer the viewed profile's avatar if present;
+    // fall back to the logged-in user's profile pic when viewing an identity without an avatar.
     useEffect(() => {
         let mounted = true;
-        if (!currentUser) return;
 
-        const profilePicId = getUserProfilePicId(currentUser);
+        const profilePicId = profile?.avatar || getUserProfilePicId(currentUser);
         const cached = getCachedProfilePreview(profilePicId || undefined);
         if (cached !== undefined && mounted) {
             setProfileUrl(cached ?? null);
@@ -72,7 +73,7 @@ export const Profile = ({ username }: ProfileProps) => {
 
         fetchPreview();
         return () => { mounted = false; };
-    }, [currentUser]);
+    }, [profile, currentUser]);
 
     const normalizeUsername = (value?: string | null) => {
         if (!value) return null;
@@ -81,10 +82,16 @@ export const Profile = ({ username }: ProfileProps) => {
 
     const normalizedUsername = normalizeUsername(username);
 
-    const isOwnProfile = currentUser && (
-        (normalizedUsername === normalizeUsername(profile?.username)) ||
-        (!normalizedUsername && profile?.userId === currentUser.$id)
-    );
+    // Determine whether the viewed profile belongs to the logged-in user.
+    // Previously we compared the URL username to the viewed profile username which
+    // incorrectly marked any viewed profile as "own" when the username in the URL
+    // matched the profile (even for other users). Instead, prefer ID-based checks
+    // and fall back to comparing against the logged-in user's profile username.
+    // Only consider this the "own profile" when the fetched profile's userId
+    // exactly matches the currently authenticated user's id. This prevents
+    // accidental "Edit Profile" controls from appearing when viewing other
+    // users that happen to share a username or when context usernames collide.
+    const isOwnProfile = Boolean(currentUser && profile && profile.userId && currentUser.$id && profile.userId === currentUser.$id);
 
     const loadProfile = useCallback(async () => {
         // Only show global loading on first load
@@ -92,8 +99,15 @@ export const Profile = ({ username }: ProfileProps) => {
         
         try {
             let data;
-            if (username) {
-                data = await UsersService.getProfile(username);
+            if (normalizedUsername) {
+                // Always fetch the profile for the username in the URL from the
+                // canonical public "chat.profiles" table. This is the single source
+                // of truth when visiting /u/:username — do not substitute the
+                // currently-logged-in user's profile here.
+                data = await UsersService.getProfile(normalizedUsername);
+                // If no profile is found, we intentionally do NOT fall back to
+                // the logged-in user's profile. Showing someone else's page must
+                // always reflect that target owner's data or show Not Found.
             } else if (currentUser) {
                 // Use the profile from context if it's our own profile
                 if (myProfile && myProfile.userId === currentUser.$id) {
@@ -115,19 +129,24 @@ export const Profile = ({ username }: ProfileProps) => {
                 
                 // Load Stats & Moments
                 setMomentsLoading(true);
+                const targetId = data.userId || data.$id;
                 const [feedRes, followStats, followingStatus] = await Promise.all([
-                    SocialService.getFeed(currentUser?.$id, data.userId || data.$id),
-                    SocialService.getFollowStats(data.userId || data.$id),
-                    currentUser ? SocialService.isFollowing(currentUser.$id, data.userId || data.$id) : Promise.resolve(false)
+                    SocialService.getFeed(currentUser?.$id, targetId),
+                    SocialService.getFollowStats(targetId),
+                    currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false)
                 ]);
 
                 setMoments(feedRes.rows);
+
+                // followStats may now include rows for deeper validation
                 setStats({
                     posts: feedRes.total,
-                    followers: followStats.followers,
-                    following: followStats.following
+                    followers: typeof followStats.followers === 'number' ? followStats.followers : (followStats.followerRows ? followStats.followerRows.length : 0),
+                    following: typeof followStats.following === 'number' ? followStats.following : (followStats.followingRows ? followStats.followingRows.length : 0)
                 });
-                setIsFollowing(followingStatus);
+
+                // Ensure UI reflects authoritative following state
+                setIsFollowing(Boolean(followingStatus));
                 setMomentsLoading(false);
             } else {
                 setProfile(null);
@@ -137,24 +156,35 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [username, currentUser, myProfile, profile]); // Added missing dependencies
+    }, [normalizedUsername, currentUser?.$id, myProfile]);
 
     useEffect(() => {
         loadProfile();
     }, [loadProfile]);
 
+    const getTargetId = () => profile?.userId || profile?.$id;
+
     const handleFollow = async () => {
         if (!currentUser || !profile) return;
         setFollowLoading(true);
         try {
+            const targetId = getTargetId();
+            if (!targetId) return;
+
             if (isFollowing) {
-                await SocialService.unfollowUser(currentUser.$id, profile.$id);
+                await SocialService.unfollowUser(currentUser.$id, targetId);
                 setIsFollowing(false);
-                setStats(prev => ({ ...prev, followers: prev.followers - 1 }));
             } else {
-                await SocialService.followUser(currentUser.$id, profile.$id);
+                await SocialService.followUser(currentUser.$id, targetId);
                 setIsFollowing(true);
-                setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
+            }
+
+            // Refresh follow stats from authoritative source
+            try {
+                const newStats = await SocialService.getFollowStats(targetId);
+                setStats(prev => ({ ...prev, followers: newStats.followers, following: newStats.following }));
+            } catch (e) {
+                console.warn('Failed to refresh follow stats after follow/unfollow', e);
             }
         } catch (error: unknown) {
             console.error('Follow operation failed:', error);
@@ -224,7 +254,7 @@ export const Profile = ({ username }: ProfileProps) => {
                 }} />
 
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4, position: 'relative', zIndex: 1 }}>
-                        <Avatar
+                    <Avatar
                             onClick={handleNavigateToPublic}
                             src={profileUrl || profile.avatar}
                             sx={{ 
@@ -239,7 +269,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                 fontFamily: 'var(--font-clash)'
                             }}
                         >
-                        {(profile.displayName || profile.username || currentUser?.name || 'U').charAt(0).toUpperCase()}
+                        {(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
                         <Typography onClick={handleNavigateToPublic} variant="h3" sx={{ 
