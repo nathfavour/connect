@@ -280,20 +280,29 @@ const createWalletRow = async (
 ) => {
     const address = await deriveAddress(root, chain, cache);
     const encryptedSecret = await ecosystemSecurity.encrypt(JSON.stringify(root));
+    const walletId = `main-${chain}-${userId}`;
 
-    return tablesDB.createRow(
-        PASSWORD_MANAGER_DB,
-        WALLETS_TABLE,
-        ID.unique(),
-        {
-            ownerId: ownerIdForUser(userId),
-            address,
-            chain,
-            encryptedSecret,
-            type: 'main',
-        },
-        walletPermissions(userId)
-    );
+    try {
+        return await tablesDB.createRow(
+            PASSWORD_MANAGER_DB,
+            WALLETS_TABLE,
+            walletId,
+            {
+                ownerId: ownerIdForUser(userId),
+                address,
+                chain,
+                encryptedSecret,
+                type: 'main',
+            },
+            walletPermissions(userId)
+        );
+    } catch (error: any) {
+        // If the document already exists, fetch it instead
+        if (error?.code === 409) {
+            return await tablesDB.getRow(PASSWORD_MANAGER_DB, WALLETS_TABLE, walletId);
+        }
+        throw error;
+    }
 };
 
 const syncWalletMap = async (userId: string, wallets: any[]) => {
@@ -359,21 +368,107 @@ export const WalletService = {
         return rows.map(toWalletSummary);
     },
 
+    async listAllWallets(userId: string): Promise<WalletSummary[]> {
+        const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
+            Query.equal('ownerId', ownerIdForUser(userId)),
+            Query.limit(100),
+        ]);
+
+        return response.rows.map(toWalletSummary);
+    },
+
+    async createBurnerWallet(userId: string): Promise<WalletSummary[]> {
+        if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
+            throw new Error('Wallet vault is locked');
+        }
+
+        const root = createRootEnvelope();
+        const cache = new Map<SupportedWalletChain, string>();
+        const createdRows: any[] = [];
+
+        // For a new burner identity, we auto-provision the default chains
+        for (const chain of DEFAULT_MAIN_CHAINS) {
+            const address = await deriveAddress(root, chain, cache);
+            const encryptedSecret = await ecosystemSecurity.encrypt(JSON.stringify(root));
+            // Unique ID for burner chain derivation: burner-[uuid]-[chain]-[userId]
+            const walletId = `burner-${root.walletId.slice(0, 8)}-${chain}-${userId}`;
+
+            const created = await tablesDB.createRow(
+                PASSWORD_MANAGER_DB,
+                WALLETS_TABLE,
+                walletId,
+                {
+                    ownerId: ownerIdForUser(userId),
+                    address,
+                    chain,
+                    encryptedSecret,
+                    type: 'burner',
+                },
+                walletPermissions(userId)
+            );
+            createdRows.push(created);
+        }
+
+        return createdRows.map(toWalletSummary);
+    },
+
     async ensureMainWallets(userId: string): Promise<WalletSummary[]> {
         if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
             throw new Error('Wallet vault is locked');
         }
 
-        const existingRows = await listWalletRows(userId);
+        let existingRows = await listWalletRows(userId);
         const cache = new Map<SupportedWalletChain, string>();
         const root = existingRows[0] ? await parseRootEnvelope(existingRows[0].encryptedSecret) : createRootEnvelope();
+        
+        // 1. Self-healing: Detect and consolidate duplicate addresses
+        const addressMap = new Map<string, any[]>();
+        for (const row of existingRows) {
+            const list = addressMap.get(row.address) || [];
+            list.push(row);
+            addressMap.set(row.address, list);
+        }
+
+        let needsRefresh = false;
+        for (const [, duplicates] of addressMap.entries()) {
+            if (duplicates.length > 1) {
+                // Sort by creation date (oldest first)
+                const sorted = [...duplicates].sort((a, b) => 
+                    new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime()
+                );
+                
+                // Keep the oldest as 'main', demote others to 'burner' to hide from UI
+                for (let i = 1; i < sorted.length; i++) {
+                    await tablesDB.updateRow(PASSWORD_MANAGER_DB, WALLETS_TABLE, sorted[i].$id, {
+                        type: 'burner'
+                    });
+                    needsRefresh = true;
+                }
+            }
+        }
+
+        if (needsRefresh) {
+            existingRows = await listWalletRows(userId);
+        }
+
         const walletsByChain = new Map(existingRows.map((wallet) => [wallet.chain as SupportedWalletChain, wallet]));
+        const walletsByAddress = new Map(existingRows.map((wallet) => [wallet.address, wallet]));
         const createdRows: any[] = [];
 
+        // 2. Robust provisioning: Only one wallet per unique address/root
         for (const chain of DEFAULT_MAIN_CHAINS) {
             if (walletsByChain.has(chain)) continue;
+            
+            const address = await deriveAddress(root, chain, cache);
+            if (walletsByAddress.has(address)) {
+                // If we have a wallet with this address but a different chain alias, 
+                // skip creation to prevent duplicate cards for the same private key.
+                continue;
+            }
+
             const created = await createWalletRow(userId, chain, root, cache);
             walletsByChain.set(chain, created);
+            walletsByAddress.set(address, created);
             createdRows.push(created);
         }
 
@@ -403,11 +498,69 @@ export const WalletService = {
         }
 
         const root = await parseRootEnvelope(existingRows[0].encryptedSecret);
+        const address = await deriveAddress(root, chain, new Map());
+        
+        if (existingRows.some((wallet) => wallet.address === address)) {
+            return existingRows.map(toWalletSummary);
+        }
+
         const created = await createWalletRow(userId, chain, root, new Map());
         const allWallets = sortWallets([...existingRows, created]);
 
         await publishWalletAddresses(userId, allWallets);
 
         return allWallets.map(toWalletSummary);
+    },
+
+    async getWalletSecret(userId: string): Promise<string> {
+        if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
+            throw new Error('Wallet vault is locked');
+        }
+
+        const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
+            Query.equal('ownerId', ownerIdForUser(userId)),
+            Query.equal('type', 'main'),
+            Query.limit(1),
+        ]);
+
+        if (response.rows.length === 0) {
+            throw new Error('No wallets found');
+        }
+
+        const root = await parseRootEnvelope(response.rows[0].encryptedSecret);
+        return root.mnemonic;
+    },
+
+    async derivePrivateKey(userId: string, chain: SupportedWalletChain): Promise<string> {
+        if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
+            throw new Error('Wallet vault is locked');
+        }
+
+        const mnemonic = await this.getWalletSecret(userId);
+        const rootChain = getRootChain(chain);
+
+        switch (NETWORKS[rootChain].family) {
+            case 'evm': {
+                return HDNodeWallet.fromPhrase(mnemonic, undefined, "m/44'/60'/0'/0/0").privateKey;
+            }
+            case 'solana': {
+                const seed = bip39.mnemonicToSeedSync(mnemonic);
+                const derived = derivePath("m/44'/501'/0'/0'", Buffer.from(seed).toString('hex'));
+                const keypair = Keypair.fromSeed(derived.key.slice(0, 32));
+                return Buffer.from(keypair.secretKey).toString('hex');
+            }
+            case 'bitcoin': {
+                const seed = bip39.mnemonicToSeedSync(mnemonic);
+                const node = bip32.fromSeed(seed, bitcoin.networks.bitcoin).derivePath("m/84'/0'/0'/0/0");
+                return node.toWIF();
+            }
+            case 'sui': {
+                const keypair = SuiEd25519Keypair.deriveKeypair(mnemonic, "m/44'/784'/0'/0'/0'");
+                return keypair.export().privateKey;
+            }
+            default: {
+                throw new Error(`Unsupported wallet family for ${chain}`);
+            }
+        }
     },
 };

@@ -26,6 +26,12 @@ import {
     Plus,
     History,
     Settings,
+    Eye,
+    EyeOff,
+    ChevronRight,
+    Key,
+    FileText,
+    Shield,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useSudo } from '@/context/SudoContext';
@@ -58,6 +64,13 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const [error, setError] = useState<string | null>(null);
     const [loadingLabel, setLoadingLabel] = useState('Preparing your secure wallet...');
     const [pendingChain, setPendingChain] = useState<SupportedWalletChain | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showExportOptions, setShowExportOptions] = useState(false);
+    const [showWalletList, setShowWalletList] = useState(false);
+    const [allWallets, setAllWallets] = useState<WalletSummary[]>([]);
+    const [isCreatingBurner, setIsCreatingBurner] = useState(false);
+    const [viewingSecret, setViewingSecret] = useState<{ type: 'key' | 'phrase'; value: string; chainLabel?: string } | null>(null);
+    const [isSecretVisible, setIsSecretVisible] = useState(false);
 
     const AMBER = '#F59E0B';
     const SURFACE = '#161412';
@@ -122,6 +135,12 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         }
     }, [isOpen, hasMasterpass]);
 
+    useEffect(() => {
+        if (isOpen && !isUnlocked && hasMasterpass !== false && !loading) {
+            handleUnlock();
+        }
+    }, [isOpen, isUnlocked, hasMasterpass, loading]);
+
     const handleUnlock = () => {
         requestSudo({
             onSuccess: async () => {
@@ -181,348 +200,678 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         }
     };
 
-    const renderWalletContent = () => (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
-                <Stack direction="row" alignItems="center" gap={1.5}>
-                    <Box sx={{
-                        p: 1,
-                        borderRadius: '12px',
-                        bgcolor: alpha(AMBER, 0.1),
-                        color: AMBER,
-                        display: 'flex',
-                        ...rimLight
-                    }}>
-                        <WalletIcon size={20} />
-                    </Box>
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
-                            Kylrix Wallet
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontFamily: 'Satoshi' }}>
-                            T4 Non-Custodial Layer
-                        </Typography>
-                    </Box>
-                </Stack>
-                <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                    <X size={20} />
-                </IconButton>
-            </Stack>
+    const loadAllWallets = useCallback(async () => {
+        if (!user?.$id) return;
+        try {
+            const list = await WalletService.listAllWallets(user.$id);
+            setAllWallets(list);
+        } catch (e) {
+            console.error('Failed to load all wallets', e);
+        }
+    }, [user?.$id]);
 
-            {!user ? (
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', maxWidth: 260, fontFamily: 'Satoshi' }}>
-                        Sign in to initialize your wallet mesh.
-                    </Typography>
-                </Box>
-            ) : hasMasterpass === false ? (
-                <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    px: 2
-                }}>
-                    <Box sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: '20px',
-                        bgcolor: SURFACE,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 3,
-                        ...rimLight,
-                        color: 'rgba(255, 255, 255, 0.2)'
-                    }}>
-                        <Lock size={32} />
-                    </Box>
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
-                        Vault Setup Required
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 260, fontFamily: 'Satoshi' }}>
-                        Wallet provisioning becomes automatic once your MasterPass exists for Tier 3 encryption.
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        onClick={() => {
-                            const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
-                            const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-                            window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
-                        }}
-                        sx={{
-                            bgcolor: 'white',
-                            color: '#000',
-                            fontWeight: 900,
-                            borderRadius: '14px',
-                            px: 4,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontFamily: 'Satoshi',
-                            ...rimLight,
-                            '&:hover': { bgcolor: alpha('#fff', 0.9), transform: 'translateY(-1px)' },
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                    >
-                        Setup MasterPass
-                    </Button>
-                </Box>
-            ) : !isUnlocked ? (
-                <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    px: 2
-                }}>
-                    <Box sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: '20px',
-                        bgcolor: SURFACE,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 3,
-                        ...rimLight,
-                        color: AMBER
-                    }}>
-                        <Lock size={32} />
-                    </Box>
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
-                        Wallet is Locked
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 240, fontFamily: 'Satoshi' }}>
-                        Unlock your secure vault and Connect will auto-provision your main wallet addresses with zero extra input.
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        onClick={handleUnlock}
-                        startIcon={<Unlock size={18} />}
-                        sx={{
-                            bgcolor: AMBER,
-                            color: '#000',
-                            fontWeight: 900,
-                            borderRadius: '14px',
-                            px: 4,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontFamily: 'Satoshi',
-                            ...rimLight,
-                            '&:hover': { bgcolor: alpha(AMBER, 0.9), transform: 'translateY(-1px)' },
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                    >
-                        Unlock Wallet
-                    </Button>
-                </Box>
-            ) : loading ? (
-                <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    px: 2
-                }}>
-                    <CircularProgress sx={{ color: AMBER, mb: 3 }} />
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
-                        Auto-Provisioning Wallets
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 280, fontFamily: 'Satoshi' }}>
-                        {loadingLabel}
-                    </Typography>
-                </Box>
-            ) : error ? (
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Paper sx={{
-                        p: 3,
-                        borderRadius: '20px',
-                        bgcolor: SURFACE,
-                        ...rimLight,
-                        textAlign: 'center',
-                        maxWidth: 280
-                    }}>
-                        <Typography variant="body1" sx={{ fontWeight: 800, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
-                            Wallet Sync Failed
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, fontFamily: 'Satoshi' }}>
-                            {error}
-                        </Typography>
-                        <Button
-                            onClick={refreshWallets}
-                            variant="outlined"
-                            sx={{
-                                borderRadius: '12px',
-                                borderColor: 'rgba(255,255,255,0.1)',
-                                color: 'white',
-                                textTransform: 'none',
-                                fontFamily: 'Satoshi',
-                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: 'rgba(255,255,255,0.2)' }
+    const handleCreateBurner = async () => {
+        if (!user?.$id) return;
+        setIsCreatingBurner(true);
+        try {
+            await WalletService.createBurnerWallet(user.$id);
+            toast.success('Burner wallet identity provisioned');
+            await loadAllWallets();
+            await refreshWallets();
+        } catch (e) {
+            toast.error('Failed to create burner wallet');
+        } finally {
+            setIsCreatingBurner(false);
+        }
+    };
+
+    const handleClose = useCallback(() => {
+        setShowSettings(false);
+        setShowExportOptions(false);
+        setShowWalletList(false);
+        setViewingSecret(null);
+        setIsSecretVisible(false);
+        onClose();
+    }, [onClose]);
+
+    const renderWalletContent = () => {
+        if (viewingSecret) {
+            return (
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
+                    <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 4 }}>
+                        <IconButton 
+                            size="small" 
+                            onClick={() => {
+                                setViewingSecret(null);
+                                setIsSecretVisible(false);
                             }}
+                            sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
                         >
-                            Retry
-                        </Button>
-                    </Paper>
-                </Box>
-            ) : (
-                <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '10px' } }}>
-                    {/* Simplified Balance Header */}
+                            <ChevronLeft size={20} />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white' }}>
+                            {viewingSecret.type === 'phrase' ? 'Secret Recovery Phrase' : `Private Key (${viewingSecret.chainLabel})`}
+                        </Typography>
+                    </Stack>
+
                     <Box sx={{ 
                         p: 3, 
-                        mb: 3, 
-                        textAlign: 'center',
-                        bgcolor: SURFACE,
-                        borderRadius: '24px',
+                        bgcolor: SURFACE, 
+                        borderRadius: '24px', 
+                        border: '1px solid rgba(245, 158, 11, 0.2)',
                         ...rimLight,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(255, 255, 255, 0.03)'
+                        mb: 4
                     }}>
-                        <Typography variant="caption" sx={{ color: AMBER, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'Satoshi', opacity: 0.8 }}>
-                            Estimated Balance
-                        </Typography>
-                        <Typography variant="h3" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.02em' }}>
-                            $0.00
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 700, fontFamily: 'Satoshi' }}>
-                            {wallets.length} active networks
+                        <Stack direction="row" gap={1.5} sx={{ mb: 2, color: AMBER }}>
+                            <Shield size={20} />
+                            <Typography variant="body2" sx={{ fontWeight: 800, fontFamily: 'Satoshi' }}>
+                                Security Warning
+                            </Typography>
+                        </Stack>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Satoshi', lineHeight: 1.6, display: 'block' }}>
+                            Never share your {viewingSecret.type === 'phrase' ? 'recovery phrase' : 'private key'} with anyone. 
+                            Anyone with this information can take full control of your assets. 
+                            Kylrix support will never ask for this.
                         </Typography>
                     </Box>
 
-                    <Stack gap={1.5} sx={{ mb: 4 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
-                            Live Networks
+                    <Box sx={{ 
+                        p: 3, 
+                        bgcolor: VOID, 
+                        borderRadius: '18px', 
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        position: 'relative',
+                        minHeight: 120,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {isSecretVisible ? (
+                            <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                    color: 'white', 
+                                    fontFamily: 'JetBrains Mono', 
+                                    wordBreak: 'break-all',
+                                    lineHeight: 1.8,
+                                    letterSpacing: '0.05em',
+                                    textAlign: 'center',
+                                    px: 2
+                                }}
+                            >
+                                {viewingSecret.value}
+                            </Typography>
+                        ) : (
+                            <Stack alignItems="center" gap={2} sx={{ opacity: 0.3 }}>
+                                <Lock size={24} />
+                                <Typography variant="caption" sx={{ fontFamily: 'Satoshi', fontWeight: 700 }}>
+                                    Content Hidden
+                                </Typography>
+                            </Stack>
+                        )}
+                        
+                        <Stack direction="row" gap={0.5} sx={{ position: 'absolute', top: 8, right: 8 }}>
+                            <IconButton
+                                onClick={() => setIsSecretVisible(!isSecretVisible)}
+                                size="small"
+                                sx={{ color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                            >
+                                {isSecretVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </IconButton>
+                            <IconButton
+                                onClick={() => handleCopyAddress(viewingSecret.value)}
+                                size="small"
+                                sx={{ color: 'rgba(255,255,255,0.2)', '&:hover': { color: AMBER } }}
+                            >
+                                <Copy size={16} />
+                            </IconButton>
+                        </Stack>
+                    </Box>
+
+                    <Box sx={{ flex: 1 }} />
+
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={() => {
+                            setViewingSecret(null);
+                            setIsSecretVisible(false);
+                        }}
+                        sx={{
+                            bgcolor: SURFACE,
+                            color: 'white',
+                            fontWeight: 800,
+                            borderRadius: '14px',
+                            py: 1.5,
+                            textTransform: 'none',
+                            fontFamily: 'Satoshi',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            '&:hover': { bgcolor: HIGHLIGHT }
+                        }}
+                    >
+                        Done
+                    </Button>
+                </Box>
+            );
+        }
+
+        if (showExportOptions) {
+            return (
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
+                    <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 4 }}>
+                        <IconButton 
+                            size="small" 
+                            onClick={() => setShowExportOptions(false)}
+                            sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                        >
+                            <ChevronLeft size={20} />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white' }}>
+                            Export Wallet
                         </Typography>
+                    </Stack>
+
+                    <Stack gap={1.5}>
+                        <Paper
+                            onClick={() => {
+                                requestSudo({
+                                    onSuccess: async () => {
+                                        try {
+                                            const phrase = await WalletService.getWalletSecret(user!.$id);
+                                            setViewingSecret({ type: 'phrase', value: phrase });
+                                        } catch (e) {
+                                            toast.error('Failed to retrieve phrase');
+                                        }
+                                    }
+                                });
+                            }}
+                            sx={{
+                                p: 2,
+                                borderRadius: '18px',
+                                bgcolor: SURFACE,
+                                border: '1px solid rgba(255,255,255,0.03)',
+                                ...rimLight,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
+                            }}
+                        >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                <Stack direction="row" alignItems="center" gap={2}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: alpha('#fff', 0.05), color: 'rgba(255,255,255,0.6)' }}>
+                                        <FileText size={18} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                            View Secret Phrase
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Satoshi' }}>
+                                            12-word recovery mnemonic
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                                <ChevronRight size={18} color="rgba(255,255,255,0.2)" />
+                            </Stack>
+                        </Paper>
+
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', mt: 2, mb: 1, px: 1 }}>
+                            Individual Private Keys
+                        </Typography>
+
                         {wallets.map((wallet) => (
                             <Paper
-                                key={wallet.chain}
+                                key={`export-${wallet.id}`}
+                                onClick={() => {
+                                    requestSudo({
+                                        onSuccess: async () => {
+                                            try {
+                                                const key = await WalletService.derivePrivateKey(user!.$id, wallet.chain);
+                                                setViewingSecret({ type: 'key', value: key, chainLabel: wallet.label });
+                                            } catch (e) {
+                                                toast.error('Failed to derive private key');
+                                            }
+                                        }
+                                    });
+                                }}
                                 sx={{
-                                    p: 1.5,
-                                    px: 2,
+                                    p: 2,
                                     borderRadius: '18px',
                                     bgcolor: SURFACE,
                                     border: '1px solid rgba(255,255,255,0.03)',
                                     ...rimLight,
+                                    cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
                                 }}
                             >
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-                                    <Box sx={{ minWidth: 0 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
-                                            {wallet.label}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
-                                            {shortenAddress(wallet.address)}
-                                        </Typography>
-                                    </Box>
-                                    <Stack alignItems="flex-end">
-                                        <Typography variant="body2" sx={{ fontWeight: 900, color: AMBER, fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
-                                            0.00 {wallet.symbol}
-                                        </Typography>
-                                        <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleCopyAddress(wallet.address)}
-                                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: AMBER } }}
-                                            >
-                                                <Copy size={14} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => {
-                                                    const explorerUrl = getExplorerUrl(wallet);
-                                                    if (explorerUrl) {
-                                                        window.open(explorerUrl, '_blank', 'noopener,noreferrer');
-                                                    }
-                                                }}
-                                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
-                                            >
-                                                <ExternalLink size={14} />
-                                            </IconButton>
-                                        </Stack>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Stack direction="row" alignItems="center" gap={2}>
+                                        <Box sx={{ p: 1, borderRadius: '10px', bgcolor: alpha(AMBER, 0.1), color: AMBER }}>
+                                            <Key size={18} />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                {wallet.label} Key
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Satoshi' }}>
+                                                Export hex private key
+                                            </Typography>
+                                        </Box>
                                     </Stack>
+                                    <ChevronRight size={18} color="rgba(255,255,255,0.2)" />
                                 </Stack>
                             </Paper>
                         ))}
                     </Stack>
+                </Box>
+            );
+        }
 
-                    {addableNetworks.length > 0 && (
-                        <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
-                                Add Network
-                            </Typography>
-                            <Stack direction="row" gap={1} flexWrap="wrap">
-                                {addableNetworks.map((chain) => (
-                                    <Button
-                                        key={chain}
-                                        variant="outlined"
-                                        startIcon={pendingChain === chain ? <CircularProgress size={14} color="inherit" /> : <Plus size={14} />}
-                                        onClick={() => handleAddNetwork(chain)}
-                                        disabled={pendingChain !== null}
-                                        sx={{
-                                            borderRadius: '12px',
-                                            borderColor: 'rgba(255,255,255,0.08)',
-                                            color: 'rgba(255,255,255,0.7)',
-                                            textTransform: 'none',
-                                            fontWeight: 800,
-                                            fontFamily: 'Satoshi',
-                                            ...rimLight,
-                                            '&:hover': { bgcolor: HIGHLIGHT, borderColor: alpha(AMBER, 0.3), color: 'white' }
-                                        }}
-                                    >
-                                        {WalletService.networkDefinitions[chain].label}
-                                    </Button>
-                                ))}
-                            </Stack>
-                        </Stack>
-                    )}
-
-                    <Stack gap={2}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
-                            Recent Activity
+        if (showSettings) {
+            return (
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
+                    <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 4 }}>
+                        <IconButton 
+                            size="small" 
+                            onClick={() => setShowSettings(false)}
+                            sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                        >
+                            <ChevronLeft size={20} />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white' }}>
+                            Wallet Settings
                         </Typography>
+                    </Stack>
+
+                    <Stack gap={1.5}>
+                        <Paper
+                            onClick={() => setShowExportOptions(true)}
+                            sx={{
+                                p: 2,
+                                borderRadius: '18px',
+                                bgcolor: SURFACE,
+                                border: '1px solid rgba(255,255,255,0.03)',
+                                ...rimLight,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
+                            }}
+                        >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                <Stack direction="row" alignItems="center" gap={2}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: alpha(AMBER, 0.1), color: AMBER }}>
+                                        <Settings size={18} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                            Export Wallet
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Satoshi' }}>
+                                            View keys and recovery phrase
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                                <ChevronRight size={18} color="rgba(255,255,255,0.2)" />
+                            </Stack>
+                        </Paper>
+                    </Stack>
+
+                    <Box sx={{ flex: 1 }} />
+                    
+                    <Typography variant="caption" sx={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontFamily: 'Satoshi', mb: 2 }}>
+                        Kylrix Connect v0.1.0 • T4 Secure
+                    </Typography>
+                </Box>
+            );
+        }
+
+        return (
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
+                    <Stack direction="row" alignItems="center" gap={1.5}>
                         <Box sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            borderRadius: '24px',
-                            border: '1px dashed rgba(255,255,255,0.05)',
-                            bgcolor: 'rgba(255,255,255,0.01)',
+                            p: 1,
+                            borderRadius: '12px',
+                            bgcolor: alpha(AMBER, 0.1),
+                            color: AMBER,
+                            display: 'flex',
                             ...rimLight
                         }}>
-                            <History size={24} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontFamily: 'Satoshi' }}>
-                                No transactions yet
+                            <WalletIcon size={20} />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
+                                Kylrix Wallet
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                                T4 Non-Custodial Layer
                             </Typography>
                         </Box>
                     </Stack>
-                </Box>
-            )}
+                    <IconButton onClick={handleClose} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                        <X size={20} />
+                    </IconButton>
+                </Stack>
 
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 2 }} />
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.15)', fontWeight: 700, fontFamily: 'Satoshi' }}>
-                    Auto-provisioned once unlocked
-                </Typography>
-                <IconButton size="small" sx={{ color: 'rgba(255, 255, 255, 0.15)', '&:hover': { color: 'white' } }}>
-                    <Settings size={16} />
-                </IconButton>
-            </Stack>
-        </Box>
-    );
+                {!user ? (
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 2 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', maxWidth: 260, fontFamily: 'Satoshi' }}>
+                            Sign in to initialize your wallet mesh.
+                        </Typography>
+                    </Box>
+                ) : hasMasterpass === false ? (
+                    <Box sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        px: 2
+                    }}>
+                        <Box sx={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: '20px',
+                            bgcolor: SURFACE,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 3,
+                            ...rimLight,
+                            color: 'rgba(255, 255, 255, 0.2)'
+                        }}>
+                            <Lock size={32} />
+                        </Box>
+                        <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                            Vault Setup Required
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 260, fontFamily: 'Satoshi' }}>
+                            Wallet provisioning becomes automatic once your MasterPass exists for Tier 3 encryption.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
+                                const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
+                                window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
+                            }}
+                            sx={{
+                                bgcolor: 'white',
+                                color: '#000',
+                                fontWeight: 900,
+                                borderRadius: '14px',
+                                px: 4,
+                                py: 1.5,
+                                textTransform: 'none',
+                                fontFamily: 'Satoshi',
+                                ...rimLight,
+                                '&:hover': { bgcolor: alpha('#fff', 0.9), transform: 'translateY(-1px)' },
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                        >
+                            Setup MasterPass
+                        </Button>
+                    </Box>
+                ) : !isUnlocked ? (
+                    <Box sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        px: 2
+                    }}>
+                        <Box sx={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: '20px',
+                            bgcolor: SURFACE,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 3,
+                            ...rimLight,
+                            color: AMBER
+                        }}>
+                            <Lock size={32} />
+                        </Box>
+                        <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                            Wallet is Locked
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 240, fontFamily: 'Satoshi' }}>
+                            Unlock your secure vault and Connect will auto-provision your main wallet addresses with zero extra input.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            onClick={handleUnlock}
+                            startIcon={<Unlock size={18} />}
+                            sx={{
+                                bgcolor: AMBER,
+                                color: '#000',
+                                fontWeight: 900,
+                                borderRadius: '14px',
+                                px: 4,
+                                py: 1.5,
+                                textTransform: 'none',
+                                fontFamily: 'Satoshi',
+                                ...rimLight,
+                                '&:hover': { bgcolor: alpha(AMBER, 0.9), transform: 'translateY(-1px)' },
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                        >
+                            Unlock Wallet
+                        </Button>
+                    </Box>
+                ) : loading ? (
+                    <Box sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        px: 2
+                    }}>
+                        <CircularProgress sx={{ color: AMBER, mb: 3 }} />
+                        <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                            Auto-Provisioning Wallets
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 280, fontFamily: 'Satoshi' }}>
+                            {loadingLabel}
+                        </Typography>
+                    </Box>
+                ) : error ? (
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Paper sx={{
+                            p: 3,
+                            borderRadius: '20px',
+                            bgcolor: SURFACE,
+                            ...rimLight,
+                            textAlign: 'center',
+                            maxWidth: 280
+                        }}>
+                            <Typography variant="body1" sx={{ fontWeight: 800, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                                Wallet Sync Failed
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, fontFamily: 'Satoshi' }}>
+                                {error}
+                            </Typography>
+                            <Button
+                                onClick={refreshWallets}
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: '12px',
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                    color: 'white',
+                                    textTransform: 'none',
+                                    fontFamily: 'Satoshi',
+                                    '&:hover': { bgcolor: HIGHLIGHT, borderColor: 'rgba(255,255,255,0.2)' }
+                                }}
+                            >
+                                Retry
+                            </Button>
+                        </Paper>
+                    </Box>
+                ) : (
+                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '10px' } }}>
+                        {/* Simplified Balance Header */}
+                        <Box sx={{ 
+                            p: 3, 
+                            mb: 3, 
+                            textAlign: 'center',
+                            bgcolor: SURFACE,
+                            borderRadius: '24px',
+                            ...rimLight,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255, 255, 255, 0.03)'
+                        }}>
+                            <Typography variant="caption" sx={{ color: AMBER, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'Satoshi', opacity: 0.8 }}>
+                                Estimated Balance
+                            </Typography>
+                            <Typography variant="h3" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.02em' }}>
+                                $0.00
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                                {wallets.length} active networks
+                            </Typography>
+                        </Box>
+
+                        <Stack gap={1.5} sx={{ mb: 4 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                                Live Networks
+                            </Typography>
+                            {wallets.map((wallet) => (
+                                <Paper
+                                    key={wallet.id}
+                                    sx={{
+                                        p: 1.5,
+                                        px: 2,
+                                        borderRadius: '18px',
+                                        bgcolor: SURFACE,
+                                        border: '1px solid rgba(255,255,255,0.03)',
+                                        ...rimLight,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
+                                    }}
+                                >
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                {wallet.label}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
+                                                {shortenAddress(wallet.address)}
+                                            </Typography>
+                                        </Box>
+                                        <Stack alignItems="flex-end">
+                                            <Typography variant="body2" sx={{ fontWeight: 900, color: AMBER, fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+                                                0.00 {wallet.symbol}
+                                            </Typography>
+                                            <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleCopyAddress(wallet.address)}
+                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: AMBER } }}
+                                                >
+                                                    <Copy size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        const explorerUrl = getExplorerUrl(wallet);
+                                                        if (explorerUrl) {
+                                                            window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+                                                        }
+                                                    }}
+                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                                                >
+                                                    <ExternalLink size={14} />
+                                                </IconButton>
+                                            </Stack>
+                                        </Stack>
+                                    </Stack>
+                                </Paper>
+                            ))}
+                        </Stack>
+
+                        {addableNetworks.length > 0 && (
+                            <Stack gap={1.5} sx={{ mb: 4 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                                    Add Network
+                                </Typography>
+                                <Stack direction="row" gap={1} flexWrap="wrap">
+                                    {addableNetworks.map((chain) => (
+                                        <Button
+                                            key={chain}
+                                            variant="outlined"
+                                            startIcon={pendingChain === chain ? <CircularProgress size={14} color="inherit" /> : <Plus size={14} />}
+                                            onClick={() => handleAddNetwork(chain)}
+                                            disabled={pendingChain !== null}
+                                            sx={{
+                                                borderRadius: '12px',
+                                                borderColor: 'rgba(255,255,255,0.08)',
+                                                color: 'rgba(255,255,255,0.7)',
+                                                textTransform: 'none',
+                                                fontWeight: 800,
+                                                fontFamily: 'Satoshi',
+                                                ...rimLight,
+                                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: alpha(AMBER, 0.3), color: 'white' }
+                                            }}
+                                        >
+                                            {WalletService.networkDefinitions[chain].label}
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            </Stack>
+                        )}
+
+                        <Stack gap={2}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                                Recent Activity
+                            </Typography>
+                            <Box sx={{
+                                p: 4,
+                                textAlign: 'center',
+                                borderRadius: '24px',
+                                border: '1px dashed rgba(255,255,255,0.05)',
+                                bgcolor: 'rgba(255,255,255,0.01)',
+                                ...rimLight
+                            }}>
+                                <History size={24} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                                    No transactions yet
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Box>
+                )}
+
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 2 }} />
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.15)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                        Auto-provisioned once unlocked
+                    </Typography>
+                    <IconButton 
+                        size="small" 
+                        onClick={() => setShowSettings(true)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.15)', '&:hover': { color: 'white' } }}
+                    >
+                        <Settings size={16} />
+                    </IconButton>
+                </Stack>
+            </Box>
+        );
+    };
 
     if (isMobile) {
         return (
             <Drawer
                 anchor="bottom"
                 open={isOpen}
-                onClose={onClose}
+                onClose={handleClose}
                 PaperProps={{
                     sx: {
                         height: isExpanded ? '100%' : '75%',
@@ -564,7 +913,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         <Drawer
             anchor="right"
             open={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             PaperProps={{
                 sx: {
                     width: 400,
