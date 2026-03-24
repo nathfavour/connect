@@ -291,7 +291,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     const updatedWithPulse = updated.map((m: any, i: number) => ({ ...m, isPulsed: pulsedFlags[i] }));
                     setMoments(updatedWithPulse);
                     saveToCache(updatedWithPulse);
-                } catch (e) {
+                } catch (_e) {
                     // fallback: set without pulse flags
                     setMoments(updated);
                     saveToCache(updated);
@@ -359,7 +359,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         } finally {
             setLoading(false);
         }
-    }, [user, view, moments.length, saveToCache]);
+    }, [user, view, moments, saveToCache]);
 
 
     useEffect(() => {
@@ -537,7 +537,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             const actors = await Promise.all(interactions.map(async (i: any) => {
                 try {
                     const p = profileRegistry.get(i.userId) || await UsersService.getProfileById(i.userId);
-                    let avatar = p?.avatar ? await fetchProfilePreview(p.avatar, 64, 64) as unknown as string : null;
+                    const avatar = p?.avatar ? await fetchProfilePreview(p.avatar, 64, 64) as unknown as string : null;
                     return { $id: i.userId, username: p?.username, displayName: p?.displayName, avatar };
                 } catch (_e) {
                     return { $id: i.userId };
@@ -557,7 +557,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             const actors = await Promise.all(pulses.map(async (p: any) => {
                 try {
                     const profile = profileRegistry.get(p.userId) || await UsersService.getProfileById(p.userId);
-                    let avatar = profile?.avatar ? await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string : null;
+                    const avatar = profile?.avatar ? await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string : null;
                     return { $id: p.userId, username: profile?.username, displayName: profile?.displayName, avatar };
                 } catch (_e) { return { $id: p.userId }; }
             }));

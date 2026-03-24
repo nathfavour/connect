@@ -135,20 +135,20 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         }
     }, [isOpen, hasMasterpass]);
 
-    const handleUnlock = () => {
+    const handleUnlock = useCallback(() => {
         requestSudo({
             onSuccess: async () => {
                 toast.success('Wallet Unlocked');
                 await refreshWallets();
             }
         });
-    };
+    }, [requestSudo, refreshWallets]);
 
     useEffect(() => {
         if (isOpen && !isUnlocked && hasMasterpass !== false && !loading) {
             handleUnlock();
         }
-    }, [isOpen, isUnlocked, hasMasterpass, loading]);
+    }, [isOpen, isUnlocked, hasMasterpass, loading, handleUnlock]);
 
     const handleCopyAddress = (address: string) => {
         navigator.clipboard.writeText(address);
@@ -218,7 +218,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
             toast.success('Burner wallet identity provisioned');
             await loadAllWallets();
             await refreshWallets();
-        } catch (e) {
+        } catch (_e) {
             toast.error('Failed to create burner wallet');
         } finally {
             setIsCreatingBurner(false);
@@ -379,7 +379,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                         try {
                                             const phrase = await WalletService.getWalletSecret(user!.$id);
                                             setViewingSecret({ type: 'phrase', value: phrase });
-                                        } catch (e) {
+                                        } catch (_e) {
                                             toast.error('Failed to retrieve phrase');
                                         }
                                     }
@@ -427,7 +427,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                             try {
                                                 const key = await WalletService.derivePrivateKey(user!.$id, wallet.chain);
                                                 setViewingSecret({ type: 'key', value: key, chainLabel: wallet.label });
-                                            } catch (e) {
+                                            } catch (_e) {
                                                 toast.error('Failed to derive private key');
                                             }
                                         }

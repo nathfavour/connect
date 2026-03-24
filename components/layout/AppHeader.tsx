@@ -23,7 +23,6 @@ import {
   LogOut,
   User,
   LayoutGrid,
-  Download,
   Sparkles,
   Bell,
   CheckCircle,
@@ -58,7 +57,7 @@ export const AppHeader = () => {
 
   useEffect(() => {
     if (searchParams.get('openWallet') === 'true') {
-      setIsWalletOpen(true);
+      setTimeout(() => setIsWalletOpen(true), 0);
       // Optional: Clean up URL
       const params = new URLSearchParams(searchParams.toString());
       params.delete('openWallet');

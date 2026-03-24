@@ -74,8 +74,6 @@ tableIdMap["whisperrflow"]["forms"] = "forms";
 tableIdMap["whisperrflow"]["formSubmissions"] = "formSubmissions";
 tableIdMap["whisperrflow"]["agents"] = "agents";
 
-const tablesWithRelationships = new Set<string>();
-
 const roleBuilder: RoleBuilder = {
   any: () => Role.any() as RoleString,
   user: (userId, status?) => Role.user(userId, status) as RoleString,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Drawer, Box, Typography, Avatar, IconButton, Stack, useMediaQuery, useTheme, Button, CircularProgress, alpha } from '@mui/material';
-import { X, UserPlus, UserMinus, Check } from 'lucide-react';
+import { X, UserPlus, Check } from 'lucide-react';
 
 export interface Actor {
     $id: string;
@@ -23,7 +23,8 @@ interface Props {
 
 export function ActorsListDrawer({ open, onClose, title, actors, mobile = false, onSelect, onAction }: Props) {
     const theme = useTheme();
-    const prefersMobile = mobile || useMediaQuery(theme.breakpoints.down('md'));
+    const isMdDown = useMediaQuery(theme.breakpoints.down('md'));
+    const prefersMobile = mobile || isMdDown;
     const [isExpanded, setIsExpanded] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [confirmUnfollow, setConfirmUnfollow] = useState<string | null>(null);

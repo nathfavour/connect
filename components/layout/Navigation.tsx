@@ -21,7 +21,6 @@ import {
     Home, 
     MessageSquare, 
     Phone, 
-    User, 
     LogOut,
     Wallet
 } from 'lucide-react';

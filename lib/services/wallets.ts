@@ -556,7 +556,7 @@ export const WalletService = {
             }
             case 'sui': {
                 const keypair = SuiEd25519Keypair.deriveKeypair(mnemonic, "m/44'/784'/0'/0'/0'");
-                return keypair.export().privateKey;
+                return keypair.getSecretKey();
             }
             default: {
                 throw new Error(`Unsupported wallet family for ${chain}`);

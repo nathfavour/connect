@@ -161,7 +161,7 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [normalizedUsername, currentUser?.$id, myProfile]);
+    }, [normalizedUsername, currentUser, myProfile, profile]);
 
     useEffect(() => {
         loadProfile();

@@ -22,7 +22,6 @@ import {
     MessageCircle, 
     Home, 
     Phone, 
-    User, 
     Settings
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
