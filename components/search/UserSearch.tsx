@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { UsersService } from '@/lib/services/users';
+import { Users } from '@/types/appwrite';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -41,7 +42,7 @@ const SearchResultAvatar = ({ u }: { u: any }) => {
 
 export const UserSearch = () => {
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<any[]>([]);
+    const [results, setResults] = useState<Users[]>([]);
     const [loading, setLoading] = useState(false);
     const { user } = useAuth();
     const router = useRouter();
@@ -75,7 +76,7 @@ export const UserSearch = () => {
 
     const startChat = async (targetUser: any) => {
         if (!user) return;
-        const targetUserId = targetUser.userId || targetUser.$id;
+        const targetUserId = targetUser.$id;
 
         if (!targetUser.publicKey) {
             toast.error(`${targetUser.displayName || targetUser.username} hasn't set up their account for secure chatting yet.`);
@@ -100,11 +101,7 @@ export const UserSearch = () => {
                 );
             }
 
-            const canReuseFound = found?.$permissions?.some((permission: string) =>
-                permission === 'read("users")' || permission === 'read("any")'
-            );
-
-            if (found && canReuseFound) {
+            if (found) {
                 router.push(`/chat/${found.$id}`);
                 return; // Instant jump
             }
