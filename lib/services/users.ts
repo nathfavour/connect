@@ -120,7 +120,7 @@ export const UsersService = {
         }
 
         const updatePayload: any = {};
-        const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey', 'walletAddress'];
+        const allowedFields = ['userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey', 'walletAddress', 'preferences'];
 
         if (data.username) {
             const normalized = normalizeUsername(data.username);
@@ -133,6 +133,39 @@ export const UsersService = {
                     throw new Error('Username already taken');
                 }
                 updatePayload.username = normalized;
+
+                // --- USERNAME HISTORY TRACKING ---
+                try {
+                    let prefs: any = {};
+                    try {
+                        prefs = typeof currentProfile.preferences === 'string' 
+                            ? JSON.parse(currentProfile.preferences || '{}') 
+                            : (currentProfile.preferences || {});
+                    } catch (e) { prefs = {}; }
+
+                    const history = prefs.usernameHistory || [];
+                    const now = new Date().toISOString();
+
+                    if (history.length === 0) {
+                        // First change: record initial and new
+                        history.push({
+                            initial: currentProfile.username,
+                            new: normalized,
+                            updatedAt: now
+                        });
+                    } else {
+                        // Subsequent changes: just record the new one and timestamp
+                        history.push({
+                            new: normalized,
+                            updatedAt: now
+                        });
+                    }
+
+                    prefs.usernameHistory = history;
+                    updatePayload.preferences = JSON.stringify(prefs);
+                } catch (historyErr) {
+                    console.error('[UsersService] Failed to update username history:', historyErr);
+                }
             }
         }
 
