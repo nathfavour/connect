@@ -22,7 +22,8 @@ import {
     MessageCircle, 
     Home, 
     Phone, 
-    Settings
+    Settings,
+    ArrowLeft
 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMemo, useEffect, useState } from 'react';
@@ -31,6 +32,8 @@ import { getUserProfilePicId } from '@/lib/user-utils';
 import { useAuth } from '@/lib/auth';
 
 import { AppHeader } from './AppHeader';
+import { ChatList } from '../chat/ChatList';
+import { Button } from '@mui/material';
 
 const drawerWidth = 280;
 
@@ -40,7 +43,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const searchParams = useSearchParams();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const _router = useRouter();
+    const router = useRouter();
     const [_anchorEl, _setAnchorEl] = useState<null | HTMLElement>(null);
     const [_profileUrl, setProfileUrl] = useState<string | null>(null);
 
@@ -71,6 +74,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
     const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);
     const isExternalProfile = pathname?.startsWith('/u/');
+    const isChatActive = pathname?.startsWith('/chat/') || pathname === '/chats';
+    const isInsideChat = pathname?.startsWith('/chat/');
 
     const navItems = [
         { label: 'Home', icon: <Home size={24} />, href: '/' },
@@ -134,42 +139,72 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                         },
                     }}
                 >
-                    <Box sx={{ overflow: 'auto', mt: 2, px: 2 }}>
-                        <List sx={{ gap: 1, display: 'flex', flexDirection: 'column' }}>
-                            {navItems.map((item) => (
-                                <ListItem key={item.href} disablePadding>
-                                    <ListItemButton 
-                                        component={Link} 
-                                        href={item.href}
-                                        selected={pathname === item.href}
+                    <Box sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        {isChatActive ? (
+                            <>
+                                <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                    <Button 
+                                        onClick={() => router.push('/')}
+                                        startIcon={<ArrowLeft size={16} />}
+                                        fullWidth
                                         sx={{ 
-                                            borderRadius: '12px', 
-                                            transition: 'all 0.2s ease',
-                                            '&.Mui-selected': {
-                                                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                                                color: '#6366F1',
-                                                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' },
-                                                '& .MuiListItemIcon-root': { color: '#6366F1' }
-                                            },
+                                            justifyContent: 'flex-start',
+                                            color: 'text.secondary',
+                                            fontWeight: 700,
+                                            fontSize: '0.8rem',
+                                            borderRadius: '10px',
                                             '&:hover': {
-                                                bgcolor: 'rgba(255, 255, 255, 0.05)'
+                                                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                                color: 'white'
                                             }
                                         }}
                                     >
-                                        <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? '#6366F1' : 'text.secondary' }}>
-                                            {item.icon}
-                                        </ListItemIcon>
-                                        <ListItemText 
-                                            primary={item.label} 
-                                            primaryTypographyProps={{ 
-                                                fontWeight: pathname === item.href ? 700 : 500,
-                                                fontSize: '0.9rem'
-                                            }} 
-                                        />
-                                    </ListItemButton>
-                                </ListItem>
-                            ))}
-                        </List>
+                                        Back to Menu
+                                    </Button>
+                                </Box>
+                                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                                    <ChatList />
+                                </Box>
+                            </>
+                        ) : (
+                            <Box sx={{ overflow: 'auto', mt: 2, px: 2 }}>
+                                <List sx={{ gap: 1, display: 'flex', flexDirection: 'column' }}>
+                                    {navItems.map((item) => (
+                                        <ListItem key={item.href} disablePadding>
+                                            <ListItemButton 
+                                                component={Link} 
+                                                href={item.href}
+                                                selected={pathname === item.href}
+                                                sx={{ 
+                                                    borderRadius: '12px', 
+                                                    transition: 'all 0.2s ease',
+                                                    '&.Mui-selected': {
+                                                        bgcolor: 'rgba(99, 102, 241, 0.1)',
+                                                        color: '#6366F1',
+                                                        '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' },
+                                                        '& .MuiListItemIcon-root': { color: '#6366F1' }
+                                                    },
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(255, 255, 255, 0.05)'
+                                                    }
+                                                }}
+                                            >
+                                                <ListItemIcon sx={{ minWidth: 40, color: pathname === item.href ? '#6366F1' : 'text.secondary' }}>
+                                                    {item.icon}
+                                                </ListItemIcon>
+                                                <ListItemText 
+                                                    primary={item.label} 
+                                                    primaryTypographyProps={{ 
+                                                        fontWeight: pathname === item.href ? 700 : 500,
+                                                        fontSize: '0.9rem'
+                                                    }} 
+                                                />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Box>
+                        )}
                     </Box>
                 </Drawer>
             )}
@@ -189,8 +224,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
             >
                 <Box sx={{ 
                     height: '100%', 
-                    p: { xs: 2, md: 3 },
-                    overflowY: 'auto',
+                    p: isInsideChat ? 0 : { xs: 2, md: 3 },
+                    overflowY: isInsideChat ? 'hidden' : 'auto',
                     maxWidth: isExternalProfile ? '1200px' : 'auto',
                     mx: isExternalProfile ? 'auto' : 'unset'
                 }}>
@@ -198,15 +233,18 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                     <Paper
                         elevation={0}
                         sx={{
+                            height: isInsideChat ? '100%' : 'auto',
                             minHeight: '100%',
-                            bgcolor: '#161412',
-                            borderRadius: '24px',
-                            border: '1px solid',
+                            bgcolor: isInsideChat ? 'transparent' : '#161412',
+                            borderRadius: isInsideChat ? 0 : '24px',
+                            border: isInsideChat ? 'none' : '1px solid',
                             borderColor: 'rgba(255, 255, 255, 0.05)',
-                            p: { xs: 2, md: 4 },
+                            p: isInsideChat ? 0 : { xs: 2, md: 4 },
                             position: 'relative',
+                            display: isInsideChat ? 'flex' : 'block',
+                            flexDirection: 'column',
                             '&::before': {
-                                content: '""',
+                                content: isInsideChat ? 'none' : '""',
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
@@ -223,7 +261,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
             </Box>
 
             {/* Mobile Bottom Nav */}
-            {isMobile && (
+            {isMobile && !isInsideChat && (
                 <Paper 
                     elevation={0}
                     sx={{ 

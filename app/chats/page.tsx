@@ -154,15 +154,16 @@ export default function Home() {
         <ChatHandler />
       </Suspense>
       <Box sx={{ display: 'flex', height: '100%' }}>
-        <Box sx={{ 
-            width: isMobile ? '100%' : 350, 
-            borderRight: isMobile ? 0 : 1, 
-            borderColor: 'divider', 
-            display: 'flex', 
-            flexDirection: 'column' 
-        }}>
-          <ChatList />
-        </Box>
+        {isMobile && (
+            <Box sx={{ 
+                width: '100%', 
+                borderRight: 0, 
+                display: 'flex', 
+                flexDirection: 'column' 
+            }}>
+                <ChatList />
+            </Box>
+        )}
         {!isMobile && (
             <Box sx={{ flex: 1, p: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={3}>Find People</Typography>

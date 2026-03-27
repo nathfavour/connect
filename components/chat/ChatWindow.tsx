@@ -66,6 +66,7 @@ import { usePresence } from '../providers/PresenceProvider';
 import { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';
 import { fetchProfilePreview } from '@/lib/profile-preview';
+import { FormattedText } from '../common/FormattedText';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
@@ -903,7 +904,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
 
         const fileId = msg.attachments && msg.attachments[0];
-        if (!fileId) return <Typography variant="body1">{msg.content}</Typography>;
+        if (!fileId) return <FormattedText text={msg.content as string} />;
 
         const bucketId = StorageService.getBucketForType(msg.type as any);
         const viewUrl = StorageService.getFileView(fileId, bucketId);

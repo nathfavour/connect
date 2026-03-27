@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
+import { FormattedText } from '../common/FormattedText';
 
 interface ChatMessage {
     id: string;
@@ -115,9 +116,7 @@ export const InCallChat = ({
                                 borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                                 border: isMe ? 'none' : '1px solid rgba(255,255,255,0.05)'
                             }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-                                    {msg.content}
-                                </Typography>
+                                <FormattedText text={msg.content} variant="body2" sx={{ fontWeight: 500 }} />
                                 
                                 {msg.attachment && (
                                     <Box sx={{ mt: 1, p: 1, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
