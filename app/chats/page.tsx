@@ -147,28 +147,54 @@ function ChatHandler() {
 export default function Home() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isUnlocked } = useSudo();
 
   return (
     <AppShell>
       <Suspense fallback={null}>
         <ChatHandler />
       </Suspense>
-      <Box sx={{ display: 'flex', height: '100%' }}>
-        {isMobile && (
-            <Box sx={{ 
-                width: '100%', 
-                borderRight: 0, 
-                display: 'flex', 
-                flexDirection: 'column' 
-            }}>
-                <ChatList />
-            </Box>
-        )}
-        {!isMobile && (
-            <Box sx={{ flex: 1, p: 3 }}>
-              <Typography variant="h5" fontWeight="bold" mb={3}>Find People</Typography>
-              <UserSearch />
-            </Box>
+      <Box sx={{ position: 'relative', height: '100%' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            height: '100%',
+            filter: isUnlocked ? 'none' : 'blur(8px)',
+            transform: isUnlocked ? 'none' : 'scale(1.01)',
+            transition: 'filter 180ms ease, transform 180ms ease',
+            pointerEvents: isUnlocked ? 'auto' : 'none',
+            userSelect: isUnlocked ? 'auto' : 'none',
+          }}
+        >
+          {isMobile && (
+              <Box sx={{
+                  width: '100%',
+                  borderRight: 0,
+                  display: 'flex',
+                  flexDirection: 'column'
+              }}>
+                  <ChatList />
+              </Box>
+          )}
+          {!isMobile && (
+              <Box sx={{ flex: 1, p: 3 }}>
+                <Typography variant="h5" fontWeight="bold" mb={3}>Find People</Typography>
+                <UserSearch />
+              </Box>
+          )}
+        </Box>
+        {!isUnlocked && (
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1,
+              pointerEvents: 'none',
+              bgcolor: 'rgba(10, 9, 8, 0.28)',
+              backdropFilter: 'blur(14px)',
+            }}
+          />
         )}
       </Box>
     </AppShell>
