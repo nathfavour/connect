@@ -10,6 +10,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://connect.kylrix.space'),
   title: "Kylrix Connect - Premium Communication",
   description: "Seamless, secure, and professional connections for the Kylrix Premium Suite.",
   icons: {

@@ -445,7 +445,7 @@ export function SudoModal({
                             {loading ? <CircularProgress size={24} color="inherit" /> : "Verify Identity"}
                         </Button>
 
-                        {hasPasskey && mode !== "passkey" && (
+                        {hasPasskey && (
                             <Button
                                 fullWidth
                                 variant="text"
