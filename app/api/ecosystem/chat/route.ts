@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
             user.$id, 
             content, 
             type || 'text', 
-            attachments || []
+            attachments || [],
+            undefined,
+            undefined,
+            { cookie: req.headers.get('cookie') || undefined }
         );
 
         // Optional: Tag with appId in metadata if we had a metadata column in Messages

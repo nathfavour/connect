@@ -26,7 +26,10 @@ export function getEcosystemUrl(subdomain: string) {
   }
 
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isLocalhost =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    process.env.NODE_ENV !== 'production';
 
   if (isLocalhost) {
     const ports: Record<string, number> = {

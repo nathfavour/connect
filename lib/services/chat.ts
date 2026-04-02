@@ -1,6 +1,7 @@
 import { ID, Permission, Query, Role } from 'appwrite';
-import { tablesDB } from '../appwrite/client';
+import { account, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
+import { getEcosystemUrl } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 
@@ -8,6 +9,7 @@ import { UsersService } from './users';
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
 const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+const ACCOUNTS_API_URL = `${getEcosystemUrl('accounts')}/api/permissions`;
 const participantIdCache = new Map<string, string>();
 
 const arraysEqual = (left: string[], right: string[]) =>
@@ -26,6 +28,57 @@ const getConversationActivityAt = (row: any) =>
 
 const getMessageActivityAt = (row: any) =>
     row?.createdAt || row?.updatedAt || row?.$createdAt || row?.$updatedAt || null;
+
+const buildMessagePermissions = (senderId: string) => [
+    Permission.read(Role.user(senderId)),
+    Permission.update(Role.user(senderId)),
+    Permission.delete(Role.user(senderId))
+];
+
+const syncMessagePermissions = async (
+    rowId: string,
+    recipientIds: string[],
+    permission: 'read' | 'write' | 'admin' = 'read',
+    auth?: { jwt?: string; cookie?: string }
+) => {
+    const targets = Array.from(new Set(recipientIds.filter(Boolean)));
+    if (!rowId || targets.length === 0) return;
+
+    let jwt: string | null = auth?.jwt || null;
+    if (!jwt && !auth?.cookie) {
+        try {
+            const session = await account.createJWT();
+            jwt = session?.jwt || null;
+        } catch (_err) {
+            jwt = null;
+        }
+    }
+
+    if (!jwt && !auth?.cookie) {
+        throw new Error('Unable to authenticate permission update request');
+    }
+
+    const response = await fetch(ACCOUNTS_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+            ...(auth?.cookie ? { Cookie: auth.cookie } : {}),
+        },
+        body: JSON.stringify({
+            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+            tableId: MSG_TABLE,
+            rowId,
+            targetUserIds: targets,
+            permission,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update message permissions');
+    }
+};
 
 const resolveParticipantId = async (participantId: string) => {
     if (!participantId) return participantId;
@@ -189,17 +242,16 @@ export const ChatService = {
 
         let updated = false;
         for (const doc of res.rows) {
-            if (doc.publicKey && doc.userId) {
-                // Check if the key needs updating (either missing or creator rotated)
-                // For simplicity, we re-wrap if it's missing or if we are the creator and want to ensure everyone is synced
-                if (!currentKeyMap[doc.userId]) {
-                    try {
-                        currentKeyMap[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
-                        updated = true;
-                    } catch (e) {
-                        console.error(`Failed to re-wrap key for user ${doc.$id}`, e);
-                    }
+            if (!doc.publicKey || !doc.userId) continue;
+
+            try {
+                const freshWrap = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
+                if (currentKeyMap[doc.userId] !== freshWrap) {
+                    currentKeyMap[doc.userId] = freshWrap;
+                    updated = true;
                 }
+            } catch (e) {
+                console.error(`Failed to re-wrap key for user ${doc.$id}`, e);
             }
         }
 
@@ -413,7 +465,8 @@ export const ChatService = {
         type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'call_signal' | 'system' | 'attachment' = 'text', 
         attachments: string[] = [], 
         replyTo?: string,
-        metadata?: any
+        metadata?: any,
+        permissionSyncAuth?: { jwt?: string; cookie?: string }
     ) {
         const now = new Date().toISOString();
         let conversation: any = null;
@@ -450,9 +503,7 @@ export const ChatService = {
             throw new Error('You are not a participant in this conversation');
         }
 
-        const permissions = [Permission.read(Role.users())];
-        permissions.push(`update("user:${senderId}")`);
-        permissions.push(`delete("user:${senderId}")`);
+        const permissions = buildMessagePermissions(senderId);
 
         // 1. Create Message with explicit permissions
         const message = await tablesDB.createRow(DB_ID, MSG_TABLE, ID.unique(), {
@@ -467,6 +518,14 @@ export const ChatService = {
             createdAt: now,
             updatedAt: now
         }, permissions);
+
+        const recipientIds = Array.isArray(conversation?.participants)
+            ? conversation.participants.filter((participantId: string) => participantId && participantId !== senderId)
+            : [];
+
+        if (recipientIds.length > 0) {
+            await syncMessagePermissions(message.$id, recipientIds, 'read', permissionSyncAuth);
+        }
 
         // 2. Best-effort conversation preview update.
         // In a client-only model only the creator can mutate the shared row, so list UIs must

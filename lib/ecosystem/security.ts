@@ -20,6 +20,7 @@ export class EcosystemSecurity {
   private decryptionCache: Map<string, string> = new Map();
   private isUnlocked = false;
   private nodeId: string = 'unknown';
+  private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean }) => void> = new Set();
   // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
   private tabSessionSecret: Uint8Array | null = null;
 
@@ -47,6 +48,26 @@ export class EcosystemSecurity {
         this.lock();
       }
     });
+  }
+
+  private emitStatusChange() {
+    const status = this.status;
+    this.statusListeners.forEach((listener) => {
+      try {
+        listener(status);
+      } catch (error) {
+        console.warn('[Security] Status listener failed:', error);
+      }
+    });
+  }
+
+  onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean }) => void) {
+    this.statusListeners.add(listener);
+    listener(this.status);
+
+    return () => {
+      this.statusListeners.delete(listener);
+    };
   }
 
   private getOrCreateSessionSecret(): Uint8Array {
@@ -176,6 +197,7 @@ export class EcosystemSecurity {
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem("kylrix_vault_unlocked", "true");
       }
+      this.emitStatusChange();
       return true;
     } catch (__e) {
       console.error("[Security] Failed to import master key", __e);
@@ -191,6 +213,7 @@ export class EcosystemSecurity {
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem("kylrix_vault_unlocked", "true");
       }
+      this.emitStatusChange();
       return true;
     } catch (_e: unknown) {
       console.error("[Security] Unlock failed", _e);
@@ -419,6 +442,7 @@ export class EcosystemSecurity {
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("kylrix_vault_unlocked");
     }
+    this.emitStatusChange();
   }
 
   get status() {

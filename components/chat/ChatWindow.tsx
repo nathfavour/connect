@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
+import { ChatDiagnosticsDrawer } from './ChatDiagnosticsDrawer';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { SudoModal } from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
@@ -67,6 +68,13 @@ import { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { FormattedText } from '../common/FormattedText';
+import {
+    ConversationDiagnostic,
+    inspectConversationDecryption,
+    isLikelyEncryptedPayload,
+    isDiagnosticsSuppressed,
+    suppressDiagnosticsFor,
+} from '@/lib/services/diagnostics';
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
@@ -88,6 +96,11 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [replyingTo, setReplyingTo] = useState<Messages | null>(null);
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: Messages } | null>(null);
+    const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+    const [diagnosticReport, setDiagnosticReport] = useState<ConversationDiagnostic | null>(null);
+    const [diagnosticPulse, setDiagnosticPulse] = useState('Waiting for live key scan...');
+    const [diagnosticBusy, setDiagnosticBusy] = useState(false);
+    const [probeCursor, setProbeCursor] = useState(0);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,27 +182,17 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     }, [conversationId, user]);
 
     useEffect(() => {
-        const checkUnlock = setInterval(() => {
-            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
-                setIsUnlocked(ecosystemSecurity.status.isUnlocked);
-                if (ecosystemSecurity.status.isUnlocked) {
-                    loadMessages();
-                    loadConversation();
-                }
-            }
-        }, 1000);
-        return () => clearInterval(checkUnlock);
-    }, [isUnlocked, loadConversation, loadMessages]);
+        const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
+            setIsUnlocked(status.isUnlocked);
 
-    // Background re-wrap check when opening a conversation
-    useEffect(() => {
-        if (conversationId && isUnlocked && conversation) {
-            // Trigger background re-wrap to ensure keys are synced
-            ChatService.rewrapConversationKeys(conversationId).catch(err =>
-                console.warn("[ChatWindow] Background re-wrap failed:", err)
-            );
-        }
-    }, [conversationId, isUnlocked, conversation]);
+            if (status.isUnlocked) {
+                loadMessages();
+                loadConversation();
+            }
+        });
+
+        return () => unsubscribe();
+    }, [loadConversation, loadMessages]);
 
     useEffect(() => {
         if (conversationId && conversation?.type === 'direct' && !isSelf) {
@@ -347,6 +350,103 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         toast.success("Copied to clipboard");
         setMessageAnchorEl(null);
     };
+
+    const runConversationDiagnostics = React.useCallback(async (forceOpen = false, preferredMessageId?: string | null) => {
+        if (!conversationId || !user?.$id) return;
+
+        if (!isUnlocked) {
+            setDiagnosticPulse('Vault locked, live diagnostics are waiting for unlock.');
+            return;
+        }
+
+        setDiagnosticBusy(true);
+        setDiagnosticPulse('Scanning live conversation keys...');
+
+        try {
+            const report = await inspectConversationDecryption(conversationId, user.$id, messages as any, preferredMessageId || undefined);
+            setDiagnosticReport(report);
+
+            if (report.issues.length > 0 || report.encryptedCount > 0 || forceOpen) {
+                if (!isDiagnosticsSuppressed() || report.issues.length > 0 || report.encryptedCount > 0 || forceOpen) {
+                    setDiagnosticsOpen(true);
+                }
+            } else if (!isDiagnosticsSuppressed()) {
+                setDiagnosticsOpen(true);
+            }
+
+            if (report.encryptedCount > 0 && report.decryptedCount > 0) {
+                setDiagnosticPulse('Partial decrypt detected. Some rows open, some still look stale.');
+            } else if (report.encryptedCount > 0) {
+                setDiagnosticPulse('Encrypted rows remain after unlock. Refreshing live keys is recommended.');
+            } else {
+                setDiagnosticPulse('No encrypted payloads detected in the visible thread.');
+            }
+        } catch (error) {
+            console.error('[ChatWindow] Conversation diagnostics failed:', error);
+            setDiagnosticPulse('Live diagnostics hit an error while inspecting the thread.');
+        } finally {
+            setDiagnosticBusy(false);
+        }
+    }, [conversationId, user?.$id, isUnlocked, messages]);
+
+    const refreshLiveKeys = React.useCallback(async () => {
+        if (!conversationId) return;
+        setDiagnosticPulse('Refreshing live keys from chat.profiles...');
+        try {
+            await ChatService.rewrapConversationKeys(conversationId);
+            await loadMessages();
+            await loadConversation();
+            await runConversationDiagnostics(true);
+        } catch (error) {
+            console.error('[ChatWindow] Live key refresh failed:', error);
+            setDiagnosticsOpen(true);
+        }
+    }, [conversationId, loadConversation, loadMessages, runConversationDiagnostics]);
+
+    const probeAnotherMessage = React.useCallback(async () => {
+        const encryptedMessages = messages.filter((msg) => isLikelyEncryptedPayload((msg as any).content) || isLikelyEncryptedPayload((msg as any).metadata));
+        if (encryptedMessages.length === 0) {
+            setDiagnosticPulse('No encrypted message sample is currently visible to probe.');
+            setDiagnosticsOpen(true);
+            await runConversationDiagnostics(true);
+            return;
+        }
+
+        const candidate = encryptedMessages[probeCursor % encryptedMessages.length];
+        setProbeCursor((prev) => (prev + 1) % encryptedMessages.length);
+        if (candidate?.$id) {
+            document.getElementById(`msg-${candidate.$id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setDiagnosticsOpen(true);
+        await runConversationDiagnostics(true, candidate?.$id || null);
+    }, [messages, probeCursor, runConversationDiagnostics]);
+
+    const handleCloseDiagnostics = React.useCallback(() => {
+        suppressDiagnosticsFor(60_000);
+        setDiagnosticsOpen(false);
+    }, []);
+
+    // Background re-wrap check when opening a conversation
+    useEffect(() => {
+        if (conversationId && isUnlocked && conversation) {
+            // Refresh wraps from live profile keys before rendering decrypted content.
+            refreshLiveKeys().catch(err => console.warn("[ChatWindow] Live key refresh failed:", err));
+        }
+    }, [conversationId, isUnlocked, conversation, refreshLiveKeys]);
+
+    useEffect(() => {
+        if (!conversationId || !user?.$id) return;
+
+        const timer = setInterval(() => {
+            if (ecosystemSecurity.status.isUnlocked) {
+                void runConversationDiagnostics();
+            }
+        }, 5000);
+
+        void runConversationDiagnostics();
+
+        return () => clearInterval(timer);
+    }, [conversationId, user?.$id, isUnlocked, messages, runConversationDiagnostics]);
 
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -1051,6 +1151,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 </IconButton>
                             </>
                         )}
+                        <IconButton onClick={() => setDiagnosticsOpen(true)} sx={{ color: 'text.secondary' }}>
+                            <Shield size={20} strokeWidth={1.5} />
+                        </IconButton>
                         <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
                             <MoreVertical size={20} strokeWidth={1.5} />
                         </IconButton>
@@ -1096,6 +1199,31 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     </MenuItem>
                 )}
             </Menu>
+
+            <ChatDiagnosticsDrawer
+                open={diagnosticsOpen}
+                onClose={handleCloseDiagnostics}
+                title="Live Decryption Diagnostics"
+                subtitle="Connect is watching this thread for stale wraps, mismatched keys, and encrypted rows that should already be readable."
+                statusLabel={diagnosticReport?.healthy && !(diagnosticReport?.issues?.length) ? 'Healthy' : 'Needs attention'}
+                statusColor={diagnosticReport?.healthy && !(diagnosticReport?.issues?.length) ? '#10B981' : '#F59E0B'}
+                issues={diagnosticReport?.issues || []}
+                tips={
+                    diagnosticReport?.tips?.length
+                        ? diagnosticReport.tips
+                        : ['Open another message in this chat and let Connect compare the live key state.']
+                }
+                checks={[
+                    { label: 'Live pulse', value: diagnosticBusy ? 'Scanning...' : diagnosticPulse },
+                    { label: 'Encrypted rows', value: String(diagnosticReport?.encryptedCount ?? 0) },
+                    { label: 'Readable rows', value: String(diagnosticReport?.decryptedCount ?? 0) },
+                    { label: 'Wrap available', value: diagnosticReport?.hasConversationWrap ? 'Yes' : 'No' },
+                ]}
+                livePulse="This panel keeps pulsing while the conversation is open and re-checks the visible messages every few seconds."
+                probeSummary={diagnosticReport?.probeSummary}
+                onRefresh={refreshLiveKeys}
+                onProbeAnotherMessage={probeAnotherMessage}
+            />
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
