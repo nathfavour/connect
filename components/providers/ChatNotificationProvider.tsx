@@ -60,7 +60,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
             const cached = getCachedIdentityById(message.senderId);
             const profile = cached || await UsersService.getProfileById(message.senderId);
             if (profile) seedIdentityCache(profile);
-            const senderName = profile ? (profile.displayName || profile.username) : 'Someone';
+            const senderName = (profile?.displayName || profile?.username) || 'Someone';
             const senderVerification = getVerificationState(profile?.preferences || null);
             let hasReplied = replyHistoryCache.current.get(message.conversationId);
 
@@ -104,7 +104,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                 id: message.$id,
                 senderName: shouldWarn ? `First message from ${senderName}` : senderName,
                 content: shouldWarn ? buildSafetyWarning(senderName) : content,
-                avatar: profile?.avatar,
+                avatar: profile?.avatar || undefined,
                 isEncrypted: isEncrypted && !ecosystemSecurity.status.isUnlocked
             };
 

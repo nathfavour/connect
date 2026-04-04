@@ -4,6 +4,10 @@ export type CachedIdentity = {
   username: string | null;
   displayName: string | null;
   avatar: string | null;
+  publicKey: string | null;
+  preferences: any | null;
+  bio: string | null;
+  walletAddress: string | null;
   cachedAt: number;
   source?: string;
 };
@@ -15,6 +19,10 @@ type IdentityInput = Partial<CachedIdentity> & {
   displayName?: string | null;
   avatar?: string | null;
   profilePicId?: string | null;
+  publicKey?: string | null;
+  preferences?: any | null;
+  bio?: string | null;
+  walletAddress?: string | null;
 };
 
 const STORAGE_KEY = 'kylrix_connect_identity_cache_v1';
@@ -80,7 +88,7 @@ function storeIdentity(identity: CachedIdentity) {
   emitUpdate(identity);
 }
 
-function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdentity | null {
+export function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdentity | null {
   if (!input) return null;
 
   const userId = input.userId || input.$id;
@@ -89,6 +97,10 @@ function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdent
   const username = normalizeUsername(input.username);
   const displayName = input.displayName?.trim() || null;
   const avatar = input.avatar || input.profilePicId || null;
+  const publicKey = input.publicKey || null;
+  const preferences = input.preferences || null;
+  const bio = input.bio || null;
+  const walletAddress = input.walletAddress || null;
 
   return {
     $id: input.$id || userId,
@@ -96,6 +108,10 @@ function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdent
     username,
     displayName,
     avatar,
+    publicKey,
+    preferences,
+    bio,
+    walletAddress,
     cachedAt: input.cachedAt || Date.now(),
     source: input.source,
   };

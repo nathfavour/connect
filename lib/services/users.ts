@@ -7,6 +7,7 @@ import {
     resolveIdentityById,
     resolveIdentityByUsername,
     seedIdentityCache,
+    normalizeIdentity,
 } from '@/lib/identity-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -149,7 +150,7 @@ export const UsersService = {
         if (!currentProfile) {
             try {
                 const doc = await genDB.use('chat').use('profiles').get(userId);
-                if (doc) currentProfile = doc;
+                if (doc) currentProfile = normalizeIdentity(doc);
             } catch (_e) {
                 // Not a document ID either
             }
@@ -396,7 +397,7 @@ export const UsersService = {
             }
         }
 
-        if (existing) {
+        if (existing && existing.username) {
             // Healing: If existing profile has a generic/placeholder username but we found a better one, update it
             const isGeneric = existing.username.startsWith('u') && existing.username.length > 5;
             const isPlaceholder = existing.username === 'user';

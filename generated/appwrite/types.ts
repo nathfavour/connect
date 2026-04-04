@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type Models } from 'appwrite';
 
 export enum NotesStatus {

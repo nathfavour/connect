@@ -49,8 +49,8 @@ export const DiscoverabilitySettings = () => {
             const p = await UsersService.getProfileById(user!.$id);
             setProfile(p);
             if (p) {
-                setUsername(p.username);
-                setNewUsername(p.username);
+                setUsername(p.username || '');
+                setNewUsername(p.username || '');
             }
         } catch (_e: unknown) {
             console.error("Failed to load profile", _e);
