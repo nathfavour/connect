@@ -150,7 +150,7 @@
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 65535,
+                    "size": 655350,
                     "default": null,
                     "encrypt": true
                 },
@@ -1447,9 +1447,7 @@
         },
         {
             "$id": "subscriptions",
-            "$permissions": [
-                "create(\"users\")"
-            ],
+            "$permissions": [],
             "databaseId": "67ff05a9000296822396",
             "name": "subscriptions",
             "enabled": true,
@@ -4138,6 +4136,193 @@
                     ],
                     "orders": [
                         "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "accountEvents",
+            "$permissions": [],
+            "databaseId": "chat",
+            "name": "account_events",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "referral",
+                        "reputation",
+                        "report",
+                        "coupon",
+                        "username_change",
+                        "verification",
+                        "profile_sync"
+                    ]
+                },
+                {
+                    "key": "actorId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "relatedUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "delta",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -2147483648,
+                    "max": 2147483647
+                },
+                {
+                    "key": "discountPercent",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "active",
+                        "verified",
+                        "rejected",
+                        "redeemed",
+                        "expired",
+                        "revoked",
+                        "synced"
+                    ]
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_account_events_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_user_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "type"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "type"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_actor",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "actorId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_related",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "relatedUserId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_account_events_expires",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "expiresAt"
+                    ],
+                    "orders": [
                         "ASC"
                     ]
                 }

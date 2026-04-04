@@ -88,6 +88,27 @@ export enum CallsType {
     VIDEO = "video"
 }
 
+export enum AccountEventsType {
+    REFERRAL = "referral",
+    REPUTATION = "reputation",
+    REPORT = "report",
+    COUPON = "coupon",
+    USERNAME_CHANGE = "username_change",
+    VERIFICATION = "verification",
+    PROFILE_SYNC = "profile_sync"
+}
+
+export enum AccountEventsStatus {
+    PENDING = "pending",
+    ACTIVE = "active",
+    VERIFIED = "verified",
+    REJECTED = "rejected",
+    REDEEMED = "redeemed",
+    EXPIRED = "expired",
+    REVOKED = "revoked",
+    SYNCED = "synced"
+}
+
 export enum FormsStatus {
     DRAFT = "draft",
     PUBLISHED = "published",
@@ -507,6 +528,18 @@ export type Epochs = Models.Row & {
     resourceId: string;
     epochNumber: number;
     createdBy: string;
+}
+
+export type AccountEvents = Models.Row & {
+    userId: string;
+    type: AccountEventsType;
+    actorId: string;
+    relatedUserId: string | null;
+    delta: number | null;
+    discountPercent: number | null;
+    status: AccountEventsStatus | null;
+    expiresAt: string | null;
+    metadata: string | null;
 }
 
 export type FocusSessions = Models.Row & {
