@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth';
 import {
     Box,
     Typography,
-    Avatar,
     Paper,
     Button,
     CircularProgress,
@@ -321,16 +320,18 @@ export const Profile = ({ username }: ProfileProps) => {
                 }} />
 
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4, position: 'relative', zIndex: 1 }}>
-                    <IdentityAvatar
-                        src={profileUrl || profile.avatar}
-                        alt={profile.displayName || profile.username || 'profile'}
-                        fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
-                        verified={identityFlags.verified}
-                        pro={identityFlags.pro}
-                        size={140}
-                        verifiedSize={22}
-                        borderRadius="28px"
-                    />
+                    <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer' }}>
+                        <IdentityAvatar
+                            src={profileUrl || profile.avatar}
+                            alt={profile.displayName || profile.username || 'profile'}
+                            fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
+                            verified={identityFlags.verified}
+                            pro={identityFlags.pro}
+                            size={140}
+                            verifiedSize={22}
+                            borderRadius="28px"
+                        />
+                    </Box>
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
                         <Typography onClick={handleNavigateToPublic} variant="h3" sx={{ 
                             fontWeight: 900, 

@@ -9,7 +9,6 @@ import {
   IconButton, 
   Menu, 
   MenuItem, 
-  Avatar, 
   Tooltip, 
   Divider,
   ListItemIcon,
