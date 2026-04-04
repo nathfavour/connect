@@ -22,7 +22,8 @@ import {
     Activity,
     Heart,
     MessageCircle,
-    Repeat2
+    Repeat2,
+    Flag
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/components/providers/ProfileProvider';
@@ -30,6 +31,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { ActorsListDrawer, Actor } from '../social/ActorsListDrawer';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import ReportUserDialog from './ReportUserDialog';
 
 interface ProfileProps {
     username?: string;
@@ -45,6 +47,7 @@ export const Profile = ({ username }: ProfileProps) => {
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     const [moments, setMoments] = useState<any[]>([]);
     const [momentsLoading, setMomentsLoading] = useState(false);
@@ -439,12 +442,46 @@ export const Profile = ({ username }: ProfileProps) => {
                                     >
                                         Message
                                     </Button>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<Flag size={18} />}
+                                        sx={{ 
+                                            borderRadius: '14px',
+                                            px: 3,
+                                            py: 1,
+                                            fontWeight: 700,
+                                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                                            color: 'var(--color-titanium)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            '&:hover': { 
+                                                borderColor: '#EF4444',
+                                                bgcolor: alpha('#EF4444', 0.06)
+                                            }
+                                        }}
+                                        onClick={() => setIsReportModalOpen(true)}
+                                        disabled={!currentUser}
+                                    >
+                                        Report
+                                    </Button>
                                 </>
                             )}
                         </Box>
                     </Box>
                 </Box>
             </Paper>
+
+            {!isOwnProfile && profile?.userId && (
+                <ReportUserDialog
+                    open={isReportModalOpen}
+                    onClose={() => setIsReportModalOpen(false)}
+                    targetUserId={profile.userId || profile.$id}
+                    targetUsername={profile.username}
+                    contextType="profile"
+                    contextId={profile.$id}
+                    contextUrl={typeof window !== 'undefined' ? window.location.href : null}
+                    sourceApp="connect"
+                />
+            )}
 
             <Typography variant="h6" sx={{ 
                 fontWeight: 800, 
