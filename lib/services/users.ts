@@ -2,6 +2,7 @@ import { ID, Query, Permission, Role } from 'appwrite';
 import { tablesDB, storage, getCurrentUser } from '../appwrite/client';
 import { databases as genDB } from '../../generated/appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
+import { getEcosystemUrl } from '../constants';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
@@ -16,6 +17,32 @@ const normalizeUsername = (input: string | null | undefined): string | null => {
         .replace(/[^a-z0-9_-]/g, '');
     return cleaned || null;
 };
+
+async function syncProfileEvent(payload: {
+    type: 'username_change' | 'profile_sync';
+    userId: string;
+    newUsername?: string | null;
+    profilePatch?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+}) {
+    try {
+        const res = await fetch(`${getEcosystemUrl('accounts')}/api/account-events`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Failed to sync profile event');
+        return data;
+    } catch (error) {
+        console.warn('[UsersService] Failed to sync profile event:', error);
+        return null;
+    }
+}
 
 export const UsersService = {
     /**
@@ -198,6 +225,22 @@ export const UsersService = {
             console.log('[UsersService] Updating profile for', targetUserId, 'with payload:', JSON.stringify(updatePayload));
             try {
                 const result = await genDB.use('chat').use('profiles').update(currentProfile.$id, updatePayload);
+                await syncProfileEvent({
+                    type: Object.prototype.hasOwnProperty.call(data, 'username') ? 'username_change' : 'profile_sync',
+                    userId: targetUserId,
+                    newUsername: updatePayload.username as string | undefined,
+                    profilePatch: {
+                        username: updatePayload.username || currentProfile.username,
+                        displayName: updatePayload.displayName || currentProfile.displayName,
+                        bio: updatePayload.bio ?? currentProfile.bio,
+                        avatar: updatePayload.avatar ?? currentProfile.avatar,
+                        publicKey: updatePayload.publicKey ?? currentProfile.publicKey,
+                        walletAddress: updatePayload.walletAddress ?? currentProfile.walletAddress,
+                    },
+                    metadata: {
+                        source: 'connect.users-service.updateProfile',
+                    },
+                });
                 return result;
             } catch (err: any) {
                 console.error('[UsersService] Update failed:', err);
@@ -258,7 +301,23 @@ export const UsersService = {
                 Permission.update(Role.user(userId)),
                 Permission.delete(Role.user(userId))
             ]
-        );
+        ).then(async (row) => {
+            await syncProfileEvent({
+                type: 'username_change',
+                userId,
+                newUsername: normalized,
+                profilePatch: {
+                    username: normalized,
+                    displayName: createData.displayName,
+                    bio: createData.bio,
+                    publicKey: createData.publicKey,
+                },
+                metadata: {
+                    source: 'connect.users-service.createProfile',
+                },
+            });
+            return row;
+        });
     },
 
     /**
