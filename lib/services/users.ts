@@ -3,6 +3,11 @@ import { tablesDB, storage, getCurrentUser } from '../appwrite/client';
 import { databases as genDB } from '../../generated/appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
+import {
+    resolveIdentityById,
+    resolveIdentityByUsername,
+    seedIdentityCache,
+} from '@/lib/identity-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
@@ -52,11 +57,13 @@ export const UsersService = {
         const normalized = normalizeUsername(username);
         if (!normalized) return null;
         try {
-            const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                Query.equal('username', normalized),
-                Query.limit(1)
-            ]);
-            return result.rows[0] || null;
+            return await resolveIdentityByUsername(normalized, async () => {
+                const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
+                    Query.equal('username', normalized),
+                    Query.limit(1)
+                ]);
+                return result.rows[0] || null;
+            });
         } catch (_e: unknown) {
             return null;
         }
@@ -70,30 +77,32 @@ export const UsersService = {
     async getProfileById(userId: string) {
         if (!userId) return null;
         try {
-            // Priority 1: Find by the dedicated 'userId' field
-            const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
-                Query.equal('userId', userId),
-                Query.limit(2) // Check if more than one exists
-            ]);
-            
-            if (result.total > 1) {
-                console.warn(`[UsersService] Duplicate profiles detected for ${userId}. Purging for state integrity.`);
-                await this.purgeAllProfilesForUser(userId);
-                return null;
-            }
-            
-            if (result.rows[0]) return result.rows[0];
+            return await resolveIdentityById(userId, async () => {
+                // Priority 1: Find by the dedicated 'userId' field
+                const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
+                    Query.equal('userId', userId),
+                    Query.limit(2) // Check if more than one exists
+                ]);
 
-            // Priority 2: Robustness fallback - check if the passed ID is actually a document ID ($id)
-            // This happens when legacy UI components pass profile.$id instead of profile.userId
-            try {
-                const doc = await genDB.use('chat').use('profiles').get(userId);
-                if (doc) return doc;
-            } catch (_e) {
-                // Not a document ID or not found
-            }
-            
-            return null;
+                if (result.total > 1) {
+                    console.warn(`[UsersService] Duplicate profiles detected for ${userId}. Purging for state integrity.`);
+                    await this.purgeAllProfilesForUser(userId);
+                    return null;
+                }
+
+                if (result.rows[0]) return result.rows[0];
+
+                // Priority 2: Robustness fallback - check if the passed ID is actually a document ID ($id)
+                // This happens when legacy UI components pass profile.$id instead of profile.userId
+                try {
+                    const doc = await genDB.use('chat').use('profiles').get(userId);
+                    if (doc) return doc;
+                } catch (_e) {
+                    // Not a document ID or not found
+                }
+
+                return null;
+            });
         } catch (_e: unknown) {
             return null;
         }
@@ -225,6 +234,7 @@ export const UsersService = {
             console.log('[UsersService] Updating profile for', targetUserId, 'with payload:', JSON.stringify(updatePayload));
             try {
                 const result = await genDB.use('chat').use('profiles').update(currentProfile.$id, updatePayload);
+                seedIdentityCache(result);
                 await syncProfileEvent({
                     type: Object.prototype.hasOwnProperty.call(data, 'username') ? 'username_change' : 'profile_sync',
                     userId: targetUserId,
@@ -302,6 +312,7 @@ export const UsersService = {
                 Permission.delete(Role.user(userId))
             ]
         ).then(async (row) => {
+            seedIdentityCache(row);
             await syncProfileEvent({
                 type: 'username_change',
                 userId,
@@ -397,6 +408,7 @@ export const UsersService = {
                     displayName: derivedDisplayName || existing.displayName
                 });
             }
+            seedIdentityCache(existing);
             return existing;
         }
 
@@ -421,7 +433,9 @@ export const UsersService = {
                 return null;
             }
 
-            return await this.createProfile(user.$id, derivedUsername, createData);
+            const created = await this.createProfile(user.$id, derivedUsername, createData);
+            seedIdentityCache(created);
+            return created;
         } catch (err: unknown) {
             console.error('[UsersService] ensureProfileForUser failed:', err);
             return await this.getProfileById(user.$id);

@@ -10,6 +10,7 @@ import {
     Paper,
     Button,
     CircularProgress,
+    Skeleton,
     Stack,
     alpha
 } from '@mui/material';
@@ -30,6 +31,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { ActorsListDrawer, Actor } from '../social/ActorsListDrawer';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
 import ReportUserDialog from './ReportUserDialog';
 
@@ -37,13 +39,19 @@ interface ProfileProps {
     username?: string;
 }
 
+const normalizeUsername = (value?: string | null) => {
+    if (!value) return null;
+    return value.toString().trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '') || null;
+};
+
 export const Profile = ({ username }: ProfileProps) => {
     const { user: currentUser } = useAuth();
     const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
     const router = useRouter();
-    const [profile, setProfile] = useState<any>(null);
+    const normalizedUsername = normalizeUsername(username);
+    const [profile, setProfile] = useState<any>(() => normalizedUsername ? getCachedIdentityByUsername(normalizedUsername) : null);
     const [profileUrl, setProfileUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !normalizedUsername || !getCachedIdentityByUsername(normalizedUsername));
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -70,7 +78,9 @@ export const Profile = ({ username }: ProfileProps) => {
 
         const fetchPreview = async () => {
             try {
-                if (profilePicId) {
+                if (profilePicId?.startsWith('http')) {
+                    setProfileUrl(profilePicId);
+                } else if (profilePicId) {
                     const url = await fetchProfilePreview(profilePicId, 140, 140);
                     if (mounted) setProfileUrl(url as unknown as string);
                 } else if (mounted) setProfileUrl(null);
@@ -83,12 +93,17 @@ export const Profile = ({ username }: ProfileProps) => {
         return () => { mounted = false; };
     }, [profile, currentUser]);
 
-    const normalizeUsername = (value?: string | null) => {
-        if (!value) return null;
-        return value.toString().trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '') || null;
-    };
+    useEffect(() => {
+        const unsubscribe = subscribeIdentityCache((identity) => {
+            if (normalizedUsername && identity.username === normalizedUsername) {
+                setProfile(identity);
+            } else if (profile?.userId && identity.userId === profile.userId) {
+                setProfile(identity);
+            }
+        });
 
-    const normalizedUsername = normalizeUsername(username);
+        return unsubscribe;
+    }, [normalizedUsername, profile?.userId]);
 
     // Determine whether the viewed profile belongs to the logged-in user.
     // Previously we compared the URL username to the viewed profile username which
@@ -135,6 +150,7 @@ export const Profile = ({ username }: ProfileProps) => {
             }
 
             if (data) {
+                seedIdentityCache(data);
                 // Only update profile state if it actually changed to prevent re-renders
                 setProfile((prev: any) => {
                     // Use a more robust check for profile equality
@@ -173,7 +189,7 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [normalizedUsername, currentUser, myProfile, profile]);
+    }, [normalizedUsername, currentUser, myProfile]);
 
     useEffect(() => {
         loadProfile();
@@ -263,7 +279,26 @@ export const Profile = ({ username }: ProfileProps) => {
         router.push(`/chats?userId=${targetId}`);
     };
 
-    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    if (loading && !profile) {
+        return (
+            <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
+                <Paper sx={{ p: 4, borderRadius: '32px', mb: 4, bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Skeleton variant="rounded" width={72} height={72} sx={{ borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Box sx={{ flex: 1 }}>
+                            <Skeleton width="35%" height={32} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <Skeleton width="50%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        </Box>
+                    </Stack>
+                </Paper>
+                <Stack spacing={2}>
+                    <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                </Stack>
+            </Box>
+        );
+    }
 
     if (!profile) return (
         <Box sx={{ textAlign: 'center', py: 8 }}>

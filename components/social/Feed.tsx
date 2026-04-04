@@ -54,6 +54,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
+import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
+import { seedMomentPreview } from '@/lib/moment-preview';
 import { FormattedText } from '../common/FormattedText';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { NoteViewDrawer } from './NoteViewDrawer';
@@ -201,13 +203,18 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         const picId = getUserProfilePicId(user);
         if (picId) {
             try {
-                const url = await fetchProfilePreview(picId, 64, 64);
+                const url = String(picId).startsWith('http') ? picId : await fetchProfilePreview(picId, 64, 64);
                 setUserAvatarUrl(url as unknown as string);
             } catch (_e: unknown) {
                 console.warn('Feed failed to fetch user avatar');
             }
         }
     }, [user]);
+
+    const handleOpenMoment = useCallback((moment: any) => {
+        seedMomentPreview(moment);
+        router.push(`/post/${moment.$id}`);
+    }, [router]);
 
     const handleToggleLike = async (e: React.MouseEvent, moment: any) => {
         e.stopPropagation();
@@ -273,10 +280,12 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             // but we ALWAYS prioritize fresh stats and content from the server.
             const updated = filteredRows.map((fresh: any) => {
                 const existing = moments.find(p => p.$id === fresh.$id);
+                const creatorId = fresh.userId || fresh.creatorId;
+                const cachedCreator = getCachedIdentityById(creatorId);
                 // Preserve hydrated creator/source if they exist, but take everything else from fresh
                 return {
                     ...fresh,
-                    creator: existing?.creator || fresh.creator,
+                    creator: existing?.creator || cachedCreator || fresh.creator,
                     sourceMoment: existing?.sourceMoment ? {
                         ...fresh.sourceMoment,
                         creator: existing.sourceMoment.creator || fresh.sourceMoment?.creator
@@ -312,10 +321,14 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 try {
                     const profile = await UsersService.getProfileById(id);
                     let avatar = null;
-                    if (profile?.avatar && profile.avatar.length > 5) {
-                        avatar = await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
+                    if (profile?.avatar && !String(profile.avatar).startsWith('http') && profile.avatar.length > 5) {
+                        avatar = String(profile.avatar).startsWith('http')
+                            ? profile.avatar
+                            : await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
                     }
-                    profileRegistry.set(id, { ...profile, avatar });
+                    const hydratedProfile = { ...profile, avatar };
+                    profileRegistry.set(id, hydratedProfile);
+                    seedIdentityCache(hydratedProfile);
                     
             // Trigger a single state update for all posts by this creator
                     setMoments(prev => {
@@ -339,11 +352,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         });
                     });
                 } catch (_e) {
-                    profileRegistry.set(id, { 
-                        username: id.slice(0, 7), 
-                        displayName: `@${id.slice(0, 7)}`, 
-                        $id: id 
-                    });
+                    const fallbackProfile = {
+                        username: id.slice(0, 7),
+                        displayName: `@${id.slice(0, 7)}`,
+                        $id: id,
+                        userId: id,
+                        avatar: null
+                    };
+                    profileRegistry.set(id, fallbackProfile);
+                    seedIdentityCache(fallbackProfile);
                 }
             }));
             
@@ -365,6 +382,36 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     useEffect(() => {
         fetchUserAvatar();
     }, [fetchUserAvatar]);
+
+    useEffect(() => {
+        const unsubscribe = subscribeIdentityCache((identity) => {
+            profileRegistry.set(identity.userId, identity);
+            setMoments(prev => prev.map((m) => {
+                const creatorId = m.userId || m.creatorId;
+                if (creatorId === identity.userId) {
+                    return { ...m, creator: identity };
+                }
+
+                if (m.sourceMoment) {
+                    const sourceCreatorId = m.sourceMoment.userId || m.sourceMoment.creatorId;
+                    if (sourceCreatorId === identity.userId) {
+                        return {
+                            ...m,
+                            sourceMoment: { ...m.sourceMoment, creator: identity }
+                        };
+                    }
+                }
+
+                return m;
+            }));
+        });
+
+        return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        moments.slice(0, 20).forEach(seedMomentPreview);
+    }, [moments]);
 
     useEffect(() => {
         loadFeed();
@@ -537,7 +584,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             const actors = await Promise.all(interactions.map(async (i: any) => {
                 try {
                     const p = profileRegistry.get(i.userId) || await UsersService.getProfileById(i.userId);
-                    const avatar = p?.avatar ? await fetchProfilePreview(p.avatar, 64, 64) as unknown as string : null;
+                    const avatar = p?.avatar
+                        ? (String(p.avatar).startsWith('http')
+                            ? p.avatar
+                            : await fetchProfilePreview(p.avatar, 64, 64) as unknown as string)
+                        : null;
                     return { $id: i.userId, username: p?.username, displayName: p?.displayName, avatar };
                 } catch (_e) {
                     return { $id: i.userId };
@@ -557,7 +608,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             const actors = await Promise.all(pulses.map(async (p: any) => {
                 try {
                     const profile = profileRegistry.get(p.userId) || await UsersService.getProfileById(p.userId);
-                    const avatar = profile?.avatar ? await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string : null;
+                    const avatar = profile?.avatar
+                        ? (String(profile.avatar).startsWith('http')
+                            ? profile.avatar
+                            : await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string)
+                        : null;
                     return { $id: p.userId, username: profile?.username, displayName: profile?.displayName, avatar };
                 } catch (_e) { return { $id: p.userId }; }
             }));
@@ -637,8 +692,9 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 let avatar = null;
                 if (u.avatar) {
                     try {
-                        const url = await fetchProfilePreview(u.avatar, 64, 64);
-                        avatar = url as unknown as string;
+                        avatar = String(u.avatar).startsWith('http')
+                            ? u.avatar
+                            : await fetchProfilePreview(u.avatar, 64, 64) as unknown as string;
                     } catch (_e) {}
                 }
                 return { ...u, avatar };
@@ -654,7 +710,9 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     const profile = await UsersService.getProfileById(creatorId);
                     let avatar = null;
                     if (profile?.avatar) {
-                        avatar = await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
+                        avatar = String(profile.avatar).startsWith('http')
+                            ? profile.avatar
+                            : await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
                     }
                     const enrichedCreator = { ...profile, avatar };
                     profileRegistry.set(creatorId, enrichedCreator);
@@ -783,13 +841,16 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             <Stack spacing={2}>
                                 {momentSearchResults.map((moment) => {
                                     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
-                                    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || 'Unknown');
-                                    const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || undefined);
+                                    const creatorId = moment.userId || moment.creatorId;
+                                    const cachedCreator = getCachedIdentityById(creatorId);
+                                    const shortCreatorId = creatorId?.slice(0, 7) || 'user';
+                                    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${shortCreatorId}`);
+                                    const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                                     return (
                                         <Card 
                                             key={moment.$id} 
-                                            onClick={() => router.push(`/post/${moment.$id}`)}
+                                onClick={() => handleOpenMoment(moment)}
                                             sx={{ 
                                                 borderRadius: '24px', 
                                                 bgcolor: '#161412', 
@@ -1180,9 +1241,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 })
                 .map((moment) => {
                 const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
-                const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || 'Unknown');
-                const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || undefined);
-                const isUnknown = !isOwnPost && creatorName === 'Unknown';
+                const creatorId = moment.userId || moment.creatorId;
+                const cachedCreator = getCachedIdentityById(creatorId);
+                const shortCreatorId = creatorId?.slice(0, 7) || 'user';
+                const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${shortCreatorId}`);
+                const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                 return (
                     <Card key={moment.$id} sx={{ 
@@ -1217,8 +1280,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     sx={{ 
                                         width: 42,
                                         height: 42,
-                                        bgcolor: isOwnPost ? '#F59E0B' : isUnknown ? '#1C1A18' : '#161412', 
-                                        color: isOwnPost ? '#000' : isUnknown ? '#F59E0B' : 'text.secondary', 
+                                        bgcolor: isOwnPost ? '#F59E0B' : '#161412', 
+                                        color: isOwnPost ? '#000' : 'text.secondary', 
                                         border: '1px solid rgba(255, 255, 255, 0.08)',
                                         fontWeight: 800,
                                         borderRadius: '12px',
@@ -1229,7 +1292,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 </Avatar>
                             }
                             title={
-                                <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: isOwnPost ? '#F59E0B' : isUnknown ? alpha('#F59E0B', 0.8) : 'white', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
+                                <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: isOwnPost ? '#F59E0B' : 'white', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
                                     {creatorName}
                                     {isOwnPost && (
                                         <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -1259,7 +1322,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         />
                         <CardContent 
                             sx={{ pt: 0, px: 3, pb: 2, cursor: 'pointer' }}
-                            onClick={() => router.push(`/post/${moment.$id}`)}
+                            onClick={() => handleOpenMoment(moment)}
                         >
                         {/* Repost/Pulse Header */}
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
@@ -1284,7 +1347,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     cursor: 'pointer'
                                 }} onClick={(e) => {
                                     e.stopPropagation();
-                                    router.push(`/post/${moment.sourceMoment.$id}`);
+                                    handleOpenMoment(moment.sourceMoment);
                                 }}>
                                     <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 18, height: 18, borderRadius: '5px' }} />
                                     <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>

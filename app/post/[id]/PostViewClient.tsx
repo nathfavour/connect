@@ -23,7 +23,8 @@ import {
     Stack,
     Tooltip,
     useMediaQuery,
-    useTheme
+    useTheme,
+    Skeleton
 } from '@mui/material';
 import ActorsListDrawer from '@/components/social/ActorsListDrawer';
 import {
@@ -44,6 +45,8 @@ import {
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
+import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
+import { getCachedMomentPreview, seedMomentPreview } from '@/lib/moment-preview';
 import { format } from 'date-fns';
 import { FormattedText } from '@/components/common/FormattedText';
 import toast from 'react-hot-toast';
@@ -51,11 +54,13 @@ import { TextField, InputAdornment, Alert, Menu, MenuItem } from '@mui/material'
 
 export function PostViewClient() {
     const params = useParams();
+    const momentId = Array.isArray(params.id) ? params.id[0] : params.id;
     const router = useRouter();
     const { user, login } = useAuth();
-    const [moment, setMoment] = useState<any>(null);
+    const hasPreviewRef = React.useRef(Boolean(getCachedMomentPreview(momentId)));
+    const [moment, setMoment] = useState<any>(() => getCachedMomentPreview(momentId) || null);
     const [replies, setReplies] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !getCachedMomentPreview(momentId));
     const [replying, setReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -63,6 +68,7 @@ export function PostViewClient() {
     const [actorsDrawerOpen, setActorsDrawerOpen] = useState(false);
     const [actorsList, setActorsList] = useState<any[]>([]);
     const [actorsTitle, setActorsTitle] = useState('');
+    const [expandedCaption, setExpandedCaption] = useState(false);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -74,7 +80,7 @@ export function PostViewClient() {
                     const p = await UsersService.getProfileById(i.userId);
                     let avatar = null;
                     if (p?.avatar) {
-                        try { avatar = await fetchProfilePreview(p.avatar, 64, 64) as unknown as string; } catch (_e) {}
+                        try { avatar = String(p.avatar).startsWith('http') ? p.avatar : await fetchProfilePreview(p.avatar, 64, 64) as unknown as string; } catch (_e) {}
                     }
                     return { $id: i.userId, username: p?.username, displayName: p?.displayName, avatar };
                 } catch (_e) { return { $id: i.userId }; }
@@ -94,7 +100,7 @@ export function PostViewClient() {
                     const prof = await UsersService.getProfileById(p.userId);
                     let avatar = null;
                     if (prof?.avatar) {
-                        try { avatar = await fetchProfilePreview(prof.avatar, 64, 64) as unknown as string; } catch (_e) {}
+                        try { avatar = String(prof.avatar).startsWith('http') ? prof.avatar : await fetchProfilePreview(prof.avatar, 64, 64) as unknown as string; } catch (_e) {}
                     }
                     return { $id: p.userId, username: prof?.username, displayName: prof?.displayName, avatar };
                 } catch (_e) { return { $id: p.userId }; }
@@ -118,7 +124,7 @@ export function PostViewClient() {
         const picId = getUserProfilePicId(user);
         if (picId) {
             try {
-                const url = await fetchProfilePreview(picId, 64, 64);
+                const url = String(picId).startsWith('http') ? picId : await fetchProfilePreview(picId, 64, 64);
                 setUserAvatarUrl(url as unknown as string);
             } catch (_e: unknown) {
                 console.warn('Failed to fetch user avatar', _e);
@@ -127,11 +133,11 @@ export function PostViewClient() {
     }, [user]);
 
     const loadMoment = useCallback(async () => {
-        if (!params.id) return;
-        setLoading(true);
+        if (!momentId) return;
+        if (!hasPreviewRef.current) setLoading(true);
         try {
-            const id = Array.isArray(params.id) ? params.id[0] : params.id;
-            const data = await SocialService.getMomentById(id, user?.$id);
+            const data = await SocialService.getMomentById(momentId, user?.$id);
+            seedMomentPreview(data);
             
             // Enrich creator
             const creatorId = data.userId || data.creatorId;
@@ -140,8 +146,9 @@ export function PostViewClient() {
             let avatar = null;
             if (creator?.avatar) {
                 try {
-                    const url = await fetchProfilePreview(creator.avatar, 64, 64);
-                    avatar = url as unknown as string;
+                    avatar = String(creator.avatar).startsWith('http')
+                        ? creator.avatar
+                        : await fetchProfilePreview(creator.avatar, 64, 64) as unknown as string;
                 } catch (_e) {}
             }
 
@@ -150,14 +157,16 @@ export function PostViewClient() {
             if (data.metadata?.sourceId && !sourceMoment) {
                 try {
                     const source = await SocialService.getMomentById(data.metadata.sourceId, user?.$id);
+                    seedMomentPreview(source);
                     // Enrich source creator
                     const sCreatorId = source.userId || source.creatorId;
                     const sCreator = await UsersService.getProfileById(sCreatorId);
                     let sAvatar = null;
                     if (sCreator?.avatar) {
                         try {
-                            const url = await fetchProfilePreview(sCreator.avatar, 64, 64);
-                            sAvatar = url as unknown as string;
+                            sAvatar = String(sCreator.avatar).startsWith('http')
+                                ? sCreator.avatar
+                                : await fetchProfilePreview(sCreator.avatar, 64, 64) as unknown as string;
                         } catch (_e: unknown) {}
                     }
                     sourceMoment = { ...source, creator: { ...sCreator, avatar: sAvatar } };
@@ -166,21 +175,28 @@ export function PostViewClient() {
                 }
             }
 
-            setMoment({ ...data, creator: { ...creator, avatar }, sourceMoment });
+            const enrichedMoment = { ...data, creator: { ...creator, avatar }, sourceMoment };
+            setMoment(enrichedMoment);
+            seedMomentPreview(enrichedMoment);
+            seedIdentityCache(enrichedMoment.creator);
 
             // Fetch replies
-            const replyData = await SocialService.getReplies(id, user?.$id);
+            const replyData = await SocialService.getReplies(momentId, user?.$id);
             const enrichedReplies = await Promise.all(replyData.map(async (reply) => {
                 const rCreatorId = reply.userId || reply.creatorId;
                 const rCreator = await UsersService.getProfileById(rCreatorId);
                 let rAvatar = null;
                 if (rCreator?.avatar) {
                     try {
-                        const url = await fetchProfilePreview(rCreator.avatar, 48, 48);
-                        rAvatar = url as unknown as string;
+                        rAvatar = String(rCreator.avatar).startsWith('http')
+                            ? rCreator.avatar
+                            : await fetchProfilePreview(rCreator.avatar, 48, 48) as unknown as string;
                     } catch (_e: unknown) {}
                 }
-                return { ...reply, creator: { ...rCreator, avatar: rAvatar } };
+                const enrichedReply = { ...reply, creator: { ...rCreator, avatar: rAvatar } };
+                seedMomentPreview(enrichedReply);
+                seedIdentityCache(enrichedReply.creator);
+                return enrichedReply;
             }));
             setReplies(enrichedReplies);
 
@@ -190,7 +206,7 @@ export function PostViewClient() {
         } finally {
             setLoading(false);
         }
-    }, [params.id, user]);
+    }, [momentId, user]);
 
     useEffect(() => {
         loadMoment();
@@ -289,10 +305,20 @@ export function PostViewClient() {
         toast.success('Link copied to clipboard');
     };
 
-    if (loading) return (
+    if (loading && !moment) return (
         <AppShell>
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 20 }}>
-                <CircularProgress sx={{ color: '#F59E0B' }} />
+            <Box sx={{ maxWidth: 'sm', mx: 'auto', py: 4, px: 2 }}>
+                <Stack spacing={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Box sx={{ flex: 1 }}>
+                            <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        </Box>
+                    </Box>
+                    <Skeleton variant="rounded" height={240} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <Skeleton variant="rounded" height={120} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                </Stack>
             </Box>
         </AppShell>
     );
@@ -308,8 +334,10 @@ export function PostViewClient() {
 
     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
     const creatorId = moment.userId || moment.creatorId;
-    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || `@${creatorId.slice(0, 7)}`);
-    const creatorAvatar = isOwnPost ? userAvatarUrl : moment.creator?.avatar;
+    const cachedCreator = getCachedIdentityById(creatorId);
+    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${creatorId.slice(0, 7)}`);
+    const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar);
+    const captionIsLong = (moment?.caption || '').length > 280;
 
     return (
         <AppShell>
@@ -443,19 +471,33 @@ export function PostViewClient() {
                     />
 
                     <CardContent sx={{ pt: 1, px: { xs: 2.5, sm: 4 }, pb: 4 }}>
-                        <FormattedText 
-                            text={moment.caption}
-                            variant="h5"
-                            sx={{ 
-                                lineHeight: 1.5, 
-                                fontSize: { xs: '1.25rem', sm: '1.5rem' }, 
-                                fontWeight: 500,
-                                mb: 4,
-                                color: 'rgba(255,255,255,0.95)',
-                                fontFamily: 'var(--font-satoshi)',
-                                letterSpacing: '-0.01em'
-                            }}
-                        />
+                        <Box sx={{ mb: 4 }}>
+                            <FormattedText 
+                                text={moment.caption}
+                                variant="h5"
+                                sx={{ 
+                                    lineHeight: 1.5, 
+                                    fontSize: { xs: '1.25rem', sm: '1.5rem' }, 
+                                    fontWeight: 500,
+                                    color: 'rgba(255,255,255,0.95)',
+                                    fontFamily: 'var(--font-satoshi)',
+                                    letterSpacing: '-0.01em',
+                                    display: expandedCaption ? 'block' : '-webkit-box',
+                                    WebkitBoxOrient: 'vertical',
+                                    WebkitLineClamp: expandedCaption ? undefined : 6,
+                                    overflow: expandedCaption ? 'visible' : 'hidden'
+                                }}
+                            />
+                            {captionIsLong && (
+                                <Button
+                                    size="small"
+                                    onClick={() => setExpandedCaption((prev) => !prev)}
+                                    sx={{ mt: 1, px: 0, fontWeight: 900, color: '#F59E0B', textTransform: 'none' }}
+                                >
+                                    {expandedCaption ? 'Show less' : 'Read more'}
+                                </Button>
+                            )}
+                        </Box>
 
                         {moment.metadata?.attachments?.filter((a: any) => a.type === 'image' || a.type === 'video').length > 0 && (
                             <Box sx={{ mb: 4, borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(0,0,0,0.2)' }}>

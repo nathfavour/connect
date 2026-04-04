@@ -18,10 +18,12 @@ import {
     Typography,
     Box,
     CircularProgress,
+    Skeleton,
     alpha,
     Badge,
     ListItemAvatar,
     Divider,
+    Stack,
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -29,6 +31,7 @@ import BookmarkIcon from '@mui/icons-material/BookmarkOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import LockIcon from '@mui/icons-material/LockOutlined';
 import { fetchProfilePreview } from '@/lib/profile-preview';
+import { seedIdentityCache } from '@/lib/identity-cache';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { realtime } from '@/lib/appwrite/client';
 import toast from 'react-hot-toast';
@@ -39,7 +42,11 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
 
     useEffect(() => {
         if (u.avatar) {
-            fetchProfilePreview(u.avatar, 64, 64).then(url => setAvatarUrl(url as unknown as string)).catch(() => {});
+            if (String(u.avatar).startsWith('http')) {
+                setAvatarUrl(u.avatar);
+            } else {
+                fetchProfilePreview(u.avatar, 64, 64).then(url => setAvatarUrl(url as unknown as string)).catch(() => {});
+            }
         }
     }, [u.avatar]);
 
@@ -225,12 +232,15 @@ export const ChatList = () => {
                             try {
                                 const profile = await UsersService.getProfileById(otherId);
                                 let avatarUrl = null;
-                                if (profile?.avatar) {
+                                if (profile?.avatar?.startsWith?.('http')) {
+                                    avatarUrl = profile.avatar;
+                                } else if (profile?.avatar) {
                                     try {
                                         const url = await fetchProfilePreview(profile.avatar, 64, 64);
                                         avatarUrl = url as unknown as string;
                                     } catch (_e) {}
                                 }
+                                seedIdentityCache({ ...profile, avatar: profile?.avatar || avatarUrl });
                                 return {
                                     ...conv,
                                     otherUserId: otherId,
@@ -246,12 +256,15 @@ export const ChatList = () => {
                         const myProfile = await UsersService.getProfileById(user!.$id);
                         const myName = myProfile ? (myProfile.displayName || myProfile.username) : (user!.name || 'You');
                         let avatarUrl = null;
-                        if (myProfile?.avatar) {
+                        if (myProfile?.avatar?.startsWith?.('http')) {
+                            avatarUrl = myProfile.avatar;
+                        } else if (myProfile?.avatar) {
                             try {
                                 const url = await fetchProfilePreview(myProfile.avatar, 64, 64);
                                 avatarUrl = url as unknown as string;
                             } catch (_e) {}
                         }
+                        seedIdentityCache({ ...myProfile, avatar: myProfile?.avatar || avatarUrl });
                         return {
                             ...conv,
                             otherUserId: user!.$id,
@@ -331,7 +344,21 @@ export const ChatList = () => {
         };
     }, [user, loadConversations]);
 
-    if (loading) return <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>;
+    if (loading) return (
+        <Box sx={{ p: 2 }}>
+            <Stack spacing={1.5}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1 }}>
+                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Box sx={{ flex: 1 }}>
+                            <Skeleton width="55%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <Skeleton width="35%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        </Box>
+                    </Box>
+                ))}
+            </Stack>
+        </Box>
+    );
 
     const filteredConversations = conversations.filter(c =>
         c.name?.toLowerCase().includes(searchQuery.toLowerCase())

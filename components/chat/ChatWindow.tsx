@@ -28,7 +28,8 @@ import {
     Stack,
     useTheme,
     useMediaQuery,
-    alpha
+    alpha,
+    Skeleton
 } from '@mui/material';
 import {
     Send,
@@ -67,6 +68,7 @@ import { usePresence } from '../providers/PresenceProvider';
 import { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';
 import { fetchProfilePreview } from '@/lib/profile-preview';
+import { seedIdentityCache } from '@/lib/identity-cache';
 import { FormattedText } from '../common/FormattedText';
 import {
     ConversationDiagnostic,
@@ -120,12 +122,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     try {
                         const profile = await UsersService.getProfileById(otherId);
                         let avatarUrl = null;
-                        if (profile?.avatar) {
+                        if (profile?.avatar?.startsWith?.('http')) {
+                            avatarUrl = profile.avatar;
+                        } else if (profile?.avatar) {
                             try {
                                 const url = await fetchProfilePreview(profile.avatar, 64, 64);
                                 avatarUrl = url as unknown as string;
                             } catch (_e) {}
                         }
+                        seedIdentityCache({ ...profile, avatar: profile?.avatar || avatarUrl });
                         setConversation({
                             ...conv,
                             name: profile ? (profile.displayName || profile.username) : `@${otherId.slice(0, 7)}`,
@@ -138,12 +143,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     const myProfile = await UsersService.getProfileById(user.$id);
                     const myName = myProfile ? (myProfile.displayName || myProfile.username) : (user.name || 'You');
                     let avatarUrl = null;
-                    if (myProfile?.avatar) {
+                    if (myProfile?.avatar?.startsWith?.('http')) {
+                        avatarUrl = myProfile.avatar;
+                    } else if (myProfile?.avatar) {
                         try {
                             const url = await fetchProfilePreview(myProfile.avatar, 64, 64);
                             avatarUrl = url as unknown as string;
                         } catch (_e) {}
                     }
+                    seedIdentityCache({ ...myProfile, avatar: myProfile?.avatar || avatarUrl });
                     setConversation({ ...conv, name: `${myName} (You)`, avatarUrl });
                 }
             } else {
@@ -1070,7 +1078,22 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
     };
 
-    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    if (loading) return (
+        <Box sx={{ p: 2 }}>
+            <Stack spacing={1.5}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Skeleton variant="rounded" width={42} height={42} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <Box sx={{ flex: 1 }}>
+                        <Skeleton width="32%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Skeleton width="22%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    </Box>
+                </Box>
+                {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                ))}
+            </Stack>
+        </Box>
+    );
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
