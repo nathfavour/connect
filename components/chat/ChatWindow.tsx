@@ -59,6 +59,7 @@ import {
     Reply,
     Copy,
 } from 'lucide-react';
+import { IdentityName } from '../common/IdentityBadge';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
 import { ChatDiagnosticsDrawer } from './ChatDiagnosticsDrawer';
@@ -69,6 +70,7 @@ import { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { seedIdentityCache } from '@/lib/identity-cache';
+import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 import { FormattedText } from '../common/FormattedText';
 import {
     ConversationDiagnostic,
@@ -103,6 +105,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [diagnosticPulse, setDiagnosticPulse] = useState('Waiting for live key scan...');
     const [diagnosticBusy, setDiagnosticBusy] = useState(false);
     const [probeCursor, setProbeCursor] = useState(0);
+    const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
+    const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,6 +115,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const router = useRouter();
 
     const isSelf = conversation?.type === 'direct' && conversation?.participants && (conversation.participants.length === 1 || conversation.participants.length === 2) && conversation.participants.every((p: string) => p === user?.$id);
+    const hasRepliedToPartner = messages.some((message) => message.senderId === user?.$id);
+    const showFirstContactWarning = Boolean(
+        conversation?.type === 'direct' &&
+        !isSelf &&
+        partnerProfile &&
+        !partnerVerification.verified &&
+        !hasRepliedToPartner
+    );
 
     const loadConversation = React.useCallback(async () => {
         if (!user?.$id) return;
@@ -121,6 +133,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 if (otherId) {
                     try {
                         const profile = await UsersService.getProfileById(otherId);
+                        setPartnerProfile(profile || null);
+                        setPartnerVerification(getVerificationState(profile?.preferences || null));
                         let avatarUrl = null;
                         if (profile?.avatar?.startsWith?.('http')) {
                             avatarUrl = profile.avatar;
@@ -137,11 +151,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             avatarUrl
                         });
                     } catch (_e: unknown) {
+                        setPartnerProfile(null);
+                        setPartnerVerification(getVerificationState(null));
                         setConversation({ ...conv, name: `@${otherId.slice(0, 7)}` });
                     }
                 } else {
                     const myProfile = await UsersService.getProfileById(user.$id);
                     const myName = myProfile ? (myProfile.displayName || myProfile.username) : (user.name || 'You');
+                    setPartnerProfile(null);
+                    setPartnerVerification(getVerificationState(null));
                     let avatarUrl = null;
                     if (myProfile?.avatar?.startsWith?.('http')) {
                         avatarUrl = myProfile.avatar;
@@ -155,6 +173,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     setConversation({ ...conv, name: `${myName} (You)`, avatarUrl });
                 }
             } else {
+                setPartnerProfile(null);
+                setPartnerVerification(getVerificationState(null));
                 setConversation(conv);
             }
         } catch (error: unknown) {
@@ -1134,9 +1154,19 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             {isSelf ? <Bookmark size={18} color="#6366F1" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || <User size={20} color="#F59E0B" strokeWidth={1.5} />))}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#6366F1' : 'text.primary' }}>
-                                {conversation?.name || 'Loading...'}
-                            </Typography>
+                            {conversation?.type === 'direct' && !isSelf ? (
+                                <IdentityName
+                                    verified={partnerVerification.verified}
+                                    verifiedOn={partnerVerification.verifiedOn}
+                                    sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: 'text.primary' }}
+                                >
+                                    {conversation?.name || 'Loading...'}
+                                </IdentityName>
+                            ) : (
+                                <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#6366F1' : 'text.primary' }}>
+                                    {conversation?.name || 'Loading...'}
+                                </Typography>
+                            )}
                             {!isSelf && conversation?.type === 'direct' && (
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.6, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     {(() => {
@@ -1278,7 +1308,16 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
                 ) : (
-                    messages.map((msg, _index) => (
+                    <>
+                        {showFirstContactWarning && (
+                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: alpha('#F59E0B', 0.08), border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'text.primary', fontWeight: 600 }}>
+                                    {buildSafetyWarning(conversation?.name || 'this contact')}
+                                </Typography>
+                            </Box>
+                        )}
+                        
+                        {messages.map((msg, _index) => (
                         <Box 
                             key={msg.$id} 
                             id={`msg-${msg.$id}`}
@@ -1368,7 +1407,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         )}
                             </Box>
                         </Box>
-                    ))
+                        ))}
+                    </>
                 )}
                 <div ref={messagesEndRef} />
             </Box>

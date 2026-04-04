@@ -148,6 +148,7 @@ export const AppHeader = () => {
     tier: profileRecord?.tier || user?.prefs?.tier || null,
     publicKey: profileRecord?.publicKey || null,
     emailVerified: Boolean((user as any)?.emailVerification),
+    preferences: profileRecord?.preferences || null,
   });
 
   const { profile: myProfile } = useProfile();
@@ -359,6 +360,7 @@ export const AppHeader = () => {
                 alt={user?.name || user?.email || 'profile'}
                 fallback={user?.name ? user.name[0].toUpperCase() : 'U'}
                 verified={identitySignals.verified}
+                verifiedOn={identitySignals.verifiedOn}
                 pro={identitySignals.pro}
                 size={38}
                 borderRadius="12px"
@@ -417,7 +419,7 @@ export const AppHeader = () => {
               Account Identity
             </Typography>
             <Box sx={{ mt: 0.5 }}>
-              <IdentityName verified={identitySignals.verified} sx={{ fontWeight: 700, color: 'white', opacity: 0.9 }}>
+              <IdentityName verified={identitySignals.verified} verifiedOn={identitySignals.verifiedOn} sx={{ fontWeight: 700, color: 'white', opacity: 0.9 }}>
                 {user?.name || user?.email}
               </IdentityName>
             </Box>

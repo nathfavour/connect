@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useAuth } from '@/lib/auth';
@@ -11,6 +11,7 @@ import { Box, Typography, alpha, Avatar, Badge } from '@mui/material';
 import { MessageCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
+import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 
 interface ChatNotification {
     id: string;
@@ -34,6 +35,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     const [lastMessage, setLastMessage] = useState<any | null>(null);
     const [scanComplete, setScanComplete] = useState(false);
     const [activeNotification, setActiveNotification] = useState<ChatNotification | null>(null);
+    const replyHistoryCache = useRef<Map<string, boolean>>(new Map());
 
     // Track session-level scan status locally
     const [hasCheckedSession, setHasCheckedSession] = useState(false);
@@ -47,6 +49,10 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         }
     }, [user?.$id, hasCheckedSession]);
 
+    useEffect(() => {
+        replyHistoryCache.current = new Map();
+    }, [user?.$id]);
+
     const showDynamicIsland = useCallback(async (message: any) => {
         if (!user || message.senderId === user.$id) return;
 
@@ -55,6 +61,24 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
             const profile = cached || await UsersService.getProfileById(message.senderId);
             if (profile) seedIdentityCache(profile);
             const senderName = profile ? (profile.displayName || profile.username) : 'Someone';
+            const senderVerification = getVerificationState(profile?.preferences || null);
+            let hasReplied = replyHistoryCache.current.get(message.conversationId);
+
+            if (hasReplied === undefined) {
+                try {
+                    const conversation = await ChatService.getConversationById(message.conversationId, user.$id);
+                    if (conversation?.type === 'direct') {
+                        const history = await ChatService.getMessages(message.conversationId, 50, 0, user.$id);
+                        hasReplied = history.rows.some((row: any) => row.senderId === user.$id);
+                    } else {
+                        hasReplied = true;
+                    }
+                } catch {
+                    hasReplied = true;
+                }
+
+                replyHistoryCache.current.set(message.conversationId, Boolean(hasReplied));
+            }
             
             let content = message.content;
             const isEncrypted = message.content?.length > 40 && !message.content?.includes(' ');
@@ -74,10 +98,12 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                 }
             }
 
+            const shouldWarn = !senderVerification.verified && hasReplied === false;
+
             const notif: ChatNotification = {
                 id: message.$id,
-                senderName,
-                content,
+                senderName: shouldWarn ? `First message from ${senderName}` : senderName,
+                content: shouldWarn ? buildSafetyWarning(senderName) : content,
                 avatar: profile?.avatar,
                 isEncrypted: isEncrypted && !ecosystemSecurity.status.isUnlocked
             };
@@ -141,6 +167,11 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                 const payload = response.payload as any;
                 
                 // We receive events for rows we can read.
+                if (payload.senderId === user.$id) {
+                    replyHistoryCache.current.set(payload.conversationId, true);
+                    return;
+                }
+
                 if (payload.senderId !== user.$id) {
                     console.log('[ChatNotification] New message received:', payload.$id);
                     setLastMessage(payload);

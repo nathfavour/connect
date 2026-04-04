@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { syncCurrentUserVerification } from '@/lib/verification';
 
 interface ProfileContextType {
     profile: any | null;
@@ -44,7 +45,18 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             }, 1000 * 60 * 60); // 1 hour TTL for own profile
 
             if (data) {
-                setProfile(data);
+                let resolvedProfile = data;
+                if (user.$id) {
+                    const syncedProfile = await syncCurrentUserVerification(user.$id).catch((error) => {
+                        console.warn('[ProfileProvider] Failed to sync verification state:', error);
+                        return null;
+                    });
+                    if (syncedProfile) {
+                        resolvedProfile = syncedProfile;
+                        invalidate(`profile_${user.$id}`);
+                    }
+                }
+                setProfile(resolvedProfile);
                 localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
             }
         } catch (error) {
@@ -52,7 +64,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         } finally {
             setIsLoading(false);
         }
-    }, [user, fetchOptimized]);
+    }, [user, fetchOptimized, invalidate]);
 
     useEffect(() => {
         if (!user) {

@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Typography, alpha } from '@mui/material';
+import { Box, Typography, alpha, Tooltip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { formatVerificationTooltip, getVerificationState } from '@/lib/verification';
 
 const RING_COLORS = ['#6366F1', '#EC4899', '#10B981', '#A855F7', '#F59E0B'];
 const RING_GRADIENT = `conic-gradient(from 180deg, ${RING_COLORS.join(', ')}, #6366F1)`;
-const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 export interface IdentitySignals {
   createdAt?: string | null;
@@ -16,17 +16,13 @@ export interface IdentitySignals {
   tier?: string | null;
   publicKey?: string | null;
   emailVerified?: boolean | null;
+  preferences?: string | Record<string, any> | null;
 }
 
 export function computeIdentityFlags(signals: IdentitySignals) {
-  const createdAt = signals.createdAt ? new Date(signals.createdAt).getTime() : NaN;
-  const lastUsernameEdit = signals.lastUsernameEdit ? new Date(signals.lastUsernameEdit).getTime() : NaN;
-  const hasAge = Number.isFinite(createdAt) ? Date.now() - createdAt >= THIRTY_DAYS : false;
-  const hasStableUsername = !Number.isFinite(lastUsernameEdit) || Date.now() - lastUsernameEdit >= THIRTY_DAYS;
-  const hasCoreProfile = Boolean(signals.username?.trim() && signals.bio?.trim() && signals.profilePicId);
-  const verified = hasAge && hasStableUsername && hasCoreProfile;
+  const verification = getVerificationState(signals.preferences || null);
   const pro = String(signals.tier || '').toUpperCase() === 'PRO';
-  return { verified, pro };
+  return { verified: verification.verified, verifiedOn: verification.verifiedOn, pro };
 }
 
 export function IdentityAvatar({
@@ -34,6 +30,7 @@ export function IdentityAvatar({
   alt,
   fallback,
   verified,
+  verifiedOn,
   pro,
   size = 40,
   verifiedSize = 16,
@@ -43,11 +40,20 @@ export function IdentityAvatar({
   alt?: string;
   fallback?: string;
   verified?: boolean;
+  verifiedOn?: string | null;
   pro?: boolean;
   size?: number;
   verifiedSize?: number;
   borderRadius?: string | number;
 }) {
+  const verifiedTooltip = formatVerificationTooltip({
+    verified: Boolean(verified),
+    verifiedOn: verifiedOn || null,
+    checkedAt: verifiedOn || null,
+    method: null,
+    source: null,
+  });
+
   return (
     <Box
       sx={{
@@ -99,22 +105,24 @@ export function IdentityAvatar({
         </Box>
       )}
       {verified && (
-        <Box
-          sx={{
-            position: 'absolute',
-            right: -2,
-            bottom: -2,
-            width: verifiedSize,
-            height: verifiedSize,
-            borderRadius: '50%',
-            bgcolor: '#0A0908',
-            display: 'grid',
-            placeItems: 'center',
-            boxShadow: '0 0 0 2px rgba(10,9,8,1)',
-          }}
-        >
-          <CheckCircleIcon sx={{ fontSize: verifiedSize, color: '#6366F1' }} />
-        </Box>
+        <Tooltip title={verifiedTooltip} arrow>
+          <Box
+            sx={{
+              position: 'absolute',
+              right: -2,
+              bottom: -2,
+              width: verifiedSize,
+              height: verifiedSize,
+              borderRadius: '50%',
+              bgcolor: '#0A0908',
+              display: 'grid',
+              placeItems: 'center',
+              boxShadow: '0 0 0 2px rgba(10,9,8,1)',
+            }}
+          >
+            <CheckCircleIcon sx={{ fontSize: verifiedSize, color: '#6366F1' }} />
+          </Box>
+        </Tooltip>
       )}
     </Box>
   );
@@ -123,10 +131,12 @@ export function IdentityAvatar({
 export function IdentityName({
   children,
   verified,
+  verifiedOn,
   sx,
 }: {
   children: React.ReactNode;
   verified?: boolean;
+  verifiedOn?: string | null;
   sx?: Record<string, unknown>;
 }) {
   return (
@@ -134,7 +144,17 @@ export function IdentityName({
       <Typography component="span" sx={{ lineHeight: 1 }}>
         {children}
       </Typography>
-      {verified && <CheckCircleIcon sx={{ fontSize: 16, color: '#6366F1', flexShrink: 0 }} />}
+      {verified && (
+        <Tooltip title={verifiedTooltipText(verifiedOn)} arrow>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+            <CheckCircleIcon sx={{ fontSize: 16, color: '#6366F1', flexShrink: 0 }} />
+          </Box>
+        </Tooltip>
+      )}
     </Box>
   );
+}
+
+function verifiedTooltipText(verifiedOn?: string | null) {
+  return verifiedOn ? `Verified on ${new Date(verifiedOn).toLocaleString()}` : 'Verified';
 }
