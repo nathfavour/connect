@@ -11,6 +11,7 @@ export const APPWRITE_CONFIG = {
         CHAT: {
             CONVERSATIONS: 'conversations',
             MESSAGES: 'messages',
+            ACCOUNT_EVENTS: 'accountEvents',
             APP_ACTIVITY: 'app_activity',
             CALL_LINKS: 'calls',
             FOLLOWS: 'follows',
