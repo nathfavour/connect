@@ -52,11 +52,7 @@ function ChatHandler() {
           const found = existing.rows.find((c: any) => 
             c.type === 'direct' && c.participants.includes(actualTargetUserId)
           );
-          const canReuseFound = found?.$permissions?.some((permission: string) =>
-            permission === 'read("users")' || permission === 'read("any")'
-          );
-
-          if (found && canReuseFound) {
+          if (found) {
             router.push(`/chat/${found.$id}`);
           } else {
             // Ensure Sudo is unlocked before creating (needed for E2E keys)

@@ -39,6 +39,7 @@ export interface ConversationDiagnostic {
 
 const PASSWORD_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const IDENTITIES_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
 const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
 const PROFILES_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 const CONVERSATIONS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
@@ -216,8 +217,22 @@ export async function inspectConversationDecryption(
       partnerPublicKey = partnerProfile?.publicKey || null;
     }
 
-    const wraps = conv?.encryptionKey ? JSON.parse(conv.encryptionKey) : {};
-    hasConversationWrap = Boolean(wraps?.[userId]);
+    const [chatWraps, epochWraps] = await Promise.all([
+      tablesDB.listRows(PASSWORD_DB, KEY_MAPPING_TABLE, [
+        Query.equal('resourceType', 'chat'),
+        Query.equal('resourceId', conversationId),
+        Query.equal('grantee', userId),
+        Query.limit(1),
+      ]),
+      tablesDB.listRows(PASSWORD_DB, KEY_MAPPING_TABLE, [
+        Query.equal('resourceType', 'epoch'),
+        Query.equal('resourceId', conversationId),
+        Query.equal('grantee', userId),
+        Query.limit(1),
+      ]),
+    ]);
+
+    hasConversationWrap = chatWraps.total > 0 || epochWraps.total > 0;
     if (!hasConversationWrap) {
       issues.push({
         title: 'Missing wrap for this account',

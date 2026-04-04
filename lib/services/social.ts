@@ -378,10 +378,6 @@ export const SocialService = {
             `delete("user:${creatorId}")`,
         ];
 
-        if (visibility === 'public') {
-            permissions.push('read("any")');
-        }
-
         // Build Metadata-based fileId
         const metadata: MomentMetadata = { type };
         if (sourceId) metadata.sourceId = sourceId;

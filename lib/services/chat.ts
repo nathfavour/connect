@@ -22,22 +22,6 @@ const arraysEqual = (left: string[], right: string[]) =>
 const canonicalizeParticipantsForMatch = (participants: string[]) =>
     Array.from(new Set((participants || []).filter(Boolean))).sort();
 
-const hasSharedReadAccess = (row: any) =>
-    Array.isArray(row?.$permissions) && row.$permissions.some((permission: string) =>
-        permission === 'read("users")' || permission === 'read("any")'
-    );
-
-const hasParticipantReadAccess = (row: any, participantIds: string[], creatorId: string) => {
-    if (!Array.isArray(row?.$permissions)) return false;
-    const requiredIds = Array.from(new Set([...participantIds, creatorId].filter(Boolean)));
-    return requiredIds.every((participantId) => {
-        if (!participantId) return true;
-        return row.$permissions.some((permission: string) =>
-            permission.startsWith('read(') && permission.includes(`user:${participantId}`)
-        );
-    });
-};
-
 const getConversationActivityAt = (row: any) =>
     row?.lastMessageAt || row?.updatedAt || row?.createdAt || row?.$updatedAt || row?.$createdAt || null;
 
@@ -281,25 +265,6 @@ async function resolveConversationKey(
         return directKey;
     }
 
-    if (conversation.encryptionKey) {
-        try {
-            const keyMap = JSON.parse(conversation.encryptionKey);
-            const myWrappedKey = keyMap[userId];
-            if (myWrappedKey) {
-                const creatorPubKey = await fetchProfilePublicKey(conversation.creatorId);
-                if (creatorPubKey) {
-                    const key = await ecosystemSecurity.unwrapKeyWithECDH(myWrappedKey, creatorPubKey);
-                    if (key && !messageCreatedAt) {
-                        conversationKeyCache.set(conversation.$id, key);
-                    }
-                    return key;
-                }
-            }
-        } catch (_e) {
-            // Legacy fallback continues below.
-        }
-    }
-
     return null;
 }
 
@@ -314,35 +279,6 @@ async function revokeLockboxRows(resourceType: string, resourceId: string, grant
 }
 
 export const ChatService = {
-    /**
-     * Internal: Wraps a symmetric conversation key for a list of participants.
-     * Uses X25519 public keys from the identities table.
-     */
-    async _wrapConversationKey(convKey: CryptoKey, participants: string[]) {
-        const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
-        const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-
-        const wrappedKeys: Record<string, string> = {};
-
-        // Fetch public keys for all participants from the unified profiles table
-        const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('userId', participants),
-        ]);
-
-        for (const doc of res.rows) {
-            try {
-                if (doc.publicKey && doc.userId) {
-                    wrappedKeys[doc.userId] = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
-                } else {
-                    console.warn(`User ${doc.userId || doc.$id} does not have a publicKey published yet`);
-                }
-            } catch (e: unknown) {
-                console.error('Failed to wrap key for user:', doc.userId, e);
-            }
-        }
-        return JSON.stringify(wrappedKeys);
-    },
-
     async _unwrapConversationKey(conv: any, myUserId: string): Promise<CryptoKey | null> {
         const key = await resolveConversationKey(conv, myUserId);
         if (key) {
@@ -351,49 +287,8 @@ export const ChatService = {
         return key;
     },
 
-    /**
-     * Re-wraps the conversation key for participants who are missing it.
-     * This is crucial for maintaining group access after a participant resets their identity.
-     */
     async rewrapConversationKeys(conversationId: string) {
-        if (!ecosystemSecurity.status.isUnlocked) return;
-
-        const convKey = ecosystemSecurity.getConversationKey(conversationId);
-        if (!convKey) return; // We need the key to wrap it!
-
-        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
-        if (String(conv?.encryptionVersion || '').toUpperCase() === 'T4') return;
-        const participants = conv.participants || [];
-        const currentKeyMap = JSON.parse(conv.encryptionKey || '{}');
-
-        // Fetch all current public keys
-        const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
-        const USERS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-
-        const res = await tablesDB.listRows(CHAT_DB, USERS_TABLE, [
-            Query.equal('userId', participants),
-        ]);
-
-        let updated = false;
-        for (const doc of res.rows) {
-            if (!doc.publicKey || !doc.userId) continue;
-
-            try {
-                const freshWrap = await ecosystemSecurity.wrapKeyWithECDH(convKey, doc.publicKey);
-                if (currentKeyMap[doc.userId] !== freshWrap) {
-                    currentKeyMap[doc.userId] = freshWrap;
-                    updated = true;
-                }
-            } catch (e) {
-                console.error(`Failed to re-wrap key for user ${doc.$id}`, e);
-            }
-        }
-
-        if (updated) {
-            await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
-                encryptionKey: JSON.stringify(currentKeyMap)
-            });
-        }
+        return;
     },
     async getConversationById(conversationId: string, userId?: string) {
         const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
@@ -532,12 +427,8 @@ export const ChatService = {
                 const existingParticipantSet = canonicalizeParticipantsForMatch(normalizedConversation?.participants || []);
 
                 if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
-                    if (hasSharedReadAccess(normalizedConversation) || hasParticipantReadAccess(normalizedConversation, uniqueParticipants, creatorId)) {
-                        console.log('[ChatService] Direct chat already exists, returning existing:', normalizedConversation.$id);
-                        return normalizedConversation;
-                    }
-
-                    console.warn('[ChatService] Found legacy direct chat without shared read access, creating a replacement conversation');
+                    console.log('[ChatService] Direct chat already exists, returning existing:', normalizedConversation.$id);
+                    return normalizedConversation;
                 }
             }
         }
@@ -574,7 +465,6 @@ export const ChatService = {
             isArchived: [],
             tags: [],
             isEncrypted: !!convKey,
-            encryptionKey: '',
             encryptionVersion: convKey ? 'T4' : '1.0',
             createdAt: now,
             updatedAt: now
@@ -674,18 +564,11 @@ export const ChatService = {
 
         if ((type === 'text' || type === 'attachment') && ecosystemSecurity.status.isUnlocked) {
             const convKey = conversation ? await resolveConversationKey(conversation, senderId) : null;
-            if (convKey) {
-                finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);
-                if (metadata) {
-                    const metaStr = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
-                    finalMetadata = await ecosystemSecurity.encryptWithKey(metaStr, convKey);
-                }
-            } else {
-                finalContent = await ecosystemSecurity.encrypt(content);
-                if (metadata) {
-                    const metaStr = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
-                    finalMetadata = await ecosystemSecurity.encrypt(metaStr);
-                }
+            if (!convKey) throw new Error('Conversation key not available');
+            finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);
+            if (metadata) {
+                const metaStr = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+                finalMetadata = await ecosystemSecurity.encryptWithKey(metaStr, convKey);
             }
         }
 
@@ -759,44 +642,20 @@ export const ChatService = {
             );
 
             if (isEncrypted) {
-                try {
-                    const messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4' && userId
-                        ? await resolveConversationKey(_conv, userId, msg.createdAt)
-                        : convKey;
+                const messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4' && userId
+                    ? await resolveConversationKey(_conv, userId, msg.createdAt)
+                    : convKey;
+                if (!messageKey) throw new Error('Conversation key not available');
 
-                    const decrypt = async (val: string) => {
-                        if (messageKey) return await ecosystemSecurity.decryptWithKey(val, messageKey);
-                        return await ecosystemSecurity.decrypt(val);
-                    };
-
-                    if (msg.type === 'text' && msg.content && msg.content.length > 40) {
-                        msg.content = await decrypt(msg.content);
-                    }
-                    if (msg.metadata && msg.metadata.length > 40) {
-                        const decryptedMeta = await decrypt(msg.metadata);
-                        try {
-                            msg.metadata = JSON.parse(decryptedMeta);
-                        } catch {
-                            msg.metadata = decryptedMeta;
-                        }
-                    }
-                } catch (_e: unknown) {
+                if (msg.type === 'text' && msg.content && msg.content.length > 40) {
+                    msg.content = await ecosystemSecurity.decryptWithKey(msg.content, messageKey);
+                }
+                if (msg.metadata && msg.metadata.length > 40) {
+                    const decryptedMeta = await ecosystemSecurity.decryptWithKey(msg.metadata, messageKey);
                     try {
-                        // Fallback attempt for legacy MasterPass encrypted messages in older DMs
-                        if (msg.type === 'text' && msg.content && msg.content.length > 40) {
-                            msg.content = await ecosystemSecurity.decrypt(msg.content);
-                        }
-                        if (msg.metadata && msg.metadata.length > 40) {
-                            const decryptedMeta = await ecosystemSecurity.decrypt(msg.metadata);
-                            try {
-                                msg.metadata = JSON.parse(decryptedMeta);
-                            } catch {
-                                msg.metadata = decryptedMeta;
-                            }
-                        }
-                    } catch (_fallbackE) {
-                        if (msg.type === 'text') msg.content = "[Encrypted Message]";
-                        if (msg.metadata) msg.metadata = null;
+                        msg.metadata = JSON.parse(decryptedMeta);
+                    } catch {
+                        msg.metadata = decryptedMeta;
                     }
                 }
             }
