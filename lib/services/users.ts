@@ -142,7 +142,7 @@ export const UsersService = {
         }
     },
 
-    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string; walletAddress?: string | null }): Promise<any> {
+    async updateProfile(userId: string, data: { username?: string; displayName?: string; bio?: string; avatar?: string; publicKey?: string; walletAddress?: string | null; preferences?: string | null }): Promise<any> {
         // Try to find by userId first (as expected)
         let currentProfile = await this.getProfileById(userId);
 
@@ -278,7 +278,7 @@ export const UsersService = {
     async createProfile(
         userId: string,
         username: string,
-        data: { displayName?: string; bio?: string; avatar?: string; publicKey?: string } = {}
+        data: { displayName?: string; bio?: string; avatar?: string; publicKey?: string; walletAddress?: string; preferences?: string } = {}
     ) {
         const normalized = normalizeUsername(username);
         if (!normalized) throw new Error('Invalid username');
@@ -290,6 +290,8 @@ export const UsersService = {
             bio: data.bio || '',
             avatar: data.avatar || null,
             publicKey: data.publicKey || null,
+            walletAddress: data.walletAddress || null,
+            preferences: data.preferences || null,
             createdAt: new Date().toISOString()
         };
 
@@ -406,7 +408,7 @@ export const UsersService = {
                 console.log('[UsersService] Healing profile for', user.$id, 'to', derivedUsername);
                 return await this.updateProfile(user.$id, { 
                     username: derivedUsername,
-                    displayName: derivedDisplayName || existing.displayName
+                    displayName: (derivedDisplayName || existing.displayName) || undefined
                 });
             }
             seedIdentityCache(existing);
