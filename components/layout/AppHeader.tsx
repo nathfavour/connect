@@ -38,9 +38,11 @@ import { useNotifications } from '@/components/providers/NotificationProvider';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import EcosystemPortal from '../common/EcosystemPortal';
+import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
 import Logo from '../common/Logo';
 import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
+import { UsersService } from '@/lib/services/users';
 
 export const AppHeader = () => {
   const { user, logout } = useAuth();
@@ -50,6 +52,7 @@ export const AppHeader = () => {
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [profileRecord, setProfileRecord] = useState<any>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -92,6 +95,24 @@ export const AppHeader = () => {
   }, [user]);
 
   useEffect(() => {
+    let mounted = true;
+    const loadProfileRecord = async () => {
+      if (!user?.$id) return;
+      try {
+        const profile = await UsersService.getProfileById(user.$id);
+        if (!mounted) return;
+        setProfileRecord(profile || null);
+      } catch (error) {
+        console.warn('[Connect Header] Failed to load profile record:', error);
+      }
+    };
+    loadProfileRecord();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.$id]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
         e.preventDefault();
@@ -101,6 +122,17 @@ export const AppHeader = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const identitySignals = computeIdentityFlags({
+    createdAt: profileRecord?.$createdAt || profileRecord?.createdAt || (user as any)?.$createdAt || null,
+    lastUsernameEdit: profileRecord?.last_username_edit || user?.prefs?.last_username_edit || null,
+    profilePicId: profileRecord?.avatar || user?.prefs?.profilePicId || null,
+    username: profileRecord?.username || user?.prefs?.username || user?.name || null,
+    bio: profileRecord?.bio || user?.prefs?.bio || null,
+    tier: profileRecord?.tier || user?.prefs?.tier || null,
+    publicKey: profileRecord?.publicKey || null,
+    emailVerified: Boolean((user as any)?.emailVerification),
+  });
 
   const { profile: myProfile } = useProfile();
 
@@ -306,21 +338,15 @@ export const AppHeader = () => {
                 transition: 'transform 0.2s'
               }}
             >
-              <Avatar 
+              <IdentityAvatar
                 src={profileUrl || undefined}
-                sx={{ 
-                  width: { xs: 32, sm: 38 }, 
-                  height: { xs: 32, sm: 38 }, 
-                  bgcolor: '#6366F1',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  color: '#000',
-                  border: '2px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '10px'
-                }}
-              >
-                {user?.name ? user.name[0].toUpperCase() : 'U'}
-              </Avatar>
+                alt={user?.name || user?.email || 'profile'}
+                fallback={user?.name ? user.name[0].toUpperCase() : 'U'}
+                verified={identitySignals.verified}
+                pro={identitySignals.pro}
+                size={38}
+                borderRadius="12px"
+              />
             </IconButton>
           ) : (
             <Button
@@ -374,7 +400,12 @@ export const AppHeader = () => {
             <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Account Identity
             </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', mt: 0.5, opacity: 0.9 }}>
+            <Box sx={{ mt: 0.5 }}>
+              <IdentityName verified={identitySignals.verified} sx={{ fontWeight: 700, color: 'white', opacity: 0.9 }}>
+                {user?.name || user?.email}
+              </IdentityName>
+            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', mt: 0.5, opacity: 0.65 }}>
               {user?.email}
             </Typography>
           </Box>
