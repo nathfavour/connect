@@ -469,20 +469,20 @@ export const UsersService = {
         const profile = await this.getProfileById(userId);
         if (!profile) throw new Error('Profile not found');
 
-        let prefs: any = {};
-        try {
-            prefs = typeof profile.preferences === 'string'
-                ? JSON.parse(profile.preferences || '{}')
-                : (profile.preferences || {});
-        } catch (_e) {
-            prefs = {};
-        }
+        return await genDB.use('chat').use('profiles').update(profile.$id, {}, {
+            permissions: (p, r) => {
+                const perms = [
+                    p.read(r.user(userId)),
+                    p.update(r.user(userId)),
+                    p.delete(r.user(userId))
+                ];
 
-        return await this.updateProfile(userId, {
-            preferences: JSON.stringify({
-                ...prefs,
-                discoverable: isDiscoverable,
-            }),
+                if (isDiscoverable) {
+                    perms.push(p.read(r.any()));
+                }
+
+                return perms;
+            }
         });
     },
 

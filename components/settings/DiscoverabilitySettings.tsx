@@ -242,16 +242,7 @@ export const DiscoverabilitySettings = () => {
 
     if (loading) return <CircularProgress size={24} />;
 
-    let discoverable = false;
-    try {
-        const parsed = typeof profile?.preferences === 'string'
-            ? JSON.parse(profile.preferences || '{}')
-            : (profile?.preferences || {});
-        discoverable = !!parsed?.discoverable;
-    } catch (_e) {
-        discoverable = false;
-    }
-    const isDiscoverable = discoverable;
+    const isDiscoverable = profile?.$permissions?.some((p: string) => p.includes('read("any")'));
     const isAvatarVisible = !!profile?.avatar;
     const isContactable = !!profile?.publicKey;
 

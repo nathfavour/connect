@@ -13,7 +13,6 @@ import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { verifyAndRepairOwnPublishedKey } from '@/lib/services/diagnostics';
 
 function ChatHandler() {
   const searchParams = useSearchParams();
@@ -99,29 +98,6 @@ function ChatHandler() {
       initChat();
     }
   }, [userId, user, router, requestSudo]);
-
-  useEffect(() => {
-    if (!user?.$id) return;
-
-    let cancelled = false;
-    const runKeySync = async () => {
-      const report = await verifyAndRepairOwnPublishedKey(user.$id);
-      if (cancelled) return;
-      if (!report.healthy) {
-        console.warn('[Chats] Silent key sync found an issue:', report.issues);
-      }
-    };
-
-    runKeySync().catch((error) => {
-      if (!cancelled) {
-        console.error('[Chats] Silent key sync diagnostic failed:', error);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.$id]);
 
   // Page-mount Sudo enforcement: when navigating to /chats (no specific userId),
   // ensure the vault state is enforced:

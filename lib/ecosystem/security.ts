@@ -16,6 +16,7 @@ export class EcosystemSecurity {
   private static instance: EcosystemSecurity;
   private masterKey: CryptoKey | null = null;
   private identityKeyPair: CryptoKeyPair | null = null;
+  private identitySyncPromise: Promise<string | null> | null = null;
   private conversationKeys: Map<string, CryptoKey> = new Map();
   private decryptionCache: Map<string, string> = new Map();
   private isUnlocked = false;
@@ -241,77 +242,87 @@ export class EcosystemSecurity {
     console.log('[Security] updateWrappedKey called but not supported in chat.users schema');
   }
 
-    async syncIdentity(userId: string) {
-    try {
-      const PW_DB_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-      const IDENTITIES_TABLE_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
-
-      const res = await tablesDB.listRows(PW_DB_ID, IDENTITIES_TABLE_ID, [
-        Query.equal('userId', userId),
-        Query.equal('identityType', 'e2e_connect'),
-        Query.limit(1)
-      ]);
-
-      if (res.total > 0) {
-        const doc = res.rows[0];
-        // Unwrap private key
-        const decryptedPriv = await this.decrypt(doc.passkeyBlob);
-        const privKeyBytes = new Uint8Array(atob(decryptedPriv).split("").map(c => c.charCodeAt(0)));
-
-        const privKey = await crypto.subtle.importKey("pkcs8", privKeyBytes, { name: "X25519" }, true, ["deriveKey", "deriveBits"]);
-        const pubKeyBytes = new Uint8Array(atob(doc.publicKey).split("").map(c => c.charCodeAt(0)));
-        const pubKey = await crypto.subtle.importKey("raw", pubKeyBytes, { name: "X25519" }, true, []);
-
-        this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
-
-        // Publish publicKey to chat.profiles
-        try {
-            const { UsersService } = await import('../services/users');
-            await UsersService.updateProfile(userId, { publicKey: doc.publicKey });
-        } catch (updateErr: any) {
-            console.error('[Security] Failed to update publicKey in chat.profiles:', updateErr?.message || updateErr);
-        }
-
-        return doc.publicKey;
-      }
-
-      // Generate new pair
-      const pair = (await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveKey", "deriveBits"])) as CryptoKeyPair;
-      const privExport = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
-      const pubExport = await crypto.subtle.exportKey("raw", pair.publicKey);
-
-      const pubBase64 = btoa(String.fromCharCode(...new Uint8Array(pubExport)));
-      const privBase64 = btoa(String.fromCharCode(...new Uint8Array(privExport)));
-      const encryptedPriv = await this.encrypt(privBase64);
-
-      await tablesDB.createRow(PW_DB_ID, IDENTITIES_TABLE_ID, ID.unique(), {
-        userId,
-        identityType: 'e2e_connect',
-        label: 'Connect E2E Identity',
-        publicKey: pubBase64,
-        passkeyBlob: encryptedPriv
-      });
-
-      this.identityKeyPair = pair;
-
-      // Publish publicKey to chat.profiles
-      try {
-          const { UsersService } = await import('../services/users');
-          await UsersService.updateProfile(userId, { publicKey: pubBase64 });
-      } catch (updateErr: any) {
-          console.error('[Security] Failed to publish new publicKey to chat.profiles:', updateErr?.message || updateErr);
-      }
-
-      return pubBase64;
-    } catch (_e: unknown) {
-      console.error('[Security] Identity sync failed:', _e);
-      return null;
+  private async publishIdentityKey(userId: string, publicKey: string) {
+    const { UsersService } = await import('../services/users');
+    const profile = await UsersService.getProfileById(userId);
+    if (!profile || profile.publicKey !== publicKey) {
+      await UsersService.updateProfile(userId, { publicKey });
     }
   }
 
+  async syncIdentity(userId: string) {
+    const PW_DB_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+    const IDENTITIES_TABLE_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+
+    const res = await tablesDB.listRows(PW_DB_ID, IDENTITIES_TABLE_ID, [
+      Query.equal('userId', userId),
+      Query.equal('identityType', 'e2e_connect'),
+      Query.limit(100)
+    ]);
+
+    let identityRows = res.rows;
+    if (identityRows.length > 1) {
+      const { UsersService } = await import('../services/users');
+      const profile = await UsersService.getProfileById(userId);
+      const preferred = profile?.publicKey
+        ? identityRows.find((row) => row.publicKey === profile.publicKey)
+        : null;
+      const canonical = preferred || identityRows.find((row) => row.publicKey) || identityRows[0];
+
+      for (const row of identityRows) {
+        if (row.$id !== canonical.$id) {
+          await tablesDB.deleteRow(PW_DB_ID, IDENTITIES_TABLE_ID, row.$id);
+        }
+      }
+
+      identityRows = [canonical];
+    }
+
+    if (identityRows[0]) {
+      const doc = identityRows[0];
+      const decryptedPriv = await this.decrypt(doc.passkeyBlob);
+      const privKeyBytes = new Uint8Array(atob(decryptedPriv).split('').map((c) => c.charCodeAt(0)));
+      const pubKeyBytes = new Uint8Array(atob(doc.publicKey).split('').map((c) => c.charCodeAt(0)));
+
+      const privKey = await crypto.subtle.importKey('pkcs8', privKeyBytes, { name: 'X25519' }, true, ['deriveKey', 'deriveBits']);
+      const pubKey = await crypto.subtle.importKey('raw', pubKeyBytes, { name: 'X25519' }, true, []);
+
+      this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
+      await this.publishIdentityKey(userId, doc.publicKey);
+      return doc.publicKey;
+    }
+
+    const pair = (await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveKey', 'deriveBits'])) as CryptoKeyPair;
+    const privExport = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
+    const pubExport = await crypto.subtle.exportKey('raw', pair.publicKey);
+
+    const pubBase64 = btoa(String.fromCharCode(...new Uint8Array(pubExport)));
+    const privBase64 = btoa(String.fromCharCode(...new Uint8Array(privExport)));
+    const encryptedPriv = await this.encrypt(privBase64);
+
+    await tablesDB.createRow(PW_DB_ID, IDENTITIES_TABLE_ID, ID.unique(), {
+      userId,
+      identityType: 'e2e_connect',
+      label: 'Connect E2E Identity',
+      publicKey: pubBase64,
+      passkeyBlob: encryptedPriv
+    });
+
+    this.identityKeyPair = pair;
+    await this.publishIdentityKey(userId, pubBase64);
+    return pubBase64;
+  }
+
   async ensureE2EIdentity(userId: string) {
-    if (this.identityKeyPair) return;
-    return await this.syncIdentity(userId);
+    if (!userId) throw new Error('Missing user ID for E2E identity sync');
+
+    if (!this.identitySyncPromise) {
+      this.identitySyncPromise = this.syncIdentity(userId).finally(() => {
+        this.identitySyncPromise = null;
+      });
+    }
+
+    return await this.identitySyncPromise;
   }
 
   /**

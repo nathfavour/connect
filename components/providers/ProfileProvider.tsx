@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { syncCurrentUserVerification } from '@/lib/verification';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 interface ProfileContextType {
     profile: any | null;
@@ -65,6 +66,25 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             setIsLoading(false);
         }
     }, [user, fetchOptimized, invalidate]);
+
+    useEffect(() => {
+        if (!user?.$id) return;
+
+        const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
+            if (!status.isUnlocked) return;
+
+            void ecosystemSecurity.ensureE2EIdentity(user.$id)
+                .then(async () => {
+                    invalidate(`profile_${user.$id}`);
+                    await refreshProfile();
+                })
+                .catch((error) => {
+                    console.error('[ProfileProvider] Failed to audit E2E identity:', error);
+                });
+        });
+
+        return unsubscribe;
+    }, [user?.$id, invalidate, refreshProfile]);
 
     useEffect(() => {
         if (!user) {
