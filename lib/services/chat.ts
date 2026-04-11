@@ -441,7 +441,6 @@ export const ChatService = {
             throw new Error('E2E identity must be initialized before creating conversations');
         }
 
-        const now = new Date().toISOString();
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
@@ -618,7 +617,6 @@ export const ChatService = {
         metadata?: any,
         permissionSyncAuth?: { jwt?: string; cookie?: string }
     ) {
-        const now = new Date().toISOString();
         let conversation: any = null;
 
         // E2E Layer: Universal Handshake Protocol

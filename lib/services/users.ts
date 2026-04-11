@@ -15,11 +15,6 @@ const PROFILE_SYNC_TTL = 5000;
 const profileSyncRequests = new Map<string, Promise<any | null>>();
 const profileSyncCache = new Map<string, { value: any | null; syncedAt: number }>();
 
-const isProfileWriteConflict = (error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    return /already exists|unique|duplicate|conflict|index/i.test(message);
-};
-
 const normalizeUsername = (input: string | null | undefined): string | null => {
     if (!input) return null;
     const cleaned = input
@@ -380,50 +375,34 @@ export const UsersService = {
         console.log('[UsersService] [PAYLOAD_AUDIT] Creating with keys:', Object.keys(createData));
         console.log('[UsersService] Creating profile for', userId, 'with data:', JSON.stringify(createData));
 
-        try {
-            const row = await tablesDB.createRow(
-                DB_ID,
-                USERS_TABLE,
-                userId,
-                createData,
-                [
-                    Permission.read(Role.any()),
-                    Permission.read(Role.user(userId)),
-                    Permission.update(Role.user(userId)),
-                    Permission.delete(Role.user(userId))
-                ]
-            );
-            seedIdentityCache(row);
-            await syncProfileEvent({
-                type: 'username_change',
-                userId,
-                newUsername: normalized,
-                profilePatch: {
-                    username: normalized,
-                    displayName: createData.displayName,
-                    bio: createData.bio,
-                    publicKey: createData.publicKey,
-                },
-                metadata: {
-                    source: 'connect.users-service.createProfile',
-                },
-            });
-            return row;
-        } catch (error) {
-            console.error('[UsersService] createProfile failed:', {
-                userId,
+        const row = await tablesDB.createRow(
+            DB_ID,
+            USERS_TABLE,
+            userId,
+            createData,
+            [
+                Permission.read(Role.any()),
+                Permission.read(Role.user(userId)),
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId))
+            ]
+        );
+        seedIdentityCache(row);
+        await syncProfileEvent({
+            type: 'username_change',
+            userId,
+            newUsername: normalized,
+            profilePatch: {
                 username: normalized,
-                error,
-            });
-
-            const recovered = await this.getProfileById(userId, true);
-            if (recovered) {
-                seedIdentityCache(recovered);
-                return recovered;
-            }
-
-            throw error;
-        }
+                displayName: createData.displayName,
+                bio: createData.bio,
+                publicKey: createData.publicKey,
+            },
+            metadata: {
+                source: 'connect.users-service.createProfile',
+            },
+        });
+        return row;
     },
 
     /**
@@ -438,161 +417,115 @@ export const UsersService = {
             const email = user.email || (user as any).email;
             const name = user.name || (user as any).name;
 
-        // --- IDENTITY DERIVATION ---
-        let derivedUsername = '';
-        let derivedDisplayName = '';
+            // --- IDENTITY DERIVATION ---
+            let derivedUsername = '';
+            let derivedDisplayName = '';
 
-        if (name) {
-            const parts = name.trim().split(/\s+/);
-            const first = parts[0] || '';
-            const second = parts[1] || '';
-            
-            // Username logic: max 2 parts, normalized
-            let usernameBase = '';
-            if (first.length > 10) {
-                usernameBase = first;
-            } else if (second) {
-                usernameBase = first + second;
-            } else {
-                usernameBase = first;
-            }
-
-            // Normalize (lowercase, remove non-alphanumeric)
-            const normalized = normalizeUsername(usernameBase);
-            // Check against a reasonable limit (e.g., 32 chars for Appwrite string fields)
-            if (normalized && normalized.length <= 32) {
-                derivedUsername = normalized;
-            }
-
-            // Display Name logic: max 2 parts
-            if (first && second) {
-                derivedDisplayName = `${first} ${second}`;
-            } else {
-                derivedDisplayName = first;
-            }
-        }
-
-        // Fallback to Email if Name logic failed or name doesn't exist
-        if (!derivedUsername && email) {
-            const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z]/g, '');
-            const normalized = normalizeUsername(emailPrefix);
-            if (normalized) {
-                derivedUsername = normalized;
-                if (!derivedDisplayName) {
-                    derivedDisplayName = emailPrefix;
-                }
-            }
-        }
-
-        // Handle collision for new profiles
-        if (derivedUsername && !await this.isUsernameAvailable(derivedUsername)) {
-            if (existing?.username !== derivedUsername) {
-                derivedUsername = normalizeUsername(`${derivedUsername}${user.$id.slice(0, 4)}`) || derivedUsername;
-            }
-        }
-
-        if (existing && existing.username) {
-            // Healing: If existing profile has a generic/placeholder username but we found a better one, update it
-            const isGeneric = existing.username.startsWith('u') && existing.username.length > 5;
-            const isPlaceholder = existing.username === 'user';
-            
-            if ((isGeneric || isPlaceholder) && derivedUsername && derivedUsername !== existing.username) {
-                console.log('[UsersService] Healing profile for', user.$id, 'to', derivedUsername);
-                return await this.updateProfile(user.$id, { 
-                    username: derivedUsername,
-                    displayName: (derivedDisplayName || existing.displayName) || undefined
-                });
-            }
-            seedIdentityCache(existing);
-            return existing;
-        }
-
-            try {
-                const avatarId = user?.prefs?.avatar || user?.prefs?.profilePicId || null;
-                if (avatarId) {
-                    try {
-                        await this.setAvatarVisible(user.$id, avatarId, true);
-                    } catch (avatarErr) {
-                        console.warn('[UsersService] Failed to make avatar public during setup:', avatarErr);
-                    }
+            if (name) {
+                const parts = name.trim().split(/\s+/);
+                const first = parts[0] || '';
+                const second = parts[1] || '';
+                
+                let usernameBase = '';
+                if (first.length > 10) {
+                    usernameBase = first;
+                } else if (second) {
+                    usernameBase = first + second;
+                } else {
+                    usernameBase = first;
                 }
 
-                const createData: any = {
-                    displayName: derivedDisplayName || undefined,
-                    avatar: avatarId
-                };
+                const normalized = normalizeUsername(usernameBase);
+                if (normalized && normalized.length <= 32) {
+                    derivedUsername = normalized;
+                }
 
-                if (!derivedUsername) {
-                    derivedUsername = buildFallbackUsername(user.$id, email);
+                if (first && second) {
+                    derivedDisplayName = `${first} ${second}`;
+                } else {
+                    derivedDisplayName = first;
+                }
+            }
+
+            if (!derivedUsername && email) {
+                const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z]/g, '');
+                const normalized = normalizeUsername(emailPrefix);
+                if (normalized) {
+                    derivedUsername = normalized;
                     if (!derivedDisplayName) {
-                        derivedDisplayName = email?.split('@')[0] || `User ${user.$id.slice(0, 6)}`;
+                        derivedDisplayName = emailPrefix;
                     }
                 }
-
-                const usernameCandidates = Array.from(new Set([
-                    derivedUsername,
-                    normalizeUsername(`${derivedUsername || buildFallbackUsername(user.$id, email)}${user.$id.slice(0, 4)}`),
-                    buildFallbackUsername(user.$id, email),
-                ].filter(Boolean))) as string[];
-
-                for (const candidateUsername of usernameCandidates) {
-                    if (!candidateUsername) continue;
-                    if (!existing && !(await this.isUsernameAvailable(candidateUsername))) {
-                        continue;
-                    }
-
-                    try {
-                        const created = await this.createProfile(user.$id, candidateUsername, createData);
-                        seedIdentityCache(created);
-                        return created;
-                    } catch (err) {
-                        console.error('[UsersService] Profile creation attempt failed:', {
-                            userId: user.$id,
-                            candidateUsername,
-                            error: err,
-                        });
-
-                        const recovered = await this.getProfileById(user.$id, true);
-                        if (recovered) {
-                            seedIdentityCache(recovered);
-                            return recovered;
-                        }
-
-                        if (!isProfileWriteConflict(err)) {
-                            throw err;
-                        }
-                    }
-                }
-
-                const recovered = await this.getProfileById(user.$id, true);
-                if (recovered) {
-                    seedIdentityCache(recovered);
-                    return recovered;
-                }
-
-                return null;
-            } catch (err: unknown) {
-                console.error('[UsersService] ensureProfileForUser failed:', err);
-                return await this.getProfileById(user.$id, true);
             }
+
+            if (derivedUsername && !await this.isUsernameAvailable(derivedUsername)) {
+                if (existing?.username !== derivedUsername) {
+                    derivedUsername = normalizeUsername(`${derivedUsername}${user.$id.slice(0, 4)}`) || derivedUsername;
+                }
+            }
+
+            if (existing && existing.username) {
+                const isGeneric = existing.username.startsWith('u') && existing.username.length > 5;
+                const isPlaceholder = existing.username === 'user';
+                
+                if ((isGeneric || isPlaceholder) && derivedUsername && derivedUsername !== existing.username) {
+                    console.log('[UsersService] Healing profile for', user.$id, 'to', derivedUsername);
+                    return await this.updateProfile(user.$id, { 
+                        username: derivedUsername,
+                        displayName: (derivedDisplayName || existing.displayName) || undefined
+                    });
+                }
+                seedIdentityCache(existing);
+                return existing;
+            }
+
+            const avatarId = user?.prefs?.avatar || user?.prefs?.profilePicId || null;
+            if (avatarId) {
+                await this.setAvatarVisible(user.$id, avatarId, true);
+            }
+
+            const createData: any = {
+                displayName: derivedDisplayName || undefined,
+                avatar: avatarId
+            };
+
+            if (!derivedUsername) {
+                derivedUsername = buildFallbackUsername(user.$id, email);
+                if (!derivedDisplayName) {
+                    derivedDisplayName = email?.split('@')[0] || `User ${user.$id.slice(0, 6)}`;
+                }
+            }
+
+            const usernameCandidates = Array.from(new Set([
+                derivedUsername,
+                normalizeUsername(`${derivedUsername || buildFallbackUsername(user.$id, email)}${user.$id.slice(0, 4)}`),
+                buildFallbackUsername(user.$id, email),
+            ].filter(Boolean))) as string[];
+
+            for (const candidateUsername of usernameCandidates) {
+                if (!candidateUsername) continue;
+                if (!existing && !(await this.isUsernameAvailable(candidateUsername))) {
+                    continue;
+                }
+
+                const created = await this.createProfile(user.$id, candidateUsername, createData);
+                seedIdentityCache(created);
+                return created;
+            }
+
+            return existing;
         });
     },
 
     async syncProfileWithIdentity(user: { $id: string; email?: string; name?: string; prefs?: Record<string, any> }) {
         if (!user?.$id) return null;
 
-        try {
-            const { ecosystemSecurity } = await import('../ecosystem/security');
-            if (ecosystemSecurity.status.isUnlocked) {
-                return await this.forceSyncProfileWithIdentity(user);
-            }
-
-            return await this.ensureProfileForUser(user);
-        } catch (error) {
-            console.error('[UsersService] syncProfileWithIdentity failed:', error);
+        const { ecosystemSecurity } = await import('../ecosystem/security');
+        if (ecosystemSecurity.status.isUnlocked) {
+            return await this.forceSyncProfileWithIdentity(user);
         }
 
-        return await this.getProfileById(user.$id, true);
+        return await this.ensureProfileForUser(user);
     },
 
     async forceSyncProfileWithIdentity(user: { $id: string; email?: string; name?: string; prefs?: Record<string, any> }) {
@@ -631,20 +564,9 @@ export const UsersService = {
                 return updated;
             }
 
-            try {
-                const created = await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, payload, permissionSet);
-                seedIdentityCache(created);
-                return created;
-            } catch (err) {
-                if (isProfileWriteConflict(err)) {
-                    const recovered = await this.getProfileById(user.$id, true);
-                    if (recovered) {
-                        seedIdentityCache(recovered);
-                        return recovered;
-                    }
-                }
-                throw err;
-            }
+            const created = await tablesDB.createRow(DB_ID, USERS_TABLE, user.$id, payload, permissionSet);
+            seedIdentityCache(created);
+            return created;
         });
     },
 
