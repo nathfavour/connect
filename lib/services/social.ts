@@ -379,7 +379,12 @@ export const SocialService = {
         });
 
         const baseRows = rawRows.map((moment: any) => {
-            const metadata = parseMomentMetadata(moment);
+            const parsedMetadata = parseMomentMetadata(moment);
+            const metadata = {
+                type: getMomentKind(moment) || parsedMetadata?.type || 'post',
+                sourceId: getMomentSourceId(moment) || parsedMetadata?.sourceId || undefined,
+                attachments: parsedMetadata?.attachments || [],
+            };
             const counts = engagementBySource.get(moment.$id) || { replies: 0, pulses: 0 };
             const likes = likesByMoment.get(moment.$id) || 0;
 
@@ -562,21 +567,15 @@ export const SocialService = {
             try {
                 const recent = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
                     Query.equal('userId', creatorId),
+                    Query.equal('momentKind', 'pulse'),
+                    Query.equal('sourceId', sourceId),
                     Query.orderDesc('$createdAt'),
-                    Query.limit(200)
+                    Query.limit(1)
                 ]);
 
-                const existingPulse = recent.rows.find((m: any) => {
-                    try {
-                        if (!m.fileId) return false;
-                        const meta = JSON.parse(m.fileId);
-                        return meta.type === 'pulse' && meta.sourceId === sourceId;
-                    } catch (_e) { return false; }
-                });
-
-                if (existingPulse) {
+                if (recent.rows[0]) {
                     // Already pulsed by this user; return the existing row to dedupe at the service layer.
-                    return existingPulse;
+                    return recent.rows[0];
                 }
             } catch (dedupeErr) {
                 console.warn('pulse dedupe check failed', dedupeErr);
@@ -590,6 +589,7 @@ export const SocialService = {
             type: 'image', // Database schema only accepts image/video
             momentKind: type,
             sourceId: sourceId || null,
+            searchTitle: content || null,
             fileId: effectiveFileId, 
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() 
@@ -661,6 +661,7 @@ export const SocialService = {
     async updateMoment(momentId: string, content: string) {
         return await tablesDB.updateRow(DB_ID, MOMENTS_TABLE, momentId, {
             caption: content,
+            searchTitle: content,
             updatedAt: new Date().toISOString()
         });
     },
@@ -859,7 +860,7 @@ export const SocialService = {
     async searchMoments(query: string, userId?: string) {
         try {
             const queries = [
-                Query.contains('caption', query),
+                Query.search('searchTitle', query),
                 Query.orderDesc('$createdAt'),
                 Query.limit(50)
             ];
@@ -889,18 +890,16 @@ export const SocialService = {
             Query.equal('momentKind', 'reply'),
             Query.orderDesc('$createdAt'),
             Query.limit(100)
-        ]);
+        ]).catch(() => ({ rows: [] as any[] }));
 
         const replies = moments.rows.length
             ? await Promise.all(moments.rows.map(m => this.enrichMoment(m, currentUserId)))
-            : await Promise.all(
-                (await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
-                    Query.orderDesc('$createdAt'),
-                    Query.limit(100)
-                ])).rows
-                    .filter((m: any) => getMomentKind(m) === 'reply' && getMomentSourceId(m) === momentId)
-                    .map(m => this.enrichMoment(m, currentUserId))
-            );
+            : await Promise.all((await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+                Query.orderDesc('$createdAt'),
+                Query.limit(100)
+            ]).catch(() => ({ rows: [] as any[] }))).rows
+                .filter((m: any) => getMomentKind(m) === 'reply' && getMomentSourceId(m) === momentId)
+                .map(m => this.enrichMoment(m, currentUserId)));
 
         return replies;
     }

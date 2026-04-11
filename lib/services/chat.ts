@@ -467,20 +467,50 @@ export const ChatService = {
 
         // GUARD: Prevent duplicate direct chats by checking server-side first
         if (type === 'direct') {
-            const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
-                Query.contains('participants', creatorId),
-                Query.equal('type', 'direct'),
-                Query.limit(100)
-            ]);
+            const creatorMemberships = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
+                Query.equal('userId', creatorId),
+                Query.limit(1000)
+            ]).catch(() => ({ rows: [] as any[] }));
 
-            const targetParticipantSet = canonicalizeParticipantsForMatch(uniqueParticipants);
-            for (const conversation of existing.rows) {
-                const normalizedConversation = await normalizeConversationRow(conversation);
-                const existingParticipantSet = canonicalizeParticipantsForMatch(normalizedConversation?.participants || []);
+            const candidateConversationIds = Array.from(new Set(
+                (creatorMemberships.rows || [])
+                    .map((row: any) => row.conversationId)
+                    .filter(Boolean)
+            ));
 
-                if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
-                    console.log('[ChatService] Direct chat already exists, returning existing:', normalizedConversation.$id);
-                    return normalizedConversation;
+            if (candidateConversationIds.length > 0) {
+                const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                    Query.equal('$id', candidateConversationIds),
+                    Query.equal('type', 'direct'),
+                    Query.limit(candidateConversationIds.length)
+                ]).catch(() => ({ rows: [] as any[] }));
+
+                const candidateRows = existing.rows || [];
+                if (candidateRows.length > 0) {
+                    const membershipRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
+                        Query.equal('conversationId', candidateConversationIds),
+                        Query.limit(Math.min(1000, candidateConversationIds.length * 10))
+                    ]).catch(() => ({ rows: [] as any[] }));
+
+                    const participantsByConversation = new Map<string, string[]>();
+                    for (const row of membershipRows.rows || []) {
+                        if (!row?.conversationId || !row?.userId) continue;
+                        const current = participantsByConversation.get(row.conversationId) || [];
+                        if (!current.includes(row.userId)) current.push(row.userId);
+                        participantsByConversation.set(row.conversationId, current);
+                    }
+
+                    const targetParticipantSet = canonicalizeParticipantsForMatch(uniqueParticipants);
+                    for (const conversation of candidateRows) {
+                        const existingParticipantSet = canonicalizeParticipantsForMatch(
+                            participantsByConversation.get(conversation.$id) || []
+                        );
+
+                        if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
+                            console.log('[ChatService] Direct chat already exists, returning existing:', conversation.$id);
+                            return conversation;
+                        }
+                    }
                 }
             }
         }
