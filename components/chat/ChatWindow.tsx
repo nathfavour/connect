@@ -1,11 +1,11 @@
 'use client';
 
+import type { Models } from 'appwrite';
 import React, { useEffect, useState, useRef } from 'react';
 import { ChatService } from '@/lib/services/chat';
 import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
-import { Messages, MessagesType } from '@/generated/appwrite/types';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { realtime } from '@/lib/appwrite/client';
@@ -72,12 +72,24 @@ import { seedIdentityCache } from '@/lib/identity-cache';
 import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 import { FormattedText } from '../common/FormattedText';
 
+type ChatMessage = Models.Row & Record<string, any>;
+
+const MessagesType = {
+    TEXT: 'text',
+    IMAGE: 'image',
+    VIDEO: 'video',
+    AUDIO: 'audio',
+    FILE: 'file',
+    CALL_SIGNAL: 'call_signal',
+    SYSTEM: 'system',
+} as const;
+
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
     const { presence, getPresence } = usePresence() as any;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
-    const [messages, setMessages] = useState<Messages[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [conversation, setConversation] = useState<any>(null);
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
@@ -90,8 +102,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [secretModalOpen, setSecretModalOpen] = useState(false);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-    const [replyingTo, setReplyingTo] = useState<Messages | null>(null);
-    const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: Messages } | null>(null);
+    const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+    const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
 
@@ -194,7 +206,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             }
 
             // Reverse once for display order (bottom is newest)
-            setMessages(displayMessages.reverse() as unknown as Messages[]);
+            setMessages(displayMessages.reverse() as unknown as ChatMessage[]);
         } catch (error: unknown) {
             console.error('Failed to load messages:', error);
         } finally {
@@ -238,7 +250,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 unsub = await realtime.subscribe(
                     [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`],
                     async (response) => {
-                        const payload = response.payload as Messages;
+                        const payload = response.payload as ChatMessage;
                         if (payload.conversationId === conversationId) {
                             if (response.events.some(e => e.includes('.create')) || response.events.some(e => e.includes('.update'))) {
                                 if (user && payload.senderId === user.$id && response.events.some(e => e.includes('.create'))) return;
@@ -353,12 +365,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const handleMessageContextMenu = (e: React.MouseEvent, msg: Messages) => {
+    const handleMessageContextMenu = (e: React.MouseEvent, msg: ChatMessage) => {
         e.preventDefault();
         setMessageAnchorEl({ el: e.currentTarget as HTMLElement, msg });
     };
 
-    const handleReply = (msg: Messages) => {
+    const handleReply = (msg: ChatMessage) => {
         setReplyingTo(msg);
         setMessageAnchorEl(null);
         // Focus input
@@ -439,7 +451,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             // Replace optimistic message with the real one to maintain state (readBy, etc)
             // CRITICAL: We MUST override the content back to plaintext. The sentMessage from the API 
             // contains the encrypted blob, and if we set it as is, the UI will show gibberish!
-            const messageForState = { ...sentMessage, content: text } as unknown as Messages;
+            const messageForState = { ...sentMessage, content: text } as unknown as ChatMessage;
             setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
         } catch (error: unknown) {
             console.error('Failed to send message:', error);
@@ -905,7 +917,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         );
     };
 
-    const renderMessageContent = (msg: Messages) => {
+    const renderMessageContent = (msg: ChatMessage) => {
         if ((msg as any).metadata?.type === 'attachment') {
             return <AttachmentCard metadata={(msg as any).metadata as unknown as AttachmentMetadata} />;
         }

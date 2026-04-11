@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Query } from "appwrite";
 import {
   Dialog,
   DialogTitle,
@@ -17,8 +18,9 @@ import {
 } from "@mui/material";
 import { startRegistration } from "@simplewebauthn/browser";
 import { KeychainService } from "@/lib/appwrite/keychain";
+import { tablesDB } from "@/lib/appwrite/client";
+import { APPWRITE_CONFIG } from "@/lib/appwrite/config";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { databases } from "@/generated/appwrite/databases";
 import toast from "react-hot-toast";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
@@ -64,9 +66,10 @@ export function PasskeySetup({
   useEffect(() => {
     const fetchUsername = async () => {
       try {
-        const { rows } = await databases.use('chat').use('profiles').list({
-          queries: (q: any) => [q.equal('userId', userId), q.limit(1)]
-        });
+        const { rows } = await tablesDB.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+          Query.equal('userId', userId),
+          Query.limit(1),
+        ]);
         if (rows.length > 0 && (rows[0] as any).username) {
           setUsername((rows[0] as any).username);
         }

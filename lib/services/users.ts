@@ -1,6 +1,5 @@
 import { ID, Query, Permission, Role } from 'appwrite';
 import { tablesDB, storage, getCurrentUser } from '../appwrite/client';
-import { databases as genDB } from '../../generated/appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
 import {
@@ -155,7 +154,7 @@ export const UsersService = {
                 // Priority 2: Robustness fallback - check if the passed ID is actually a document ID ($id)
                 // This happens when legacy UI components pass profile.$id instead of profile.userId
                 try {
-                    const doc = await genDB.use('chat').use('profiles').get(userId);
+                    const doc = await tablesDB.getRow(DB_ID, USERS_TABLE, userId);
                     if (doc) return doc;
                 } catch (_e) {
                     // Not a document ID or not found
@@ -210,7 +209,7 @@ export const UsersService = {
         // Robustness: If not found by userId, check if the passed ID was actually a document ID
         if (!currentProfile) {
             try {
-                const doc = await genDB.use('chat').use('profiles').get(userId);
+                const doc = await tablesDB.getRow(DB_ID, USERS_TABLE, userId);
                 if (doc) currentProfile = normalizeIdentity(doc);
             } catch (_e) {
                 // Not a document ID either
@@ -295,7 +294,7 @@ export const UsersService = {
 
             console.log('[UsersService] Updating profile for', targetUserId, 'with payload:', JSON.stringify(updatePayload));
             try {
-                const result = await genDB.use('chat').use('profiles').update(currentProfile.$id, updatePayload);
+                const result = await tablesDB.updateRow(DB_ID, USERS_TABLE, currentProfile.$id, updatePayload);
                 seedIdentityCache(result);
                 await syncProfileEvent({
                     type: Object.prototype.hasOwnProperty.call(data, 'username') ? 'username_change' : 'profile_sync',
@@ -597,21 +596,17 @@ export const UsersService = {
         const profile = await this.getProfileById(userId);
         if (!profile) throw new Error('Profile not found');
 
-        return await genDB.use('chat').use('profiles').update(profile.$id, {}, {
-            permissions: (p, r) => {
-                const perms = [
-                    p.read(r.user(userId)),
-                    p.update(r.user(userId)),
-                    p.delete(r.user(userId))
-                ];
+        const permissions = [
+            Permission.read(Role.user(userId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId)),
+        ];
 
-                if (isDiscoverable) {
-                    perms.push(p.read(r.any()));
-                }
+        if (isDiscoverable) {
+            permissions.push(Permission.read(Role.any()));
+        }
 
-                return perms;
-            }
-        });
+        return await tablesDB.updateRow(DB_ID, USERS_TABLE, profile.$id, {}, permissions);
     },
 
     /**
