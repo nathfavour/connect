@@ -25,6 +25,7 @@ interface ChatNotificationContextType {
     unreadConversations: Set<string>;
     lastMessage: any | null;
     scanComplete: boolean;
+    markConversationRead: (conversationId: string) => void;
 }
 
 const ChatNotificationContext = createContext<ChatNotificationContextType | undefined>(undefined);
@@ -144,6 +145,16 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         }
     }, [user, scanComplete]);
 
+    const markConversationRead = useCallback((conversationId: string) => {
+        if (!user?.$id) return;
+        setUnreadConversations(prev => {
+            if (!prev.has(conversationId)) return prev;
+            const next = new Set(prev);
+            next.delete(conversationId);
+            return next;
+        });
+    }, [user?.$id]);
+
     // Effect to trigger proactive scan
     useEffect(() => {
         if (user?.$id && hasCheckedSession && !scanComplete) {
@@ -188,7 +199,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     }, [user?.$id, showDynamicIsland]);
 
     return (
-        <ChatNotificationContext.Provider value={{ unreadConversations, lastMessage, scanComplete }}>
+        <ChatNotificationContext.Provider value={{ unreadConversations, lastMessage, scanComplete, markConversationRead }}>
             {children}
             
             {/* Dynamic Island Notification */}

@@ -71,6 +71,8 @@ import { fetchProfilePreview } from '@/lib/profile-preview';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 import { FormattedText } from '../common/FormattedText';
+import { markConversationRead } from '@/lib/chat-read-state';
+import { useChatNotifications } from '../providers/ChatNotificationProvider';
 
 type ChatMessage = Models.Row & Record<string, any>;
 
@@ -84,16 +86,50 @@ const MessagesType = {
     SYSTEM: 'system',
 } as const;
 
+const getMessageTimestamp = (msg: ChatMessage) => new Date(msg.$createdAt || msg.createdAt || Date.now()).getTime();
+
+const getClientReadSegments = (
+    messages: ChatMessage[],
+    currentUserId?: string | null,
+    isDirectChat = false,
+    conversationReadAt = 0
+) => {
+    if (!currentUserId || !isDirectChat) {
+        return {
+            outgoingReadAt: 0,
+            firstUnreadIncomingIndex: -1,
+        };
+    }
+
+    let outgoingReadAt = 0;
+
+    for (const msg of messages) {
+        if (msg.senderId === currentUserId) continue;
+        outgoingReadAt = Math.max(outgoingReadAt, getMessageTimestamp(msg));
+    }
+
+    const firstUnreadIncomingIndex = messages.findIndex((msg) =>
+        msg.senderId !== currentUserId && getMessageTimestamp(msg) > conversationReadAt
+    );
+
+    return {
+        outgoingReadAt,
+        firstUnreadIncomingIndex,
+    };
+};
+
 const ChatDraftInput = React.memo(function ChatDraftInput({
     attachment,
     sending,
     isRecording,
+    onAttach,
     onSend,
     onToggleRecording,
 }: {
     attachment: File | null;
     sending: boolean;
     isRecording: boolean;
+    onAttach: (event: React.MouseEvent<HTMLElement>) => void;
     onSend: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
 }) {
@@ -107,54 +143,98 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
 
     return (
         <>
-            <TextField
-                fullWidth
-                multiline
-                maxRows={4}
-                placeholder="Type a message..."
-                value={draft}
-                inputRef={textRef}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void submitDraft();
-                    }
-                }}
-                sx={{
-                    '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                        bgcolor: '#1C1A18',
-                        fontSize: '0.95rem',
-                        transition: 'all 0.2s ease',
-                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
-                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366F1' },
-                    }
-                }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
+                <IconButton
+                    size="small"
+                    onClick={onAttach}
+                    sx={{
+                        color: 'text.secondary',
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
+                        bgcolor: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.05)',
+                            borderColor: 'rgba(245, 158, 11, 0.35)',
+                            color: '#F59E0B',
+                        },
+                    }}
+                >
+                    <PlusCircle size={18} strokeWidth={1.8} />
+                </IconButton>
 
-            {draft.trim() || attachment ? (
+                <IconButton
+                    onClick={onToggleRecording}
+                    sx={{
+                        color: isRecording ? '#ff4d4d' : 'text.secondary',
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
+                        bgcolor: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.05)',
+                            borderColor: 'rgba(245, 158, 11, 0.35)',
+                            color: '#F59E0B',
+                        },
+                    }}
+                >
+                    {isRecording ? <Square size={18} strokeWidth={1.8} /> : <Mic size={18} strokeWidth={1.8} />}
+                </IconButton>
+
+                <TextField
+                    fullWidth
+                    placeholder="Type a message..."
+                    value={draft}
+                    inputRef={textRef}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            void submitDraft();
+                        }
+                    }}
+                    sx={{
+                        flex: 1,
+                        '& .MuiOutlinedInput-root': {
+                            minHeight: 40,
+                            borderRadius: '999px',
+                            bgcolor: '#1C1A18',
+                            fontSize: '0.95rem',
+                            transition: 'all 0.2s ease',
+                            '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.06)' },
+                            '&:hover fieldset': { borderColor: 'rgba(245, 158, 11, 0.18)' },
+                            '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
+                        },
+                        '& .MuiInputBase-input': {
+                            py: 1,
+                            px: 1.5,
+                        },
+                    }}
+                />
+
                 <IconButton
                     onClick={() => void submitDraft()}
                     disabled={sending || (!draft.trim() && !attachment)}
                     sx={{
-                        bgcolor: '#6366F1',
+                        bgcolor: draft.trim() || attachment ? '#F59E0B' : 'rgba(255, 255, 255, 0.02)',
                         color: '#000',
-                        width: 42,
-                        height: 42,
-                        borderRadius: '12px',
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
+                        borderRadius: '999px',
                         opacity: sending ? 0.82 : 1,
                         transform: sending ? 'translateY(-1px)' : 'none',
                         '&:hover': {
-                            bgcolor: alpha('#6366F1', 0.8),
-                            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                            bgcolor: draft.trim() || attachment ? alpha('#F59E0B', 0.85) : 'rgba(255, 255, 255, 0.05)',
+                            boxShadow: draft.trim() || attachment ? '0 0 15px rgba(245, 158, 11, 0.25)' : 'none'
                         },
-                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.1)' }
+                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.14)' }
                     }}
                 >
                     <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Send size={20} strokeWidth={2} />
+                        <Send size={18} strokeWidth={2} />
                         {sending && (
                             <Box
                                 sx={{
@@ -165,30 +245,20 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                                     height: 7,
                                     borderRadius: '50%',
                                     bgcolor: '#10B981',
-                                    boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.28)',
+                                    boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.22)',
                                 }}
                             />
                         )}
                     </Box>
                 </IconButton>
-            ) : (
-                <IconButton
-                    onClick={onToggleRecording}
-                    sx={{
-                        color: isRecording ? '#ff4d4d' : 'text.secondary',
-                        p: 1.2,
-                        animation: isRecording ? 'pulse 1.5s infinite' : 'none'
-                    }}
-                >
-                    {isRecording ? <Square size={24} strokeWidth={1.5} /> : <Mic size={24} strokeWidth={1.5} />}
-                </IconButton>
-            )}
+            </Box>
         </>
     );
 });
 
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
+    const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { presence, getPresence } = usePresence() as any;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -208,12 +278,17 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
+    const [conversationReadAt, setConversationReadAt] = useState(0);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const router = useRouter();
+    const clientReadSegments = React.useMemo(
+        () => getClientReadSegments(messages, user?.$id, conversation?.type === 'direct', conversationReadAt),
+        [messages, user?.$id, conversation?.type, conversationReadAt]
+    );
 
     const isSelf = conversation?.type === 'direct' && conversation?.participants && (conversation.participants.length === 1 || conversation.participants.length === 2) && conversation.participants.every((p: string) => p === user?.$id);
     const hasRepliedToPartner = messages.some((message) => message.senderId === user?.$id);
@@ -317,6 +392,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     }, [conversationId, user]);
 
     useEffect(() => {
+        if (user?.$id && conversationId) {
+            const readAt = markConversationRead(conversationId, user.$id);
+            setConversationReadAt(readAt);
+            markConversationReadInContext(conversationId);
+        }
+    }, [conversationId, user?.$id, messages.length, markConversationReadInContext]);
+
+    useEffect(() => {
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
             setIsUnlocked(status.isUnlocked);
 
@@ -386,9 +469,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         if (withoutOptimistic.some(m => m.$id === payload.$id)) return withoutOptimistic;
                                         return [...withoutOptimistic, payload];
                                     });
-                                    if (user && payload.senderId !== user.$id) {
-                                        ChatService.markAsRead(payload.$id, user.$id);
-                                    }
                                     setTimeout(() => scrollToBottom(), 100);
                                 } else {
                                     setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
@@ -527,6 +607,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
         setMessages(prev => [...prev, optimisticMessage]);
         setTimeout(() => scrollToBottom(), 50);
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
         // 3. Encrypt name and metadata if it's a group
         if (type === MessagesType.TEXT && ecosystemSecurity.status.isUnlocked) {
@@ -1299,10 +1380,20 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 </Typography>
                             </Box>
                         )}
-                        
-                        {messages.map((msg, _index) => (
+
+                        {messages.map((msg, index) => (
+                        <React.Fragment key={msg.$id}>
+                            {index === clientReadSegments.firstUnreadIncomingIndex && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 0.5 }}>
+                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: alpha('#F59E0B', 0.12), border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+                                        <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B' }}>
+                                            Unread messages
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            )}
+
                         <Box 
-                            key={msg.$id} 
                             id={`msg-${msg.$id}`}
                             sx={{
                             alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start',
@@ -1369,7 +1460,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 )}
                                 {renderMessageContent(msg)}
                             </Paper>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
                                 <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
                                     {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
                                 </Typography>
@@ -1380,7 +1471,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                 ) : (msg as any).status === 'error' ? (
                                                     <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px' }}>Failed</Typography>
                                                 ) : (
-                                                    msg.readBy?.length && msg.readBy.length > 1 ? (
+                                                    getMessageTimestamp(msg) <= clientReadSegments.outgoingReadAt ? (
                                                         <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} />
                                                     ) : (
                                                         <Check size={13} strokeWidth={2.5} style={{ opacity: 0.4 }} />
@@ -1390,6 +1481,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         )}
                             </Box>
                         </Box>
+                        </React.Fragment>
                         ))}
                     </>
                 )}
@@ -1427,8 +1519,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 <Paper elevation={0} sx={{
                     p: 0.5,
                     display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: 0.5,
+                    alignItems: 'center',
+                    gap: 0.75,
                     borderRadius: replyingTo ? '0 0 24px 24px' : '24px',
                     bgcolor: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -1437,13 +1529,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         bgcolor: 'rgba(255, 255, 255, 0.05)',
                     }
                 }}>
-                    <IconButton
-                        size="small"
-                        onClick={(e) => setAttachAnchorEl(e.currentTarget)}
-                        sx={{ color: 'text.secondary', p: 1.2 }}
-                    >
-                        <PlusCircle size={22} strokeWidth={1.5} />
-                    </IconButton>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
 
                     <Menu
@@ -1476,14 +1561,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     </Menu>
 
                     <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#0A0908', zIndex: 1 }}>
-                        <ChatDraftInput
-                            key={conversationId}
-                            attachment={attachment}
-                            sending={sending}
-                            isRecording={isRecording}
-                            onSend={handleSend}
-                            onToggleRecording={toggleRecording}
-                        />
+                    <ChatDraftInput
+                        key={conversationId}
+                        attachment={attachment}
+                        sending={sending}
+                        isRecording={isRecording}
+                        onAttach={(e) => setAttachAnchorEl(e.currentTarget)}
+                        onSend={handleSend}
+                        onToggleRecording={toggleRecording}
+                    />
                     </Box>
                 </Paper>
             </Box>

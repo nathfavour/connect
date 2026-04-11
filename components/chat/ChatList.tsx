@@ -36,6 +36,8 @@ import { realtime } from '@/lib/appwrite/client';
 import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
 import { getCachedIdentityById } from '@/lib/identity-cache';
+import { getConversationReadAt } from '@/lib/chat-read-state';
+import { useChatNotifications } from '../providers/ChatNotificationProvider';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
     const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
@@ -74,6 +76,7 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
 
 export const ChatList = () => {
     const { user } = useAuth();
+    const { unreadConversations } = useChatNotifications();
     const router = useRouter();
     const { requestSudo } = useSudo();
     const [conversations, setConversations] = useState<any[]>([]);
@@ -613,19 +616,26 @@ export const ChatList = () => {
                                                 {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                             </Typography>
                                         )}
-                                        {/* Unread Bubble placeholder - visible if last message is not from us and not read */}
-                                        {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (
-                                            <Badge 
-                                                variant="dot" 
-                                                color="primary" 
-                                                sx={{ 
-                                                    '& .MuiBadge-badge': { 
-                                                        bgcolor: '#6366F1',
-                                                        boxShadow: '0 0 8px rgba(99, 102, 241, 0.5)'
-                                                    } 
-                                                }} 
-                                            />
-                                        )}
+                                        {/* Show unread only when the conversation has not been locally marked read */}
+                                        {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (() => {
+                                            const readAt = getConversationReadAt(user?.$id, conv.$id);
+                                            const isUnread = unreadConversations.has(conv.$id) || (
+                                                conv.lastMessageSenderId !== user?.$id &&
+                                                new Date(conv.lastMessageAt).getTime() > readAt
+                                            );
+                                            return isUnread ? (
+                                                <Badge 
+                                                    variant="dot" 
+                                                    color="primary" 
+                                                    sx={{ 
+                                                        '& .MuiBadge-badge': { 
+                                                            bgcolor: '#6366F1',
+                                                            boxShadow: '0 0 8px rgba(99, 102, 241, 0.5)'
+                                                        } 
+                                                    }} 
+                                                />
+                                            ) : null;
+                                        })()}
                                     </Box>
                                 </ListItemButton>
                             </ListItem>
