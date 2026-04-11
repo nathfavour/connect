@@ -35,6 +35,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { realtime } from '@/lib/appwrite/client';
 import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
+import { getCachedIdentityById } from '@/lib/identity-cache';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
     const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
@@ -82,6 +83,7 @@ export const ChatList = () => {
     const [searching, setSearching] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const conversationsRef = React.useRef<any[]>([]);
+    const loadRequestRef = React.useRef(0);
 
     const isLikelyEncrypted = (val: string) => {
         if (!val) return false;
@@ -153,6 +155,7 @@ export const ChatList = () => {
     };
 
     const loadConversations = React.useCallback(async () => {
+        const requestId = ++loadRequestRef.current;
         try {
             if (!ecosystemSecurity.status.isUnlocked) {
                 setConversations([]);
@@ -211,76 +214,53 @@ export const ChatList = () => {
 
             if (!selfChat) {
                 console.log('[ChatList] Self chat not found, auto-initializing...');
-                try {
-                    await ecosystemSecurity.ensureE2EIdentity(user!.$id);
-                    const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
-                    console.log('[ChatList] Self chat created:', newSelfChat.$id);
-                    rows = [newSelfChat, ...rows];
-                } catch (e: unknown) {
-                    console.error('[ChatList] Failed to auto-create self chat', e);
-                }
+                void (async () => {
+                    try {
+                        await ecosystemSecurity.ensureE2EIdentity(user!.$id);
+                        const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
+                        console.log('[ChatList] Self chat created:', newSelfChat.$id);
+                        if (loadRequestRef.current !== requestId) return;
+                        setConversations((current) => {
+                            if (current.some((conv) => conv.$id === newSelfChat.$id)) return current;
+                            const next = [newSelfChat, ...current];
+                            conversationsRef.current = next;
+                            return next;
+                        });
+                    } catch (e: unknown) {
+                        console.error('[ChatList] Failed to auto-create self chat', e);
+                    }
+                })();
             }
 
-            // Enrich with other participant's name and avatar
-            const enriched = await Promise.all(rows.map(async (conv: any) => {
-                if (conv.type === 'direct') {
-                    const isActuallySelf = conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id);
-
-                    if (!isActuallySelf) {
-                        const otherId = conv.participants.find((p: string) => p !== user!.$id);
-                        if (otherId) {
-                            try {
-                                const profile = await UsersService.getProfileById(otherId);
-                                let avatarUrl = null;
-                                if (profile?.avatar?.startsWith?.('http')) {
-                                    avatarUrl = profile.avatar;
-                                } else if (profile?.avatar) {
-                                    try {
-                                        const url = await fetchProfilePreview(profile.avatar, 64, 64);
-                                        avatarUrl = url as unknown as string;
-                                    } catch (_e) {}
-                                }
-                                seedIdentityCache({ ...profile, avatar: profile?.avatar || avatarUrl });
-                                return {
-                                    ...conv,
-                                    otherUserId: otherId,
-                                    name: profile ? (profile.displayName || profile.username) : `@${otherId.slice(0, 7)}`,
-                                    avatarUrl
-                                };
-                            } catch (_e: unknown) {
-                                return { ...conv, name: `@${otherId.slice(0, 7)}` };
-                            }
-                        }
-                    } else {
-                        // Self Chat
-                        const myProfile = await UsersService.getProfileById(user!.$id);
-                        const myName = myProfile ? (myProfile.displayName || myProfile.username) : (user!.name || 'You');
-                        let avatarUrl = null;
-                        if (myProfile?.avatar?.startsWith?.('http')) {
-                            avatarUrl = myProfile.avatar;
-                        } else if (myProfile?.avatar) {
-                            try {
-                                const url = await fetchProfilePreview(myProfile.avatar, 64, 64);
-                                avatarUrl = url as unknown as string;
-                            } catch (_e) {}
-                        }
-                        seedIdentityCache({ ...myProfile, avatar: myProfile?.avatar || avatarUrl });
-                        return {
-                            ...conv,
-                            otherUserId: user!.$id,
-                            name: `${myName} (You)`,
-                            isSelf: true,
-                            avatarUrl
-                        };
-                    }
+            const baseRows = rows.map((conv: any) => {
+                if (conv.type !== 'direct') {
+                    return { ...conv, name: conv.name || 'Group Chat' };
                 }
-                return { ...conv, name: conv.name || 'Group Chat' };
-            }));
 
-            console.log('[ChatList] Enriched conversations count:', enriched.length);
+                const isActuallySelf = conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id);
+                if (isActuallySelf) {
+                    const cachedMe = getCachedIdentityById(user!.$id);
+                    const myName = cachedMe?.displayName || cachedMe?.username || user!.name || 'You';
+                    return {
+                        ...conv,
+                        otherUserId: user!.$id,
+                        name: `${myName} (You)`,
+                        isSelf: true,
+                        avatarUrl: cachedMe?.avatar || null
+                    };
+                }
 
-            // Sort: Self chat always on top if no recent activity, otherwise standard sort
-            const sorted = enriched.sort((a, b) => {
+                const otherId = conv.participants?.find((p: string) => p !== user!.$id);
+                const cachedOther = otherId ? getCachedIdentityById(otherId) : null;
+                return {
+                    ...conv,
+                    otherUserId: otherId,
+                    name: cachedOther?.displayName || cachedOther?.username || (otherId ? `@${otherId.slice(0, 7)}` : 'Direct Chat'),
+                    avatarUrl: cachedOther?.avatar || null
+                };
+            });
+
+            const sorted = baseRows.sort((a, b) => {
                 if (a.isSelf && !a.lastMessageAt) return -1;
                 if (b.isSelf && !b.lastMessageAt) return 1;
                 const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
@@ -288,9 +268,71 @@ export const ChatList = () => {
                 return timeB - timeA;
             });
 
-            console.log('[ChatList] Final sorted list count:', sorted.length);
+            console.log('[ChatList] Base conversations count:', sorted.length);
             setConversations(sorted);
             conversationsRef.current = sorted;
+            setLoading(false);
+
+            void (async () => {
+                const settled = await Promise.allSettled(sorted.map(async (conv: any) => {
+                    if (conv.type !== 'direct') return conv;
+
+                    const isActuallySelf = conv.isSelf || (conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id));
+                    if (isActuallySelf) {
+                        const myProfile = await UsersService.getProfileById(user!.$id);
+                        if (!myProfile) return conv;
+
+                        let avatarUrl = null;
+                        if (myProfile.avatar?.startsWith?.('http')) {
+                            avatarUrl = myProfile.avatar;
+                        } else if (myProfile.avatar) {
+                            try {
+                                avatarUrl = await fetchProfilePreview(myProfile.avatar, 64, 64) as unknown as string;
+                            } catch (_e) {}
+                        }
+                        seedIdentityCache({ ...myProfile, avatar: myProfile.avatar || avatarUrl });
+                        return {
+                            ...conv,
+                            name: `${myProfile.displayName || myProfile.username || user!.name || 'You'} (You)`,
+                            avatarUrl
+                        };
+                    }
+
+                    const otherId = conv.otherUserId || conv.participants?.find((p: string) => p !== user!.$id);
+                    if (!otherId) return conv;
+
+                    const profile = await UsersService.getProfileById(otherId);
+                    if (!profile) return conv;
+
+                    let avatarUrl = null;
+                    if (profile.avatar?.startsWith?.('http')) {
+                        avatarUrl = profile.avatar;
+                    } else if (profile.avatar) {
+                        try {
+                            avatarUrl = await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
+                        } catch (_e) {}
+                    }
+                    seedIdentityCache({ ...profile, avatar: profile.avatar || avatarUrl });
+                    return {
+                        ...conv,
+                        otherUserId: otherId,
+                        name: profile.displayName || profile.username || `@${otherId.slice(0, 7)}`,
+                        avatarUrl
+                    };
+                }));
+
+                if (loadRequestRef.current !== requestId) return;
+                const enriched = settled.map((entry, index) => entry.status === 'fulfilled' ? entry.value : sorted[index]);
+                const next = enriched.sort((a, b) => {
+                    if (a.isSelf && !a.lastMessageAt) return -1;
+                    if (b.isSelf && !b.lastMessageAt) return 1;
+                    const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
+                    const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+                    return timeB - timeA;
+                });
+                setConversations(next);
+                conversationsRef.current = next;
+            })();
         } catch (error: unknown) {
             console.error('Failed to load chats:', error);
         } finally {
