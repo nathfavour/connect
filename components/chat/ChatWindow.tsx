@@ -84,6 +84,91 @@ const MessagesType = {
     SYSTEM: 'system',
 } as const;
 
+const ChatDraftInput = React.memo(function ChatDraftInput({
+    attachment,
+    sending,
+    isRecording,
+    onSend,
+    onToggleRecording,
+}: {
+    attachment: File | null;
+    sending: boolean;
+    isRecording: boolean;
+    onSend: (text: string) => Promise<boolean>;
+    onToggleRecording: () => void;
+}) {
+    const [draft, setDraft] = useState('');
+    const textRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+    const submitDraft = React.useCallback(async () => {
+        const didSend = await onSend(draft);
+        if (didSend) setDraft('');
+    }, [draft, onSend]);
+
+    return (
+        <>
+            <TextField
+                fullWidth
+                multiline
+                maxRows={4}
+                placeholder="Type a message..."
+                value={draft}
+                inputRef={textRef}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void submitDraft();
+                    }
+                }}
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        bgcolor: '#1C1A18',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.2s ease',
+                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
+                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                        '&.Mui-focused fieldset': { borderColor: '#6366F1' },
+                    }
+                }}
+            />
+
+            {draft.trim() || attachment ? (
+                <IconButton
+                    onClick={() => void submitDraft()}
+                    disabled={!draft.trim() && !attachment}
+                    sx={{
+                        bgcolor: '#6366F1',
+                        color: '#000',
+                        width: 42,
+                        height: 42,
+                        borderRadius: '12px',
+                        '&:hover': {
+                            bgcolor: alpha('#6366F1', 0.8),
+                            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                        },
+                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.1)' }
+                    }}
+                >
+                    {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={2} />}
+                </IconButton>
+            ) : (
+                <IconButton
+                    onClick={onToggleRecording}
+                    sx={{
+                        color: isRecording ? '#ff4d4d' : 'text.secondary',
+                        p: 1.2,
+                        animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+                    }}
+                >
+                    {isRecording ? <Square size={24} strokeWidth={1.5} /> : <Mic size={24} strokeWidth={1.5} />}
+                </IconButton>
+            )}
+        </>
+    );
+});
+
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
     const { presence, getPresence } = usePresence() as any;
@@ -91,7 +176,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [conversation, setConversation] = useState<any>(null);
-    const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
@@ -384,21 +468,19 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setMessageAnchorEl(null);
     };
 
-    const handleSend = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if ((!inputText.trim() && !attachment) || !user || sending) return;
+    const handleSend = async (text: string) => {
+        if ((!text.trim() && !attachment) || !user || sending) return false;
 
         // Ensure vault is unlocked before sending in an encrypted conversation
         if (conversation?.isEncrypted && !isUnlocked) {
             setUnlockModalOpen(true);
-            return;
+            return false;
         }
 
-        const text = inputText;
         const file = attachment;
         const replyToId = replyingTo?.$id;
+        const previousReplyingTo = replyingTo;
 
-        setInputText('');
         setAttachment(null);
         setReplyingTo(null);
         setSending(true);
@@ -457,11 +539,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             console.error('Failed to send message:', error);
             // Mark optimistic message as failed
             setMessages(prev => prev.map(m => m.$id === optimisticId ? ({ ...m, status: 'error' } as any) : m));
-            setInputText(text);
             setAttachment(file);
+            setReplyingTo(previousReplyingTo);
+            return false;
         } finally {
             setSending(false);
         }
+
+        return true;
     };
 
     const handleCall = (type: 'audio' | 'video' = 'audio') => {
@@ -1372,63 +1457,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </MenuItem>
                     </Menu>
 
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    maxRows={4}
-                                    placeholder="Type a message..."
-                                    value={inputText}
-                                    onChange={(e) => setInputText(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSend();
-                                        }
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: '12px',
-                                            bgcolor: '#1C1A18',
-                                            fontSize: '0.95rem',
-                                            transition: 'all 0.2s ease',
-                                            '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
-                                            '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
-                                            '&.Mui-focused fieldset': { borderColor: '#6366F1' },
-                                        }
-                                    }}
-                                />
-
-                    {inputText.trim() || attachment ? (
-                                <IconButton 
-                                    onClick={handleSend} 
-                                    disabled={!inputText.trim() && !attachment} 
-                                    sx={{ 
-                                        bgcolor: '#6366F1', 
-                                        color: '#000', 
-                                        width: 42, 
-                                        height: 42, 
-                                        borderRadius: '12px',
-                                        '&:hover': { 
-                                            bgcolor: alpha('#6366F1', 0.8),
-                                            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
-                                        },
-                                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.1)' }
-                                    }}
-                                >
-                                    {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={2} />}
-                                </IconButton>
-                    ) : (
-                        <IconButton
-                            onClick={() => toggleRecording()}
-                            sx={{
-                                color: isRecording ? '#ff4d4d' : 'text.secondary',
-                                p: 1.2,
-                                animation: isRecording ? 'pulse 1.5s infinite' : 'none'
-                            }}
-                        >
-                            {isRecording ? <Square size={24} strokeWidth={1.5} /> : <Mic size={24} strokeWidth={1.5} />}
-                        </IconButton>
-                    )}
+                    <ChatDraftInput
+                        key={conversationId}
+                        attachment={attachment}
+                        sending={sending}
+                        isRecording={isRecording}
+                        onSend={handleSend}
+                        onToggleRecording={toggleRecording}
+                    />
                 </Paper>
             </Box>
 

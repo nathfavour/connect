@@ -542,7 +542,7 @@ export const ChatService = {
             updatedAt: now,
         }, conversationPermissions);
 
-        await Promise.all(uniqueParticipants.map((participantId) =>
+        const memberRows = await Promise.all(uniqueParticipants.map((participantId) =>
             tablesDB.createRow(
                 DB_ID,
                 CONV_MEMBERS_TABLE,
@@ -553,6 +553,21 @@ export const ChatService = {
                 },
                 buildConversationMemberPermissions(uniqueParticipants, creatorId)
             ).catch(() => null)
+        ));
+
+        await Promise.all(memberRows.filter(Boolean).map((memberRow: any) =>
+            callPermissionsApi('POST', {
+                databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+                tableId: CONV_MEMBERS_TABLE,
+                rowId: memberRow.$id,
+                ownerId: creatorId,
+                targetUserIds: uniqueParticipants,
+                permission: 'read',
+                action: 'grant',
+            }).catch((error) => {
+                console.error('[ChatService] Failed to grant conversation member access:', error);
+                throw error;
+            })
         ));
 
         // Cache the local key for this session
@@ -855,10 +870,22 @@ export const ChatService = {
             ]).catch(() => ({ rows: [] as any[] }));
 
             if (!memberRows.rows.length) {
-                await tablesDB.createRow(DB_ID, CONV_MEMBERS_TABLE, ID.unique(), {
+                const memberRow = await tablesDB.createRow(DB_ID, CONV_MEMBERS_TABLE, ID.unique(), {
                     conversationId,
                     userId
                 }, buildConversationMemberPermissions([...participants, userId], conv.creatorId || participants[0] || userId)).catch(() => null);
+
+                if (memberRow?.$id) {
+                    await callPermissionsApi('POST', {
+                        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+                        tableId: CONV_MEMBERS_TABLE,
+                        rowId: memberRow.$id,
+                        ownerId: conv.creatorId || participants[0] || userId,
+                        targetUserIds: [...participants, userId],
+                        permission: 'read',
+                        action: 'grant',
+                    });
+                }
             }
 
             const updated = await this.updateConversation(conversationId, {
