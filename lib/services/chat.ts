@@ -47,7 +47,8 @@ const syncMessagePermissions = async (
     rowId: string,
     recipientIds: string[],
     permission: 'read' | 'write' | 'admin' = 'read',
-    auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string },
+    ownerId?: string
 ) => {
     const targets = Array.from(new Set(recipientIds.filter(Boolean)));
     if (!rowId || targets.length === 0) return;
@@ -57,6 +58,7 @@ const syncMessagePermissions = async (
         rowId,
         targetUserIds: targets,
         permission,
+        ownerId,
     }, auth);
 };
 
@@ -575,6 +577,7 @@ export const ChatService = {
                         await callPermissionsApi('POST', {
                             action: 'rotate_epoch',
                             resourceId: newConv.$id,
+                            ownerId: creatorId,
                             participantUserIds: uniqueParticipants,
                             epochNumber: 1,
                             keyMappings: directLockboxRows.map((entry) => ({
@@ -593,6 +596,7 @@ export const ChatService = {
                             databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
                             tableId: CONV_TABLE,
                             rowId: newConv.$id,
+                            ownerId: creatorId,
                             targetUserIds: recipientIds,
                             permission: 'read',
                             action: 'grant',
@@ -663,7 +667,7 @@ export const ChatService = {
             : [];
 
         if (recipientIds.length > 0) {
-            await syncMessagePermissions(message.$id, recipientIds, 'read', permissionSyncAuth);
+            await syncMessagePermissions(message.$id, recipientIds, 'read', permissionSyncAuth, senderId);
         }
 
         // 2. Best-effort conversation preview update.
@@ -671,6 +675,7 @@ export const ChatService = {
         // derive freshness from message activity instead of depending on this always succeeding.
         if (conversation?.creatorId === senderId) {
             try {
+                const now = new Date().toISOString();
                 await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
                     lastMessageId: message.$id,
                     lastMessageAt: now,
