@@ -137,13 +137,15 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
             {draft.trim() || attachment ? (
                 <IconButton
                     onClick={() => void submitDraft()}
-                    disabled={!draft.trim() && !attachment}
+                    disabled={sending || (!draft.trim() && !attachment)}
                     sx={{
                         bgcolor: '#6366F1',
                         color: '#000',
                         width: 42,
                         height: 42,
                         borderRadius: '12px',
+                        opacity: sending ? 0.82 : 1,
+                        transform: sending ? 'translateY(-1px)' : 'none',
                         '&:hover': {
                             bgcolor: alpha('#6366F1', 0.8),
                             boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
@@ -151,7 +153,23 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.1)' }
                     }}
                 >
-                    {sending ? <CircularProgress size={20} color="inherit" /> : <Send size={20} strokeWidth={2} />}
+                    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Send size={20} strokeWidth={2} />
+                        {sending && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: -2,
+                                    right: -2,
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: '50%',
+                                    bgcolor: '#10B981',
+                                    boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.28)',
+                                }}
+                            />
+                        )}
+                    </Box>
                 </IconButton>
             ) : (
                 <IconButton
