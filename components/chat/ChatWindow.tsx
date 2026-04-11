@@ -18,7 +18,6 @@ import {
     TextField,
     IconButton,
     Button,
-    CircularProgress,
     AppBar,
     Toolbar,
     Menu,
@@ -362,6 +361,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     }, [conversationId, user]);
 
     const loadMessages = React.useCallback(async () => {
+        setLoading(true);
         try {
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
                 await UsersService.forceSyncProfileWithIdentity(user);
@@ -401,6 +401,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     useEffect(() => {
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
+            if (status.isUnlocked && status.hasIdentity) {
+                setLoading(true);
+            }
             setIsUnlocked(status.isUnlocked);
 
             if (status.isUnlocked && status.hasIdentity) {
@@ -1370,7 +1373,23 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     </Box>
                 )}
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} sx={{ color: 'primary.main' }} /></Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, py: 1 }}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                            <Box sx={{ flex: 1 }}>
+                                <Skeleton width="28%" sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                                <Skeleton width="42%" sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                            </Box>
+                        </Stack>
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <Skeleton
+                                key={index}
+                                variant="rounded"
+                                height={68}
+                                sx={{ borderRadius: '18px', bgcolor: 'rgba(255,255,255,0.06)' }}
+                            />
+                        ))}
+                    </Box>
                 ) : (
                     <>
                         {showFirstContactWarning && (
