@@ -146,15 +146,9 @@ export const UsersService = {
                 // Priority 1: Find by the dedicated 'userId' field
                 const result = await tablesDB.listRows(DB_ID, USERS_TABLE, [
                     Query.equal('userId', userId),
-                    Query.limit(2), // Check if more than one exists
+                    Query.limit(1),
                     Query.select(['$id', 'userId', 'username', 'displayName', 'bio', 'avatar', 'publicKey', 'walletAddress', 'preferences', 'tier', 'last_username_edit', 'createdAt', '$createdAt'])
                 ]);
-
-                if (result.total > 1) {
-                    console.warn(`[UsersService] Duplicate profiles detected for ${userId}. Purging for state integrity.`);
-                    await this.purgeAllProfilesForUser(userId);
-                    return null;
-                }
 
                 if (result.rows[0]) return result.rows[0];
 

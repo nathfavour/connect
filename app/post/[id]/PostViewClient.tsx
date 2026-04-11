@@ -46,6 +46,7 @@ import {
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
+import { resolveIdentity, resolveIdentityUsername } from '@/lib/identity-format';
 import { getCachedMomentPreview, seedMomentPreview } from '@/lib/moment-preview';
 import { format } from 'date-fns';
 import { FormattedText } from '@/components/common/FormattedText';
@@ -271,7 +272,7 @@ export function PostViewClient() {
         const replyBox = document.getElementById('reply-box');
         if (replyBox) {
             replyBox.scrollIntoView({ behavior: 'smooth' });
-            setReplyContent(`Quoting @${moment.creator?.username}: `);
+            setReplyContent(`Quoting ${resolveIdentity(moment.creator, creatorId).handle}: `);
         }
     };
 
@@ -335,7 +336,8 @@ export function PostViewClient() {
     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
     const creatorId = moment.userId || moment.creatorId;
     const cachedCreator = getCachedIdentityById(creatorId);
-    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${creatorId.slice(0, 7)}`);
+    const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
+    const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
     const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar);
     const captionIsLong = (moment?.caption || '').length > 280;
 
@@ -391,7 +393,7 @@ export function PostViewClient() {
                         >
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <Avatar 
-                                    onClick={(e) => { e.stopPropagation(); if (moment.sourceMoment?.creator?.username) router.push(`/u/${moment.sourceMoment.creator.username}`); }}
+                                    onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.sourceMoment?.creator, moment.sourceMoment?.userId || moment.sourceMoment?.creatorId); if (username) router.push(`/u/${username}`); }}
                                     src={moment.sourceMoment.creator?.avatar} 
                                     sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}
                                 />
@@ -399,8 +401,8 @@ export function PostViewClient() {
                             </Box>
                             <Box sx={{ flex: 1, pt: 0.2 }}>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username || `@${(moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}`}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
+                                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.4 }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
                                     <Typography variant="caption" sx={{ opacity: 0.3 }}>· {format(new Date(moment.sourceMoment.$createdAt || moment.sourceMoment.createdAt), 'MMM d')}</Typography>
                                 </Stack>
                                 <FormattedText 
@@ -434,7 +436,7 @@ export function PostViewClient() {
                     <CardHeader
                         avatar={
                                 <Avatar 
-                                    onClick={(e) => { e.stopPropagation(); if (!isOwnPost && moment.creator?.username) router.push(`/u/${moment.creator.username}`); if (isOwnPost && moment.creator?.username) router.push(`/u/${moment.creator.username}`); }}
+                                    onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }}
                                     src={creatorAvatar}
                                     sx={{ 
                                         width: 52, 
@@ -460,7 +462,7 @@ export function PostViewClient() {
                         }
                         subheader={
                             <Typography variant="caption" sx={{ opacity: 0.4, fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '0.02em' }}>
-                                @{moment.creator?.username || creatorId.slice(0, 7)}
+                                {resolvedCreator.handle}
                             </Typography>
                         }
                         action={
@@ -749,7 +751,8 @@ export function PostViewClient() {
                 <Stack spacing={2} sx={{ mt: 4 }}>
                     {replies.map((reply) => {
                         const rCreatorId = reply.userId || reply.creatorId;
-                        const rCreatorName = reply.creator?.displayName || reply.creator?.username || `@${rCreatorId.slice(0, 7)}`;
+                        const rResolvedCreator = resolveIdentity(reply.creator, rCreatorId);
+                        const rCreatorName = rResolvedCreator.displayName;
                         return (
                             <Box 
                                 key={reply.$id} 
@@ -773,7 +776,7 @@ export function PostViewClient() {
                                 <Box sx={{ flex: 1 }}>
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'white' }}>{rCreatorName}</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{reply.creator?.username || rCreatorId.slice(0, 7)}</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>{rResolvedCreator.handle}</Typography>
                                         <Typography variant="caption" sx={{ opacity: 0.3 }}>· {format(new Date(reply.$createdAt), 'MMM d')}</Typography>
                                     </Stack>
                                     <FormattedText 

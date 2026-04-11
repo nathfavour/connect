@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
+import { resolveIdentity } from '@/lib/identity-format';
 import { PostViewClient } from './PostViewClient';
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -10,7 +11,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
         const creatorId = moment.userId || moment.creatorId;
         const creator = await UsersService.getProfileById(creatorId);
         
-        const title = `@${creator?.username || creatorId.slice(0, 7)} on Kylrix Connect`;
+        const title = `${resolveIdentity(creator, creatorId).handle} on Kylrix Connect`;
         const description = moment.caption?.substring(0, 160) || "Check out this Moment on Kylrix Connect.";
         const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
         const url = `https://connect.${domain}/post/${id}`;
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
                 card: 'summary_large_image',
                 title,
                 description,
-                creator: `@${creator?.username}`,
+                creator: resolveIdentity(creator, creatorId).handle,
             },
         };
     } catch (_e: unknown) {

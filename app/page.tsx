@@ -58,7 +58,7 @@ export default function Home() {
         {tabValue === 2 ? (
           <Feed view="search" />
         ) : (
-          <Feed view={tabValue === 0 ? 'personal' : 'trending'} key={tabValue === 0 ? 'personal' : 'trending'} />
+          <Feed view={tabValue === 0 ? 'personal' : 'trending'} />
         )}
       </Container>
     </AppShell>

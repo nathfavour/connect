@@ -55,6 +55,7 @@ import { useRouter } from 'next/navigation';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
+import { resolveIdentity, resolveIdentityUsername } from '@/lib/identity-format';
 import { seedMomentPreview } from '@/lib/moment-preview';
 import { FormattedText } from '../common/FormattedText';
 import { NoteSelectorModal } from './NoteSelectorModal';
@@ -116,7 +117,7 @@ const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], on
                 {pendingMoments.slice(0, 3).map((m, i) => (
                                     <Avatar 
                                         key={m.$id} 
-                                        onClick={(e) => { e.stopPropagation(); if (m.creator?.username) { router.push(`/u/${m.creator.username}`); } }}
+                                        onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(m.creator, m.userId || m.creatorId); if (username) { router.push(`/u/${username}`); } }}
                                         src={m.creator?.avatar} 
                                         sx={{ 
                                             width: 24, 
@@ -130,7 +131,7 @@ const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], on
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        {m.creator?.username?.charAt(0).toUpperCase()}
+                                        {resolveIdentity(m.creator, m.userId || m.creatorId).displayName.charAt(0).toUpperCase()}
                                     </Avatar>
                 ))}
             </Box>
@@ -183,23 +184,44 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [editingMoment, setEditingMoment] = useState<any>(null);
     const momentsRef = React.useRef<any[]>([]);
+    const feedCacheRef = React.useRef<Record<string, any[]>>({});
+    const feedCacheAgeRef = React.useRef<Record<string, number>>({});
+    const feedLoadSeqRef = React.useRef(0);
+    const feedPrefetchRef = React.useRef<Record<string, Promise<void>>>({});
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
     useEffect(() => {
-        // Hydrate from localStorage immediately on mount
+        // Hydrate the current view immediately so tab switches feel instant.
         momentsRef.current = [];
-        const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
-        if (cached) {
-            const parsed = JSON.parse(cached);
-            momentsRef.current = parsed;
-            setMoments(parsed);
+        const memoryCached = feedCacheRef.current[view];
+        const storageCached = memoryCached || (() => {
+            const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
+            if (!cached) return null;
+            try {
+                const parsed = JSON.parse(cached);
+                feedCacheRef.current[view] = parsed;
+                return parsed;
+            } catch {
+                return null;
+            }
+        })();
+
+        if (storageCached) {
+            momentsRef.current = storageCached;
+            setMoments(storageCached);
+            setLoading(false);
+        } else {
+            setLoading(true);
         }
     }, [view]);
 
     const saveToCache = useCallback((data: any[]) => {
-        localStorage.setItem(`${CACHE_KEY}_${view}`, JSON.stringify(data.slice(0, 50)));
+        const sliced = data.slice(0, 50);
+        feedCacheRef.current[view] = sliced;
+        feedCacheAgeRef.current[view] = Date.now();
+        localStorage.setItem(`${CACHE_KEY}_${view}`, JSON.stringify(sliced));
     }, [view]);
 
     const fetchUserAvatar = useCallback(async () => {
@@ -263,21 +285,34 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     };
 
     const loadFeed = useCallback(async () => {
-        // Phase 0: Show cached content immediately if available
-        if (momentsRef.current.length === 0) {
-            const cached = localStorage.getItem(`${CACHE_KEY}_${view}`);
-            if (cached) {
-                setMoments(JSON.parse(cached));
-            } else {
-                momentsRef.current = [];
-                setLoading(true);
-            }
+        if (view === 'search') {
+            setLoading(false);
+            return;
         }
+
+        const requestId = ++feedLoadSeqRef.current;
+        const cached = feedCacheRef.current[view];
+        const cachedAt = feedCacheAgeRef.current[view] || 0;
+        const cacheFresh = cached && (Date.now() - cachedAt) < 30_000;
+
+        // Keep the cached view visible while we decide whether to refresh.
+        if (cached) {
+            momentsRef.current = cached;
+            setMoments(cached);
+            setLoading(false);
+        } else {
+            setLoading(true);
+            momentsRef.current = [];
+        }
+
+        if (cacheFresh) return;
         
         try {
             const response = view === 'trending' ? 
                 await SocialService.getTrendingFeed(user?.$id) : 
                 await SocialService.getFeed(user?.$id);
+
+            if (requestId !== feedLoadSeqRef.current) return;
                 
             const freshRows = response?.rows || [];
             // Filter out current user's own direct posts from the feed source
@@ -309,6 +344,33 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             momentsRef.current = updated;
             setMoments(updated);
             saveToCache(updated);
+            const oppositeView = view === 'personal' ? 'trending' : view === 'trending' ? 'personal' : null;
+            if (oppositeView && !feedCacheRef.current[oppositeView]) {
+                window.setTimeout(() => {
+                    if (feedPrefetchRef.current[oppositeView]) return;
+                    feedPrefetchRef.current[oppositeView] = (async () => {
+                        try {
+                            const response = oppositeView === 'trending'
+                                ? await SocialService.getTrendingFeed(user?.$id)
+                                : await SocialService.getFeed(user?.$id);
+                            const rows = response?.rows || [];
+                            const filtered = rows.filter((m: any) => {
+                                const creatorId = m.userId || m.creatorId;
+                                const type = m.metadata?.type || 'post';
+                                if (user?.$id && creatorId === user.$id && type === 'post') return false;
+                                return true;
+                            });
+                            feedCacheRef.current[oppositeView] = filtered.slice(0, 50);
+                            feedCacheAgeRef.current[oppositeView] = Date.now();
+                            localStorage.setItem(`${CACHE_KEY}_${oppositeView}`, JSON.stringify(filtered.slice(0, 50)));
+                        } catch (_e) {
+                            // best effort
+                        } finally {
+                            delete feedPrefetchRef.current[oppositeView];
+                        }
+                    })();
+                }, 0);
+            }
 
             setLoading(false);
 
@@ -320,6 +382,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 
                 try {
                     const profile = await UsersService.getProfileById(id);
+                    if (requestId !== feedLoadSeqRef.current) return;
                     let avatar = null;
                     if (profile?.avatar && !String(profile.avatar).startsWith('http') && profile.avatar.length > 5) {
                         avatar = String(profile.avatar).startsWith('http')
@@ -355,8 +418,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             });
                 } catch (_e) {
                     const fallbackProfile = {
-                        username: id.slice(0, 7),
-                        displayName: `@${id.slice(0, 7)}`,
+                        username: 'user',
+                        displayName: 'User',
                         $id: id,
                         userId: id,
                         avatar: null
@@ -380,7 +443,9 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 setMoments([]);
             }
         } finally {
-            setLoading(false);
+            if (requestId === feedLoadSeqRef.current) {
+                setLoading(false);
+            }
         }
     }, [user, view, saveToCache]);
 
@@ -424,6 +489,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     }, [moments]);
 
     useEffect(() => {
+        if (view === 'search') return;
         loadFeed();
     }, [view, user?.$id, loadFeed]);
 
@@ -698,7 +764,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 await ChatService.sendMessage(
                     savedChat.$id,
                     user.$id,
-                    `Forwarded Moment from @${moment.creator?.username}:\n\n${moment.caption}`,
+                    `Forwarded Moment from ${resolveIdentity(moment.creator, moment.userId || moment.creatorId).handle}:\n\n${moment.caption}`,
                     'text'
                 );
                 alert('Saved to Messages');
@@ -887,8 +953,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
                                     const creatorId = moment.userId || moment.creatorId;
                                     const cachedCreator = getCachedIdentityById(creatorId);
-                                    const shortCreatorId = creatorId?.slice(0, 7) || 'user';
-                                    const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${shortCreatorId}`);
+                                    const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
+                                    const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
                                     const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                                     return (
@@ -906,7 +972,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             elevation={0}
                                         >
                                             <CardHeader
-                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); if (moment.creator?.username) router.push(`/u/${moment.creator.username}`); }} src={creatorAvatar} sx={{ width: 32, height: 32, borderRadius: '8px', cursor: 'pointer' }} />}
+                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }} src={creatorAvatar} sx={{ width: 32, height: 32, borderRadius: '8px', cursor: 'pointer' }} />}
                                                 title={<Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{creatorName}</Typography>}
                                                 subheader={<Typography variant="caption" sx={{ opacity: 0.5 }}>{new Date(moment.createdAt).toLocaleDateString()}</Typography>}
                                             />
@@ -1140,7 +1206,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                         <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                                Quoting @{pulseTarget.creator?.username || (pulseTarget.userId || pulseTarget.creatorId)?.slice(0, 7)}
+                                                Quoting {resolveIdentity(pulseTarget.creator, pulseTarget.userId || pulseTarget.creatorId).handle}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                                                 {pulseTarget.caption?.substring(0, 60)}...
@@ -1287,8 +1353,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
                 const creatorId = moment.userId || moment.creatorId;
                 const cachedCreator = getCachedIdentityById(creatorId);
-                const shortCreatorId = creatorId?.slice(0, 7) || 'user';
-                const creatorName = isOwnPost ? (user?.name || 'You') : (moment.creator?.displayName || moment.creator?.username || cachedCreator?.displayName || cachedCreator?.username || `@${shortCreatorId}`);
+                const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
+                const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
                 const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                 return (
@@ -1395,7 +1461,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 }}>
                                     <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 18, height: 18, borderRadius: '5px' }} />
                                     <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
-                                        Replying to @{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}
+                                        Replying to {resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ 
@@ -1485,8 +1551,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             }}>
                                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                                     <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
                                 </Stack>
                                 <Typography variant="body2" sx={{ 
                                     opacity: 0.7, 
@@ -1513,8 +1579,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             }}>
                                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                                     <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{moment.sourceMoment.creator?.displayName || moment.sourceMoment.creator?.username}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>@{moment.sourceMoment.creator?.username || (moment.sourceMoment.userId || moment.sourceMoment.creatorId)?.slice(0, 7)}</Typography>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
                                 </Stack>
                                 <Typography variant="body2" sx={{ 
                                     opacity: 0.7, 
