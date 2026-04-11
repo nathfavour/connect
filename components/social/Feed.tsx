@@ -87,6 +87,341 @@ const FeedSkeleton = () => (
     </Stack>
 );
 
+type ComposerFilePreview = {
+    file: File;
+    url: string;
+};
+
+const PostComposer = React.memo(function PostComposer({
+    isMobile,
+    isOpen,
+    user,
+    userAvatarUrl,
+    editingMoment,
+    selectedNote,
+    selectedEvent,
+    selectedCall,
+    pulseTarget,
+    selectedFiles,
+    posting,
+    onCancel,
+    onSubmit,
+    onSelectFiles,
+    onOpenNote,
+    onOpenEvent,
+    onOpenCall,
+    onClearNote,
+    onClearEvent,
+    onClearCall,
+    onClearPulseTarget,
+    onRemoveFile,
+    composerKey,
+}: {
+    isMobile: boolean;
+    isOpen: boolean;
+    user: any;
+    userAvatarUrl: string | null;
+    editingMoment: any;
+    selectedNote: any;
+    selectedEvent: any;
+    selectedCall: any;
+    pulseTarget: any;
+    selectedFiles: File[];
+    posting: boolean;
+    composerKey: string;
+    onCancel: () => void;
+    onSubmit: (content: string) => Promise<void>;
+    onSelectFiles: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onOpenNote: () => void;
+    onOpenEvent: () => void;
+    onOpenCall: () => void;
+    onClearNote: () => void;
+    onClearEvent: () => void;
+    onClearCall: () => void;
+    onClearPulseTarget: () => void;
+    onRemoveFile: (index: number) => void;
+}) {
+    const [draft, setDraft] = React.useState(editingMoment?.caption || '');
+    const textRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+    const [filePreviews, setFilePreviews] = React.useState<ComposerFilePreview[]>([]);
+
+    React.useEffect(() => {
+        setDraft(editingMoment?.caption || '');
+        const t = setTimeout(() => {
+            textRef.current?.focus();
+        }, 0);
+        return () => clearTimeout(t);
+    }, [composerKey, editingMoment?.caption]);
+
+    React.useEffect(() => {
+        const previews = selectedFiles.map((file) => ({
+            file,
+            url: URL.createObjectURL(file),
+        }));
+        setFilePreviews(previews);
+        return () => {
+            previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+        };
+    }, [selectedFiles]);
+
+    const canSubmit = Boolean(
+        draft.trim() || selectedNote || selectedEvent || selectedCall || pulseTarget || selectedFiles.length > 0
+    );
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={isMobile ? { opacity: 0, y: 100 } : { opacity: 1, y: 0 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={isMobile ? { opacity: 0, y: 100 } : undefined}
+                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                    style={isMobile ? {
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 2000,
+                        padding: '16px',
+                        background: '#0A0908',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '24px 24px 0 0',
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
+                    } : {}}
+                >
+                    <Card sx={{
+                        mb: isMobile ? 0 : 4,
+                        borderRadius: isMobile ? '16px' : '24px',
+                        bgcolor: isMobile ? 'transparent' : 'rgba(255, 255, 255, 0.03)',
+                        border: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)'
+                    }} elevation={0}>
+                        <CardContent sx={{ p: isMobile ? 1 : 3 }}>
+                            {isMobile && (
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                    <IconButton onClick={onCancel} sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                                        <X size={20} />
+                                    </IconButton>
+                                </Box>
+                            )}
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <Avatar
+                                    src={userAvatarUrl || undefined}
+                                    sx={{ bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B', fontWeight: 800 }}
+                                >
+                                    {user.name?.charAt(0).toUpperCase() || 'U'}
+                                </Avatar>
+                                <TextField
+                                    fullWidth
+                                    placeholder={editingMoment ? 'Update your moment...' : 'Share an update with the ecosystem...'}
+                                    multiline
+                                    rows={isMobile ? 4 : 2}
+                                    variant="standard"
+                                    inputRef={textRef}
+                                    InputProps={{
+                                        disableUnderline: true,
+                                        sx: { fontSize: '1.1rem', fontWeight: 500 }
+                                    }}
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                />
+                            </Box>
+                            {editingMoment && (
+                                <Box sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, letterSpacing: '0.05em' }}>
+                                        EDITING MODE
+                                    </Typography>
+                                    <Button
+                                        size="small"
+                                        onClick={onCancel}
+                                        sx={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)' }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </Box>
+                            )}
+                            {selectedNote && (
+                                <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', bgcolor: 'rgba(0, 240, 255, 0.03)', borderColor: 'rgba(0, 240, 255, 0.2)', position: 'relative' }}>
+                                    <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                            {selectedNote.title || 'Untitled Note'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                            {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
+                                        </Typography>
+                                    </Box>
+                                    <IconButton size="small" onClick={onClearNote} sx={{ ml: 1 }}>
+                                        <X size={16} strokeWidth={1.5} />
+                                    </IconButton>
+                                </Paper>
+                            )}
+                            {selectedEvent && (
+                                <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', bgcolor: 'rgba(0, 163, 255, 0.03)', borderColor: 'rgba(0, 163, 255, 0.2)', position: 'relative' }}>
+                                    <Calendar size={20} color="#00A3FF" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                            {selectedEvent.title || 'Untitled Event'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                            {new Date(selectedEvent.startTime).toLocaleString()}
+                                        </Typography>
+                                    </Box>
+                                    <IconButton size="small" onClick={onClearEvent} sx={{ ml: 1 }}>
+                                        <X size={16} strokeWidth={1.5} />
+                                    </IconButton>
+                                </Paper>
+                            )}
+                            {selectedCall && (
+                                <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', bgcolor: 'rgba(245, 158, 11, 0.03)', borderColor: 'rgba(245, 158, 11, 0.2)', position: 'relative' }}>
+                                    {selectedCall.type === 'video' ? <Video size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} />}
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                            {selectedCall.title || `${selectedCall.type.charAt(0).toUpperCase() + selectedCall.type.slice(1)} Call`}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                            Starts: {new Date(selectedCall.startsAt).toLocaleString()}
+                                        </Typography>
+                                    </Box>
+                                    <IconButton size="small" onClick={onClearCall} sx={{ ml: 1 }}>
+                                        <X size={16} strokeWidth={1.5} />
+                                    </IconButton>
+                                </Paper>
+                            )}
+                            {pulseTarget && (
+                                <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 3, bgcolor: 'rgba(16, 185, 129, 0.03)', borderColor: 'rgba(16, 185, 129, 0.2)', position: 'relative' }}>
+                                    <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography variant="subtitle2" fontWeight={800} noWrap>
+                                            Quoting {resolveIdentity(pulseTarget.creator, pulseTarget.userId || pulseTarget.creatorId).handle}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                                            {pulseTarget.caption?.substring(0, 60)}...
+                                        </Typography>
+                                    </Box>
+                                    <IconButton size="small" onClick={onClearPulseTarget} sx={{ ml: 1 }}>
+                                        <X size={16} strokeWidth={1.5} />
+                                    </IconButton>
+                                </Paper>
+                            )}
+                            {filePreviews.length > 0 && (
+                                <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                                    {filePreviews.map((preview, idx) => (
+                                        <Box key={`${preview.file.name}-${preview.file.lastModified}-${idx}`} sx={{ position: 'relative', width: 80, height: 80 }}>
+                                            <Box
+                                                component="img"
+                                                src={preview.url}
+                                                sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}
+                                            />
+                                            <IconButton
+                                                size="small"
+                                                sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+                                                onClick={() => onRemoveFile(idx)}
+                                            >
+                                                <X size={12} color="white" />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            )}
+                        </CardContent>
+                        <Divider sx={{ opacity: 0.05 }} />
+                        <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    id="media-upload"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                        onSelectFiles(e);
+                                        e.currentTarget.value = '';
+                                    }}
+                                />
+                                <label htmlFor="media-upload">
+                                    <IconButton
+                                        component="span"
+                                        sx={{
+                                            borderRadius: '10px',
+                                            color: '#F59E0B',
+                                            '&:hover': { bgcolor: alpha('#F59E0B', 0.1) }
+                                        }}
+                                    >
+                                        <ImageIcon size={20} strokeWidth={1.5} />
+                                    </IconButton>
+                                </label>
+                                <Button
+                                    startIcon={<FileText size={18} strokeWidth={1.5} />}
+                                    onClick={onOpenNote}
+                                    sx={{
+                                        borderRadius: '10px',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        color: 'text.secondary',
+                                        minWidth: 0,
+                                        px: 1.5,
+                                        '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
+                                    }}
+                                >
+                                    {!isMobile && 'Note'}
+                                </Button>
+                                <Button
+                                    startIcon={<Calendar size={18} strokeWidth={1.5} />}
+                                    onClick={onOpenEvent}
+                                    sx={{
+                                        borderRadius: '10px',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        color: 'text.secondary',
+                                        minWidth: 0,
+                                        px: 1.5,
+                                        '&:hover': { color: 'primary.main', bgcolor: 'rgba(99, 102, 241, 0.05)' }
+                                    }}
+                                >
+                                    {!isMobile && 'Event'}
+                                </Button>
+                                <Button
+                                    startIcon={<Phone size={18} strokeWidth={1.5} />}
+                                    onClick={onOpenCall}
+                                    sx={{
+                                        borderRadius: '10px',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        color: 'text.secondary',
+                                        minWidth: 0,
+                                        px: 1.5,
+                                        '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) }
+                                    }}
+                                >
+                                    {!isMobile && 'Call'}
+                                </Button>
+                            </Box>
+                            <Button
+                                variant="contained"
+                                disabled={!canSubmit || posting}
+                                onClick={async () => {
+                                    await onSubmit(draft);
+                                }}
+                                sx={{
+                                    borderRadius: '12px',
+                                    px: 4,
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    bgcolor: '#F59E0B',
+                                    color: 'black',
+                                    '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
+                                }}
+                            >
+                                {posting ? <CircularProgress size={20} color="inherit" /> : (editingMoment ? 'Update' : 'Post')}
+                            </Button>
+                        </CardActions>
+                    </Card>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+});
+
 const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], onClick: () => void }) => {
     const router = useRouter();
     return (
@@ -151,7 +486,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const router = useRouter();
     const [moments, setMoments] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [newMoment, setNewMoment] = useState('');
     const [posting, setPosting] = useState(false);
     const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
     const [pendingMoments, setPendingMoments] = useState<any[]>([]);
@@ -172,6 +506,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
     const [viewingEvent, setViewingEvent] = useState<any>(null);
     const [isCallModalOpen, setIsCallSelectorOpen] = useState(false);
+    const [composerResetToken, setComposerResetToken] = useState(0);
     const [postMenuAnchorEl, setPostMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
@@ -544,7 +879,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
     const handleEditMoment = (moment: any) => {
         setEditingMoment(moment);
-        setNewMoment(moment.caption || '');
         // If there are attachments, we'd ideally load them here, but for now we focus on caption
         setPulseTarget(moment.sourceMoment || null);
         setIsComposerOpen(true);
@@ -552,13 +886,24 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handlePost = async () => {
-        if (!newMoment.trim() && !selectedNote && !selectedEvent && !selectedCall && !pulseTarget && selectedFiles.length === 0) return;
+    const handleCancelComposer = useCallback(() => {
+        setEditingMoment(null);
+        setSelectedNote(null);
+        setSelectedEvent(null);
+        setSelectedCall(null);
+        setPulseTarget(null);
+        setSelectedFiles([]);
+        setComposerResetToken((value) => value + 1);
+        if (isMobile) setIsComposerOpen(false);
+    }, [isMobile]);
+
+    const handlePost = async (draftText: string) => {
+        if (!draftText.trim() && !selectedNote && !selectedEvent && !selectedCall && !pulseTarget && selectedFiles.length === 0) return;
         setPosting(true);
         try {
             if (editingMoment) {
                 // Update existing moment
-                const updated = await SocialService.updateMoment(editingMoment.$id, newMoment);
+                const updated = await SocialService.updateMoment(editingMoment.$id, draftText);
                 const enriched = await SocialService.enrichMoment(updated, user!.$id);
                 setMoments(prev => {
                     const next = prev.map(m => m.$id === enriched.$id ? { ...m, ...enriched } : m);
@@ -578,7 +923,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 }
 
                 const type = pulseTarget ? 'quote' : 'post';
-                const createdMoment = await SocialService.createMoment(user!.$id, newMoment, type, mediaIds, 'public', selectedNote?.$id, selectedEvent?.$id, pulseTarget?.$id, selectedCall?.$id);
+                const createdMoment = await SocialService.createMoment(user!.$id, draftText, type, mediaIds, 'public', selectedNote?.$id, selectedEvent?.$id, pulseTarget?.$id, selectedCall?.$id);
                 
                 // Enrich and add to local state immediately for instant feedback
                 const enriched = await SocialService.enrichMoment(createdMoment, user!.$id);
@@ -591,14 +936,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 });
                 toast.success('Moment shared');
             }
-
-            setNewMoment('');
-            setSelectedNote(null);
-            setSelectedEvent(null);
-            setSelectedCall(null);
-            setPulseTarget(null);
-            setSelectedFiles([]);
-            setEditingMoment(null);
+            handleCancelComposer();
             // Scroll to top to see own post
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error: unknown) {
@@ -1017,324 +1355,33 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 />
             )}
             {/* Create Post */}
-            {user && (!isMobile || isComposerOpen) && (
-                <AnimatePresence>
-                    <motion.div
-                        initial={isMobile ? { opacity: 0, y: 100 } : { opacity: 1, y: 0 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={isMobile ? { opacity: 0, y: 100 } : undefined}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        style={isMobile ? {
-                            position: 'fixed',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            zIndex: 2000,
-                            padding: '16px',
-                            background: '#0A0908',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '24px 24px 0 0',
-                            boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
-                        } : {}}
-                    >
-                        <Card sx={{ 
-                            mb: isMobile ? 0 : 4, 
-                            borderRadius: isMobile ? '16px' : '24px', 
-                            bgcolor: isMobile ? 'transparent' : 'rgba(255, 255, 255, 0.03)', 
-                            border: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)' 
-                        }} elevation={0}>
-                            <CardContent sx={{ p: isMobile ? 1 : 3 }}>
-                                {isMobile && (
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                        <IconButton onClick={() => setIsComposerOpen(false)} sx={{ color: 'rgba(255,255,255,0.3)' }}>
-                                            <X size={20} />
-                                        </IconButton>
-                                    </Box>
-                                )}
-                                <Box sx={{ display: 'flex', gap: 2 }}>
-                                    <Avatar
-                                        src={userAvatarUrl || undefined}
-                                        sx={{ bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B', fontWeight: 800 }}
-                                    >
-                                        {user.name?.charAt(0).toUpperCase() || 'U'}
-                                    </Avatar>
-                                    <TextField
-                                        fullWidth
-                                        placeholder={editingMoment ? "Update your moment..." : "Share an update with the ecosystem..."}
-                                        multiline
-                                        rows={isMobile ? 4 : 2}
-                                        variant="standard"
-                                        InputProps={{
-                                            disableUnderline: true,
-                                            sx: { fontSize: '1.1rem', fontWeight: 500 }
-                                        }}
-                                        value={newMoment}
-                                        onChange={(e) => setNewMoment(e.target.value)}
-                                        autoFocus={isMobile || !!editingMoment}
-                                    />
-                                </Box>
-                                {editingMoment && (
-                                    <Box sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, letterSpacing: '0.05em' }}>
-                                            EDITING MODE
-                                        </Typography>
-                                        <Button 
-                                            size="small" 
-                                            onClick={() => {
-                                                setEditingMoment(null);
-                                                setNewMoment('');
-                                                if (isMobile) setIsComposerOpen(false);
-                                            }}
-                                            sx={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)' }}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </Box>
-                                )}
-                                {/* ... rest of the selected attachments ... */}
-                                {selectedNote && (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            mt: 2,
-                                            p: 2,
-                                            borderRadius: 3,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            bgcolor: 'rgba(0, 240, 255, 0.03)',
-                                            borderColor: 'rgba(0, 240, 255, 0.2)',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                                {selectedNote.title || 'Untitled Note'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                                {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
-                                            </Typography>
-                                        </Box>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setSelectedNote(null)}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            <X size={16} strokeWidth={1.5} />
-                                        </IconButton>
-                                    </Paper>
-                                )}
-
-                                {selectedEvent && (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            mt: 2,
-                                            p: 2,
-                                            borderRadius: 3,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            bgcolor: 'rgba(0, 163, 255, 0.03)',
-                                            borderColor: 'rgba(0, 163, 255, 0.2)',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <Calendar size={20} color="#00A3FF" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                                {selectedEvent.title || 'Untitled Event'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                                {new Date(selectedEvent.startTime).toLocaleString()}
-                                            </Typography>
-                                        </Box>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setSelectedEvent(null)}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            <X size={16} strokeWidth={1.5} />
-                                        </IconButton>
-                                    </Paper>
-                                )}
-
-                                {selectedCall && (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            mt: 2,
-                                            p: 2,
-                                            borderRadius: 3,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            bgcolor: 'rgba(245, 158, 11, 0.03)',
-                                            borderColor: 'rgba(245, 158, 11, 0.2)',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        {selectedCall.type === 'video' ? <Video size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" style={{ marginRight: '16px' }} strokeWidth={1.5} />}
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                                {selectedCall.title || `${selectedCall.type.charAt(0).toUpperCase() + selectedCall.type.slice(1)} Call`}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                                Starts: {new Date(selectedCall.startsAt).toLocaleString()}
-                                            </Typography>
-                                        </Box>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setSelectedCall(null)}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            <X size={16} strokeWidth={1.5} />
-                                        </IconButton>
-                                    </Paper>
-                                )}
-
-                                {pulseTarget && (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            mt: 2,
-                                            p: 2,
-                                            borderRadius: 3,
-                                            bgcolor: 'rgba(16, 185, 129, 0.03)',
-                                            borderColor: 'rgba(16, 185, 129, 0.2)',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <Repeat2 size={20} color="#10B981" style={{ marginRight: '16px' }} strokeWidth={1.5} />
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography variant="subtitle2" fontWeight={800} noWrap>
-                                                Quoting {resolveIdentity(pulseTarget.creator, pulseTarget.userId || pulseTarget.creatorId).handle}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                                {pulseTarget.caption?.substring(0, 60)}...
-                                            </Typography>
-                                        </Box>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setPulseTarget(null)}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            <X size={16} strokeWidth={1.5} />
-                                        </IconButton>
-                                    </Paper>
-                                )}
-
-                                {selectedFiles.length > 0 && (
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                                        {selectedFiles.map((file, idx) => (
-                                            <Box key={idx} sx={{ position: 'relative', width: 80, height: 80 }}>
-                                                <Box 
-                                                    component="img" 
-                                                    src={URL.createObjectURL(file)} 
-                                                    sx={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }} 
-                                                />
-                                                <IconButton 
-                                                    size="small" 
-                                                    sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'rgba(0,0,0,0.6)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
-                                                    onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                                                >
-                                                    <X size={12} color="white" />
-                                                </IconButton>
-                                            </Box>
-                                        ))}
-                                    </Box>
-                                )}
-                            </CardContent>
-                            <Divider sx={{ opacity: 0.05 }} />
-                            <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
-                                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        id="media-upload"
-                                        style={{ display: 'none' }}
-                                        onChange={handleFileSelect}
-                                    />
-                                    <label htmlFor="media-upload">
-                                        <IconButton 
-                                            component="span" 
-                                            sx={{ 
-                                                borderRadius: '10px', 
-                                                color: '#F59E0B', 
-                                                '&:hover': { bgcolor: alpha('#F59E0B', 0.1) } 
-                                            }}
-                                        >
-                                            <ImageIcon size={20} strokeWidth={1.5} />
-                                        </IconButton>
-                                    </label>
-                                    <Button
-                                        startIcon={<FileText size={18} strokeWidth={1.5} />}
-                                        onClick={() => setIsNoteSelectorOpen(true)}
-                                        sx={{
-                                            borderRadius: '10px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            color: 'text.secondary',
-                                            minWidth: 0,
-                                            px: 1.5,
-                                            '&:hover': { color: 'primary.main', bgcolor: 'rgba(0, 240, 255, 0.05)' }
-                                        }}
-                                    >
-                                        {!isMobile && 'Note'}
-                                    </Button>
-                                    <Button
-                                        startIcon={<Calendar size={18} strokeWidth={1.5} />}
-                                        onClick={() => setIsEventSelectorOpen(true)}
-                                        sx={{
-                                            borderRadius: '10px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            color: 'text.secondary',
-                                            minWidth: 0,
-                                            px: 1.5,
-                                            '&:hover': { color: 'primary.main', bgcolor: 'rgba(99, 102, 241, 0.05)' }
-                                        }}
-                                    >
-                                        {!isMobile && 'Event'}
-                                    </Button>
-                                    <Button
-                                        startIcon={<Phone size={18} strokeWidth={1.5} />}
-                                        onClick={() => setIsCallSelectorOpen(true)}
-                                        sx={{
-                                            borderRadius: '10px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            color: 'text.secondary',
-                                            minWidth: 0,
-                                            px: 1.5,
-                                            '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) }
-                                        }}
-                                    >
-                                        {!isMobile && 'Call'}
-                                    </Button>
-                                </Box>
-                                <Button
-                                    variant="contained"
-                                    disabled={(!newMoment.trim() && !selectedNote && !selectedEvent && !selectedCall && selectedFiles.length === 0) || posting}
-                                    onClick={async () => {
-                                        await handlePost();
-                                        if (isMobile) setIsComposerOpen(false);
-                                    }}
-                                    sx={{
-                                        borderRadius: '12px',
-                                        px: 4,
-                                        fontWeight: 800,
-                                        textTransform: 'none',
-                                        bgcolor: '#F59E0B',
-                                        color: 'black',
-                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
-                                    }}
-                                >
-                                    {posting ? <CircularProgress size={20} color="inherit" /> : (editingMoment ? 'Update' : 'Post')}
-                                </Button>
-                            </CardActions>
-                        </Card>
-                    </motion.div>
-                </AnimatePresence>
+            {user && (
+                <PostComposer
+                    key={composerResetToken}
+                    composerKey={`${editingMoment?.$id || 'new'}-${composerResetToken}`}
+                    isMobile={isMobile}
+                    isOpen={!isMobile || isComposerOpen}
+                    user={user}
+                    userAvatarUrl={userAvatarUrl}
+                    editingMoment={editingMoment}
+                    selectedNote={selectedNote}
+                    selectedEvent={selectedEvent}
+                    selectedCall={selectedCall}
+                    pulseTarget={pulseTarget}
+                    selectedFiles={selectedFiles}
+                    posting={posting}
+                    onCancel={handleCancelComposer}
+                    onSubmit={handlePost}
+                    onSelectFiles={handleFileSelect}
+                    onOpenNote={() => setIsNoteSelectorOpen(true)}
+                    onOpenEvent={() => setIsEventSelectorOpen(true)}
+                    onOpenCall={() => setIsCallSelectorOpen(true)}
+                    onClearNote={() => setSelectedNote(null)}
+                    onClearEvent={() => setSelectedEvent(null)}
+                    onClearCall={() => setSelectedCall(null)}
+                    onClearPulseTarget={() => setPulseTarget(null)}
+                    onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+                />
             )}
 
             {/* Feed */}
