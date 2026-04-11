@@ -60,9 +60,11 @@ export function SudoModal({
         if (user?.$id) {
             try {
                 if (intent !== "reset") {
-                    // Sudo Hook: Ensure the profile exists and the E2E key is mirrored after unlock.
-                    console.log("[Connect] Synchronizing profile and identity...");
-                    await UsersService.forceSyncProfileWithIdentity(user);
+                    // Sudo Hook: Keep unlock responsive; repair profile/identity in the background.
+                    console.log("[Connect] Scheduling profile and identity synchronization...");
+                    void UsersService.ensureProfileForUser(user)
+                        .then(() => UsersService.forceSyncProfileWithIdentity(user))
+                        .catch((e) => console.error("[Connect] Failed to sync profile and identity", e));
                 }
 
                 // Passkey Incentive

@@ -26,6 +26,8 @@ function ChatHandler() {
     if (userId && user) {
       const initChat = async () => {
         try {
+          await UsersService.ensureProfileForUser(user);
+
           // Fetch target profile to check for publicKey
           const targetProfile = await UsersService.getProfileById(userId);
           if (!targetProfile) {
@@ -77,6 +79,7 @@ function ChatHandler() {
               intent: hasMaster ? undefined : 'initialize',
               onSuccess: async () => {
                 try {
+                  await UsersService.ensureProfileForUser(user);
                   await ecosystemSecurity.ensureE2EIdentity(user.$id);
                   const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
                   router.push(`/chat/${newConv.$id}`);
@@ -112,6 +115,9 @@ function ChatHandler() {
 
       // If already unlocked, nothing to do
       if (ecosystemSecurity.status.isUnlocked) {
+        void UsersService.ensureProfileForUser(user).catch((error) => {
+          console.warn('[Chats] Background profile bootstrap failed:', error);
+        });
         setCheckedSudoOnMount(true);
         return;
       }
@@ -121,6 +127,9 @@ function ChatHandler() {
         requestSudo({
           intent: hasMaster ? undefined : 'initialize',
           onSuccess: () => {
+            void UsersService.ensureProfileForUser(user).catch((error) => {
+              console.warn('[Chats] Background profile bootstrap failed:', error);
+            });
             setCheckedSudoOnMount(true);
           },
           onCancel: () => {
@@ -136,7 +145,7 @@ function ChatHandler() {
     };
 
     runCheck();
-  }, [user?.$id, checkedSudoOnMount, requestSudo, router]);
+  }, [user?.$id, user, checkedSudoOnMount, requestSudo, router]);
 
   return (
     null

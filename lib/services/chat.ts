@@ -1,7 +1,7 @@
 import { ID, Permission, Query, Role } from 'appwrite';
 import { account, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
+import { KYLRIX_AUTH_URI } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 

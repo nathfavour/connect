@@ -430,9 +430,20 @@ export const AppHeader = () => {
           <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
           <Box sx={{ py: 1 }}>
             <MenuItem
-              onClick={() => {
+              onClick={async () => {
                 // Prefer client-side navigation to the user's public profile when available
                 setAnchorElAccount(null);
+                try {
+                  const ensured = user?.$id ? await UsersService.ensureProfileForUser(user) : myProfile;
+                  const username = ensured?.username || myProfile?.username;
+                  if (username) {
+                    router.push(`/u/${encodeURIComponent(username)}`);
+                    return;
+                  }
+                } catch (error) {
+                  console.warn('[Connect Header] Failed to ensure profile before routing:', error);
+                }
+
                 if (myProfile && myProfile.username) {
                   router.push(`/u/${encodeURIComponent(myProfile.username)}`);
                   return;

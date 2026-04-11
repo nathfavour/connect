@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useDataNexus } from '@/context/DataNexusContext';
@@ -26,6 +26,33 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
     const { fetchOptimized, invalidate } = useDataNexus();
     const [profile, setProfile] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const bootstrapRequestRef = useRef<Promise<any | null> | null>(null);
+
+    const queueProfileBootstrap = useCallback((currentUser: { $id: string; email?: string; name?: string; prefs?: Record<string, any> }) => {
+        if (!currentUser?.$id) return Promise.resolve(null);
+        if (bootstrapRequestRef.current) return bootstrapRequestRef.current;
+
+        const request = (async () => {
+            const existing = await UsersService.getProfileById(currentUser.$id);
+            const needsBaseProfile = !existing || !existing.username || !existing.displayName;
+            const ensuredProfile = needsBaseProfile ? await UsersService.ensureProfileForUser(currentUser) : existing;
+
+            if (ecosystemSecurity.status.isUnlocked) {
+                const syncedProfile = await UsersService.forceSyncProfileWithIdentity(currentUser).catch((error) => {
+                    console.error('[ProfileProvider] Background E2E sync failed:', error);
+                    return null;
+                });
+                return syncedProfile || ensuredProfile || existing;
+            }
+
+            return ensuredProfile || existing;
+        })().finally(() => {
+            bootstrapRequestRef.current = null;
+        });
+
+        bootstrapRequestRef.current = request;
+        return request;
+    }, []);
 
     const refreshProfile = useCallback(async () => {
         if (!user?.$id) {
@@ -35,38 +62,44 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         }
 
         try {
-            const data = ecosystemSecurity.status.isUnlocked
-                ? await UsersService.forceSyncProfileWithIdentity(user)
-                : await fetchOptimized(`profile_${user.$id}`, async () => {
-                    const fetched = await UsersService.getProfileById(user.$id);
-                    if (!fetched) {
-                        console.log('[ProfileProvider] Profile not found, initiating auto-setup...');
-                        return await UsersService.ensureProfileForUser(user);
-                    }
-                    return fetched;
-                }, 1000 * 60 * 60); // 1 hour TTL for own profile
+            const cachedProfile = await fetchOptimized(`profile_${user.$id}`, async () => {
+                const fetched = await UsersService.getProfileById(user.$id);
+                return fetched;
+            }, 1000 * 60 * 60);
 
-            if (data) {
-                let resolvedProfile = data;
-                if (user.$id) {
-                    const syncedProfile = await syncCurrentUserVerification(user.$id).catch((error) => {
-                        console.warn('[ProfileProvider] Failed to sync verification state:', error);
-                        return null;
-                    });
-                    if (syncedProfile) {
-                        resolvedProfile = syncedProfile;
-                        invalidate(`profile_${user.$id}`);
-                    }
-                }
-                setProfile(resolvedProfile);
+            if (cachedProfile) {
+                setProfile(cachedProfile);
                 localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
             }
+
+            setIsLoading(false);
+
+            void queueProfileBootstrap(user).then((resolvedProfile) => {
+                if (!resolvedProfile) return;
+
+                let nextProfile = resolvedProfile;
+                void syncCurrentUserVerification(user.$id).then((syncedProfile) => {
+                    if (syncedProfile) {
+                        nextProfile = syncedProfile;
+                        invalidate(`profile_${user.$id}`);
+                    }
+                    setProfile(nextProfile);
+                    localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
+                }).catch((error) => {
+                    console.warn('[ProfileProvider] Failed to sync verification state:', error);
+                    setProfile(nextProfile);
+                    localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
+                });
+            }).catch((error) => {
+                console.error('[ProfileProvider] Failed to bootstrap profile in background:', error);
+            });
+            return;
         } catch (error) {
             console.error('[ProfileProvider] Failed to load/setup profile:', error);
         } finally {
             setIsLoading(false);
         }
-    }, [user, fetchOptimized, invalidate]);
+    }, [user, fetchOptimized, invalidate, queueProfileBootstrap]);
 
     useEffect(() => {
         if (!user?.$id) return;
@@ -74,7 +107,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
             if (!status.isUnlocked) return;
 
-            void UsersService.forceSyncProfileWithIdentity(user)
+            void queueProfileBootstrap(user)
                 .then(async () => {
                     invalidate(`profile_${user.$id}`);
                     await refreshProfile();
@@ -85,7 +118,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         });
 
         return unsubscribe;
-    }, [user, invalidate, refreshProfile]);
+    }, [user, invalidate, refreshProfile, queueProfileBootstrap]);
 
     useEffect(() => {
         if (!user) {

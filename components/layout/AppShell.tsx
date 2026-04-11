@@ -28,24 +28,20 @@ import { useMemo, useEffect, useState } from 'react';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { useAuth } from '@/lib/auth';
-import { useProfile } from '@/components/providers/ProfileProvider';
 
 import { AppHeader } from './AppHeader';
 import { ChatList } from '../chat/ChatList';
 import { Button } from '@mui/material';
-import { EditProfileModal } from '@/components/profile/EditProfileModal';
 
 const drawerWidth = 280;
 
 export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const { user, logout: _logout } = useAuth();
-    const { profile, isLoading: isProfileLoading, refreshProfile } = useProfile();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const router = useRouter();
     const [_anchorEl, _setAnchorEl] = useState<null | HTMLElement>(null);
     const [_profileUrl, setProfileUrl] = useState<string | null>(null);
-    const [isProfileSetupOpen, setIsProfileSetupOpen] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -76,18 +72,6 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const isExternalProfile = pathname?.startsWith('/u/');
     const isChatActive = pathname?.startsWith('/chat/') || pathname === '/chats';
     const isInsideChat = pathname?.startsWith('/chat/');
-    const needsProfileSetup = Boolean(
-        user &&
-        !isProfileLoading &&
-        profile &&
-        (!profile.username || !profile.displayName)
-    );
-
-    useEffect(() => {
-        if (needsProfileSetup) {
-            setIsProfileSetupOpen(true);
-        }
-    }, [needsProfileSetup]);
 
     const navItems = [
         { label: 'Home', icon: <Home size={24} />, href: '/' },
@@ -132,17 +116,6 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     return (
             <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#0A0908' }}>
                 <AppHeader />
-                {user && (
-                    <EditProfileModal
-                        open={isProfileSetupOpen || needsProfileSetup}
-                        onClose={() => setIsProfileSetupOpen(false)}
-                        profile={profile}
-                        onUpdate={async () => {
-                            setIsProfileSetupOpen(false);
-                            await refreshProfile();
-                        }}
-                    />
-                )}
 
             {/* Desktop Sidebar */}
             {!isExternalProfile && (
