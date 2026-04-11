@@ -305,8 +305,6 @@ export const UsersService = {
             // Explicitly delete ghost fields
             delete (updatePayload as any).avatarFileId;
             delete (updatePayload as any).avatarUrl;
-            delete (updatePayload as any).createdAt;
-            delete (updatePayload as any).updatedAt;
 
             console.log('[UsersService] Updating profile for', targetUserId, 'with payload:', JSON.stringify(updatePayload));
             try {
@@ -374,13 +372,10 @@ export const UsersService = {
             publicKey: data.publicKey || null,
             walletAddress: data.walletAddress || null,
             preferences: data.preferences || null,
-            createdAt: new Date().toISOString()
         };
 
         delete (createData as any).avatarFileId;
         delete (createData as any).avatarUrl;
-        delete (createData as any).createdAt;
-        delete (createData as any).updatedAt;
 
         console.log('[UsersService] [PAYLOAD_AUDIT] Creating with keys:', Object.keys(createData));
         console.log('[UsersService] Creating profile for', userId, 'with data:', JSON.stringify(createData));
@@ -622,8 +617,6 @@ export const UsersService = {
 
             delete (payload as any).avatarFileId;
             delete (payload as any).avatarUrl;
-            delete (payload as any).createdAt;
-            delete (payload as any).updatedAt;
 
             const permissionSet = [
                 Permission.read(Role.any()),

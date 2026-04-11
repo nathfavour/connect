@@ -259,7 +259,7 @@ export function SudoModal({
                     100% { transform: scale(1); opacity: 1; }
                 }
             `}</style>
-            <DialogTitle sx={{ textAlign: 'center', pt: 6, pb: 1, position: 'relative' }}>
+            <DialogTitle component="div" sx={{ textAlign: 'center', pt: 6, pb: 1, position: 'relative' }}>
                 <Box sx={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)' }}>
                     <Box sx={{ position: 'relative' }}>
                         <Logo 

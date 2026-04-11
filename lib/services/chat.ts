@@ -529,8 +529,6 @@ export const ChatService = {
             tags: [],
             isEncrypted: !!convKey,
             encryptionVersion: convKey ? 'T4' : '1.0',
-            createdAt: now,
-            updatedAt: now
         }, conversationPermissions);
 
         await Promise.all(uniqueParticipants.map((participantId) =>
@@ -660,8 +658,6 @@ export const ChatService = {
             replyTo,
             readBy: [senderId],
             metadata: finalMetadata,
-            createdAt: now,
-            updatedAt: now
         }, permissions);
 
         const recipientIds = Array.isArray(conversation?.participants)
@@ -681,7 +677,6 @@ export const ChatService = {
                     lastMessageId: message.$id,
                     lastMessageAt: now,
                     lastMessageText: type === 'text' ? finalContent : `[${type}]`,
-                    updatedAt: now
                 });
             } catch (_e) {
                 console.warn('[ChatService] Conversation preview update skipped');
