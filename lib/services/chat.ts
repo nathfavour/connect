@@ -14,7 +14,6 @@ const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
 const ACCOUNTS_API_URL = `${getEcosystemUrl('accounts')}/api/permissions`;
-const participantIdCache = new Map<string, string>();
 const conversationKeyCache = new Map<string, CryptoKey>();
 
 const arraysEqual = (left: string[], right: string[]) =>
@@ -59,26 +58,6 @@ const syncMessagePermissions = async (
         targetUserIds: targets,
         permission,
     }, auth);
-};
-
-const resolveParticipantId = async (participantId: string) => {
-    if (!participantId) return participantId;
-    const cached = participantIdCache.get(participantId);
-    if (cached) return cached;
-
-    try {
-        const profile = await UsersService.getProfileById(participantId);
-        const resolved = profile?.userId || participantId;
-
-        participantIdCache.set(participantId, resolved);
-        if (profile?.$id) participantIdCache.set(profile.$id, resolved);
-        if (profile?.userId) participantIdCache.set(profile.userId, resolved);
-
-        return resolved;
-    } catch (_e) {
-        participantIdCache.set(participantId, participantId);
-        return participantId;
-    }
 };
 
 const normalizeConversationRow = async (conversation: any) => {
@@ -407,7 +386,7 @@ export const ChatService = {
             ? conversationIds
             : conversationRows.map((conversation) => conversation.$id).filter(Boolean);
         const needsPreviewHydration = conversationRows.some((conversation) => !conversation.lastMessageAt || !conversation.lastMessageText);
-        let latestMessageByConversation = new Map<string, any>();
+        const latestMessageByConversation = new Map<string, any>();
 
         if (needsPreviewHydration && previewConversationIds.length > 0) {
             const recentMessagesResult = await tablesDB.listRows(DB_ID, MSG_TABLE, [

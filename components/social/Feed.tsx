@@ -187,7 +187,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const feedCacheRef = React.useRef<Record<string, any[]>>({});
     const feedCacheAgeRef = React.useRef<Record<string, number>>({});
     const feedLoadSeqRef = React.useRef(0);
-    const feedPrefetchRef = React.useRef<Record<string, Promise<void>>>({});
+    const feedPrefetchRef = React.useRef<Record<string, Promise<void> | undefined>>({});
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
