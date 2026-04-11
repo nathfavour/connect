@@ -26,6 +26,25 @@ const normalizeUsername = (input: string | null | undefined): string | null => {
     return cleaned || null;
 };
 
+const deriveAutomaticIdentity = (user: { $id: string; email?: string; name?: string }) => {
+    const nameParts = user.name ? user.name.trim().split(/\s+/).filter(Boolean) : [];
+    const firstName = nameParts[0] || '';
+    const surname = nameParts[1] || '';
+    const emailPrefix = user.email ? user.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '') : '';
+
+    return {
+        candidates: Array.from(new Set([
+            normalizeUsername(firstName),
+            normalizeUsername(surname),
+            normalizeUsername(emailPrefix),
+            normalizeUsername(`u${user.$id.slice(0, 12)}`),
+        ].filter(Boolean))) as string[],
+        displayName: nameParts.length >= 2
+            ? `${nameParts[0]} ${nameParts[1]}`
+            : firstName || emailPrefix || `User ${user.$id.slice(0, 6)}`,
+    };
+};
+
 const buildFallbackUsername = (userId: string, email?: string | null) => {
     const emailPrefix = email ? normalizeUsername(email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '')) : null;
     if (emailPrefix) return emailPrefix;
@@ -37,8 +56,9 @@ const buildProfilePayload = (
     profile: any | null,
     seed?: { email?: string; name?: string; prefs?: Record<string, any>; publicKey?: string | null }
 ) => {
-    const username = profile?.username || buildFallbackUsername(userId, seed?.email);
-    const displayName = profile?.displayName || seed?.name || seed?.email?.split('@')[0] || `User ${userId.slice(0, 6)}`;
+    const derived = deriveAutomaticIdentity({ $id: userId, email: seed?.email, name: seed?.name });
+    const username = profile?.username || derived.candidates[0] || buildFallbackUsername(userId, seed?.email);
+    const displayName = profile?.displayName || seed?.name || derived.displayName;
     return {
         userId,
         username,
@@ -413,66 +433,17 @@ export const UsersService = {
         if (!user?.$id) return null;
         return dedupeProfileSync(user.$id, async () => {
             const existing = await this.getProfileById(user.$id, true);
-
-            const email = user.email || (user as any).email;
-            const name = user.name || (user as any).name;
-
-            // --- IDENTITY DERIVATION ---
-            let derivedUsername = '';
-            let derivedDisplayName = '';
-
-            if (name) {
-                const parts = name.trim().split(/\s+/);
-                const first = parts[0] || '';
-                const second = parts[1] || '';
-                
-                let usernameBase = '';
-                if (first.length > 10) {
-                    usernameBase = first;
-                } else if (second) {
-                    usernameBase = first + second;
-                } else {
-                    usernameBase = first;
-                }
-
-                const normalized = normalizeUsername(usernameBase);
-                if (normalized && normalized.length <= 32) {
-                    derivedUsername = normalized;
-                }
-
-                if (first && second) {
-                    derivedDisplayName = `${first} ${second}`;
-                } else {
-                    derivedDisplayName = first;
-                }
-            }
-
-            if (!derivedUsername && email) {
-                const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z]/g, '');
-                const normalized = normalizeUsername(emailPrefix);
-                if (normalized) {
-                    derivedUsername = normalized;
-                    if (!derivedDisplayName) {
-                        derivedDisplayName = emailPrefix;
-                    }
-                }
-            }
-
-            if (derivedUsername && !await this.isUsernameAvailable(derivedUsername)) {
-                if (existing?.username !== derivedUsername) {
-                    derivedUsername = normalizeUsername(`${derivedUsername}${user.$id.slice(0, 4)}`) || derivedUsername;
-                }
-            }
+            const { candidates, displayName } = deriveAutomaticIdentity(user);
 
             if (existing && existing.username) {
                 const isGeneric = existing.username.startsWith('u') && existing.username.length > 5;
                 const isPlaceholder = existing.username === 'user';
                 
-                if ((isGeneric || isPlaceholder) && derivedUsername && derivedUsername !== existing.username) {
-                    console.log('[UsersService] Healing profile for', user.$id, 'to', derivedUsername);
+                if ((isGeneric || isPlaceholder) && candidates[0] && candidates[0] !== existing.username) {
+                    console.log('[UsersService] Healing profile for', user.$id, 'to', candidates[0]);
                     return await this.updateProfile(user.$id, { 
-                        username: derivedUsername,
-                        displayName: (derivedDisplayName || existing.displayName) || undefined
+                        username: candidates[0],
+                        displayName: (displayName || existing.displayName) || undefined
                     });
                 }
                 seedIdentityCache(existing);
@@ -485,26 +456,13 @@ export const UsersService = {
             }
 
             const createData: any = {
-                displayName: derivedDisplayName || undefined,
+                displayName: displayName || undefined,
                 avatar: avatarId
             };
 
-            if (!derivedUsername) {
-                derivedUsername = buildFallbackUsername(user.$id, email);
-                if (!derivedDisplayName) {
-                    derivedDisplayName = email?.split('@')[0] || `User ${user.$id.slice(0, 6)}`;
-                }
-            }
-
-            const usernameCandidates = Array.from(new Set([
-                derivedUsername,
-                normalizeUsername(`${derivedUsername || buildFallbackUsername(user.$id, email)}${user.$id.slice(0, 4)}`),
-                buildFallbackUsername(user.$id, email),
-            ].filter(Boolean))) as string[];
-
-            for (const candidateUsername of usernameCandidates) {
+            for (const candidateUsername of candidates) {
                 if (!candidateUsername) continue;
-                if (!existing && !(await this.isUsernameAvailable(candidateUsername))) {
+                if (!(await this.isUsernameAvailable(candidateUsername))) {
                     continue;
                 }
 
@@ -513,7 +471,10 @@ export const UsersService = {
                 return created;
             }
 
-            return existing;
+            const fallbackUsername = buildFallbackUsername(user.$id, user.email);
+            const created = await this.createProfile(user.$id, fallbackUsername, createData);
+            seedIdentityCache(created);
+            return created;
         });
     },
 
