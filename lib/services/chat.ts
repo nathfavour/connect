@@ -276,6 +276,25 @@ async function syncLockboxRows(entries: LockboxEntry[], auth?: { jwt?: string; c
     return callPermissionsApi('POST', { action: 'grant', keyMappings: entries }, auth);
 }
 
+async function syncConversationAccess(
+    conversationId: string,
+    participantIds: string[],
+    permission: 'read' | 'write' = 'read',
+    ownerId?: string
+) {
+    const targets = Array.from(new Set(participantIds.filter(Boolean)));
+    if (!conversationId || targets.length === 0) return;
+    return callPermissionsApi('POST', {
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: CONV_TABLE,
+        rowId: conversationId,
+        targetUserIds: targets,
+        permission,
+        ownerId,
+        action: 'grant',
+    });
+}
+
 export const ChatService = {
     async _unwrapConversationKey(conv: any, myUserId: string): Promise<CryptoKey | null> {
         const key = await resolveConversationKey(conv, myUserId);
@@ -531,7 +550,7 @@ export const ChatService = {
             type: type || 'direct',
             name: encryptedName || 'Direct Chat',
             creatorId,
-            admins: [],
+            admins: type === 'group' ? [creatorId] : uniqueParticipants,
             isPinned: [],
             isMuted: [],
             isArchived: [],
@@ -618,15 +637,12 @@ export const ChatService = {
 
                     const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
                     if (recipientIds.length > 0) {
-                        await callPermissionsApi('POST', {
-                            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-                            tableId: CONV_TABLE,
-                            rowId: newConv.$id,
-                            ownerId: creatorId,
-                            targetUserIds: recipientIds,
-                            permission: 'read',
-                            action: 'grant',
-                        });
+                        await syncConversationAccess(
+                            newConv.$id,
+                            recipientIds,
+                            type === 'direct' ? 'write' : 'read',
+                            creatorId
+                        );
                     }
                 }
             } catch (lockboxErr) {
@@ -847,6 +863,7 @@ export const ChatService = {
         name: string;
         description: string;
         avatar: string;
+        settings: string;
         participants: string[];
         admins: string[];
         isPinned: string[];
@@ -891,14 +908,12 @@ export const ChatService = {
             const updated = await this.updateConversation(conversationId, {
                 participants: [...participants, userId]
             });
-            await callPermissionsApi('POST', {
-                databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-                tableId: CONV_TABLE,
-                rowId: conversationId,
-                targetUserIds: [userId],
-                permission: 'read',
-                action: 'grant',
-            });
+            await syncConversationAccess(
+                conversationId,
+                [userId],
+                conv.type === 'direct' ? 'write' : 'read',
+                conv.creatorId || participants[0] || userId
+            );
             return updated;
         }
         return conv;
