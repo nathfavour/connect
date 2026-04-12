@@ -16,6 +16,7 @@ import {
 import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import { AppShell } from '@/components/layout/AppShell';
+import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
 import { KYLRIX_AUTH_URI } from '@/lib/constants';
 
@@ -38,6 +39,15 @@ export default function GroupInvitePage() {
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [requestState, setRequestState] = useState<'idle' | 'loading' | 'pending' | 'joined' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  const buildAuthHeaders = async () => {
+    const headers: Record<string, string> = {};
+    const jwt = await account.createJWT().catch(() => null);
+    if (jwt?.jwt) {
+      headers.Authorization = `Bearer ${jwt.jwt}`;
+    }
+    return headers;
+  };
 
   const inviteUrl = useMemo(() => {
     if (!conversationId || typeof window === 'undefined') return '';
@@ -103,9 +113,13 @@ export default function GroupInvitePage() {
     setError(null);
 
     try {
+      const authHeaders = user ? await buildAuthHeaders() : {};
       const response = await fetch(`${KYLRIX_AUTH_URI}/api/connect/join-requests`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
         credentials: 'include',
         body: JSON.stringify({
           resourceType: 'chat.conversation',

@@ -505,25 +505,33 @@ export const ChatService = {
 
     async _decryptConversation(conv: any, userId?: string) {
         if (!conv.isEncrypted || !ecosystemSecurity.status.isUnlocked) return conv;
+        let convKey: CryptoKey | null = null;
         try {
-            let convKey: CryptoKey | null = null;
             if (userId) {
                 convKey = await resolveConversationKey(conv, userId);
             } else {
                 convKey = conversationKeyCache.get(conv.$id) || ecosystemSecurity.getConversationKey(conv.$id);
             }
+        } catch (error) {
+            console.warn('[ChatService] Failed to resolve conversation key:', error);
+            return conv;
+        }
 
-            if (convKey) {
-                if (conv.name && conv.name.length > 40) {
-                    conv.name = await ecosystemSecurity.decryptWithKey(conv.name, convKey);
-                }
-                if (conv.lastMessageText && conv.lastMessageText.length > 40) {
-                    conv.lastMessageText = await ecosystemSecurity.decryptWithKey(conv.lastMessageText, convKey);
-                }
-                return conv;
+        if (!convKey) return conv;
+
+        if (conv.name && conv.name.length > 40) {
+            try {
+                conv.name = await ecosystemSecurity.decryptWithKey(conv.name, convKey);
+            } catch (error) {
+                console.warn('[ChatService] Failed to decrypt conversation name, keeping plaintext:', error);
             }
-        } catch (_e: unknown) {
-            throw _e;
+        }
+        if (conv.lastMessageText && conv.lastMessageText.length > 40) {
+            try {
+                conv.lastMessageText = await ecosystemSecurity.decryptWithKey(conv.lastMessageText, convKey);
+            } catch (error) {
+                console.warn('[ChatService] Failed to decrypt conversation preview, keeping plaintext:', error);
+            }
         }
         return conv;
     },

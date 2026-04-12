@@ -27,7 +27,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Query } from 'appwrite';
-import { MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Link as LinkIcon, MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/lib/auth';
@@ -164,7 +164,7 @@ export default function ConversationActionsSheet({
   const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [memberTab, setMemberTab] = useState<'members' | 'add' | 'remove'>('members');
+  const [memberTab, setMemberTab] = useState<'invite' | 'members' | 'add' | 'remove'>('members');
   const [memberQuery, setMemberQuery] = useState('');
   const [memberResults, setMemberResults] = useState<any[]>([]);
   const [memberSearching, setMemberSearching] = useState(false);
@@ -179,6 +179,11 @@ export default function ConversationActionsSheet({
     if (!currentConversation?.$id || typeof window === 'undefined') return '';
     return `${window.location.origin}/groups/invite/${currentConversation.$id}`;
   }, [currentConversation?.$id]);
+  const isDetailsDirty = useMemo(() => {
+    const currentName = String(currentConversation?.name || '').trim();
+    const currentDescription = String(currentConversation?.description || '').trim();
+    return groupNameDraft.trim() !== currentName || groupDescriptionDraft.trim() !== currentDescription;
+  }, [currentConversation?.description, currentConversation?.name, groupDescriptionDraft, groupNameDraft]);
   const participantIds = useMemo(
     () => {
       const ids = Array.isArray(currentConversation?.participants)
@@ -195,11 +200,16 @@ export default function ConversationActionsSheet({
 
   const refreshConversation = useCallback(async () => {
     if (!currentConversation?.$id || !user?.$id) return null;
-    const updated = await ChatService.getConversationById(currentConversation.$id, user.$id);
-    setCurrentConversation(updated);
-    onConversationUpdated?.(updated);
-    return updated;
-  }, [currentConversation?.$id, onConversationUpdated, user?.$id]);
+    try {
+      const updated = await ChatService.getConversationById(currentConversation.$id, user.$id);
+      setCurrentConversation(updated);
+      onConversationUpdated?.(updated);
+      return updated;
+    } catch (error) {
+      console.warn('[ConversationActionsSheet] Failed to refresh conversation:', error);
+      return currentConversation;
+    }
+  }, [currentConversation, currentConversation?.$id, onConversationUpdated, user?.$id]);
 
   const loadPendingRequests = useCallback(async () => {
     if (!open || !isGroup || !isAdmin || !currentConversation?.$id) {
@@ -410,6 +420,19 @@ export default function ConversationActionsSheet({
     setMutating(true);
     try {
       await ChatService.removeParticipant(currentConversation.$id, targetId);
+      setGroupMembers((current) => current.filter((member: any) => (member.userId || member.$id) !== targetId));
+      setCurrentConversation((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          participants: Array.isArray(current.participants)
+            ? current.participants.filter((id: string) => id !== targetId)
+            : current.participants,
+          admins: Array.isArray(current.admins)
+            ? current.admins.filter((id: string) => id !== targetId)
+            : current.admins,
+        };
+      });
       await refreshConversation();
       toast.success('Member removed');
     } catch (error: any) {
@@ -640,6 +663,22 @@ export default function ConversationActionsSheet({
                 <Typography variant="body2" sx={{ opacity: 0.6 }}>
                   {participantIds.length} members
                 </Typography>
+                {currentConversation.description ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 0.5,
+                      opacity: 0.72,
+                      lineHeight: 1.4,
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {currentConversation.description}
+                  </Typography>
+                ) : null}
               </Box>
             </Stack>
             <IconButton onClick={onClose} sx={{ color: 'text.secondary' }}>
@@ -649,126 +688,10 @@ export default function ConversationActionsSheet({
 
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
 
-          {isAdmin && (
-            <Box sx={{ px: 2.5, pt: 1.75 }}>
-              <Paper
-                sx={{
-                  p: 1.5,
-                  borderRadius: '18px',
-                  bgcolor: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}
-              >
-                <Stack spacing={1.25}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                    <Box>
-                      <Typography sx={{ fontWeight: 800 }}>Invite link</Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.65 }}>
-                        {inviteEnabled ? 'Anyone with the link can request access.' : 'Invite link is disabled.'}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant={inviteEnabled ? 'outlined' : 'contained'}
-                      size="small"
-                      onClick={() => void handleToggleInviteLink()}
-                      disabled={mutating}
-                    >
-                      {inviteEnabled ? 'Disable' : 'Enable'}
-                    </Button>
-                  </Stack>
-
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={inviteEnabled ? inviteLink : 'Disabled'}
-                    InputProps={{
-                      readOnly: true,
-                    }}
-                  />
-
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => void handleCopyInviteLink()}
-                    disabled={!inviteEnabled}
-                  >
-                    Copy link
-                  </Button>
-                </Stack>
-              </Paper>
-            </Box>
-          )}
-
-          {isAdmin && isGroup && (
-            <Box sx={{ px: 2.5, pt: 1.5 }}>
-              <Paper
-                sx={{
-                  p: 1.5,
-                  borderRadius: '18px',
-                  bgcolor: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}
-              >
-                <Stack spacing={1.5}>
-                  <Typography sx={{ fontWeight: 800 }}>Group details</Typography>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Avatar
-                      src={groupAvatarSrc}
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        bgcolor: alpha('#6366F1', 0.12),
-                        color: '#6366F1',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                      }}
-                    >
-                      {!groupAvatarSrc && <Users size={22} />}
-                    </Avatar>
-                    <Button component="label" variant="outlined" size="small" disabled={avatarUploading}>
-                      {avatarUploading ? 'Uploading...' : 'Upload avatar'}
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          void handleUploadGroupAvatar(file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </Button>
-                  </Stack>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Group name"
-                    value={groupNameDraft}
-                    onChange={(e) => setGroupNameDraft(e.target.value)}
-                  />
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={3}
-                    label="Description"
-                    value={groupDescriptionDraft}
-                    onChange={(e) => setGroupDescriptionDraft(e.target.value)}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={() => void handleSaveGroupDetails()}
-                    disabled={detailsSaving}
-                  >
-                    Save details
-                  </Button>
-                </Stack>
-              </Paper>
-            </Box>
-          )}
-
-          <Box sx={{ px: 2.5, pt: 1.5 }}>
+          <Box sx={{ px: 2.5, pt: 1.5, position: 'sticky', top: 0, zIndex: 2, bgcolor: '#161412' }}>
             <Tabs
               value={isAdmin ? memberTab : 'members'}
-              onChange={(_, value) => setMemberTab(value as 'members' | 'add' | 'remove')}
+              onChange={(_, value) => setMemberTab(value as 'invite' | 'members' | 'add' | 'remove')}
               textColor="inherit"
               indicatorColor="secondary"
               variant="fullWidth"
@@ -778,22 +701,170 @@ export default function ConversationActionsSheet({
                   minHeight: 42,
                   textTransform: 'none',
                   fontWeight: 800,
+                  minWidth: 0,
+                  px: isMobile ? 0.5 : 2,
+                  gap: 0.75,
                 },
               }}
             >
-              <Tab value="members" label="Members" />
-              {isAdmin && <Tab value="add" label="Add Members" />}
-              {isAdmin && <Tab value="remove" label="Remove Members" />}
+              {isAdmin && (
+                <Tab
+                  value="invite"
+                  icon={<LinkIcon size={18} />}
+                  label={isMobile ? '' : 'Invite'}
+                  aria-label="Invite"
+                />
+              )}
+              <Tab
+                value="members"
+                icon={<Users size={18} />}
+                label={isMobile ? '' : 'Members'}
+                aria-label="Members"
+              />
+              {isAdmin && (
+                <Tab
+                  value="add"
+                  icon={<UserPlus size={18} />}
+                  label={isMobile ? '' : 'Add Members'}
+                  aria-label="Add Members"
+                />
+              )}
+              {isAdmin && (
+                <Tab
+                  value="remove"
+                  icon={<UserMinus size={18} />}
+                  label={isMobile ? '' : 'Remove Members'}
+                  aria-label="Remove Members"
+                />
+              )}
             </Tabs>
           </Box>
 
-          <DialogContent sx={{ flex: 1, px: 2.5, py: 2, overflowY: 'auto' }}>
+          <DialogContent sx={{ flex: 1, px: 2.5, py: 2, overflowY: 'auto', minHeight: 0 }}>
             {isAdmin ? null : (
               <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <Typography variant="body2" sx={{ opacity: 0.75 }}>
                   You can view this group, but only admins can manage members.
                 </Typography>
               </Paper>
+            )}
+
+            {isAdmin && memberTab === 'invite' && (
+              <Stack spacing={1.5} sx={{ mb: 2 }}>
+                <Paper
+                  sx={{
+                    p: 1.5,
+                    borderRadius: '18px',
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 800 }}>Invite link</Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.65 }}>
+                          {inviteEnabled ? 'Anyone with the link can request access.' : 'Invite link is disabled.'}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant={inviteEnabled ? 'outlined' : 'contained'}
+                        size="small"
+                        onClick={() => void handleToggleInviteLink()}
+                        disabled={mutating}
+                      >
+                        {inviteEnabled ? 'Disable' : 'Enable'}
+                      </Button>
+                    </Stack>
+
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={inviteEnabled ? inviteLink : 'Disabled'}
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => void handleCopyInviteLink()}
+                      disabled={!inviteEnabled}
+                    >
+                      Copy link
+                    </Button>
+                  </Stack>
+                </Paper>
+
+                {isGroup && (
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      borderRadius: '18px',
+                      bgcolor: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                    }}
+                  >
+                    <Stack spacing={1.5}>
+                      <Typography sx={{ fontWeight: 800 }}>Group details</Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Avatar
+                          src={groupAvatarSrc}
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            bgcolor: alpha('#6366F1', 0.12),
+                            color: '#6366F1',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                          }}
+                        >
+                          {!groupAvatarSrc && <Users size={22} />}
+                        </Avatar>
+                        <Button component="label" variant="outlined" size="small" disabled={avatarUploading}>
+                          {avatarUploading ? 'Uploading...' : 'Upload avatar'}
+                          <input
+                            hidden
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              void handleUploadGroupAvatar(file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </Button>
+                      </Stack>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Group name"
+                        value={groupNameDraft}
+                        onChange={(e) => setGroupNameDraft(e.target.value)}
+                      />
+                      <TextField
+                        fullWidth
+                        multiline
+                        minRows={3}
+                        label="Description"
+                        value={groupDescriptionDraft}
+                        onChange={(e) => setGroupDescriptionDraft(e.target.value)}
+                      />
+                    <Button
+                      variant="contained"
+                      onClick={() => void handleSaveGroupDetails()}
+                      disabled={detailsSaving || !isDetailsDirty}
+                      sx={{
+                        opacity: detailsSaving || !isDetailsDirty ? 0.45 : 1,
+                        filter: detailsSaving || !isDetailsDirty ? 'blur(0.5px)' : 'none',
+                      }}
+                    >
+                      Save details
+                    </Button>
+                    </Stack>
+                  </Paper>
+                )}
+              </Stack>
             )}
 
             {memberTab === 'members' && (
