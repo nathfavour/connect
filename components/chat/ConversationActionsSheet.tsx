@@ -423,11 +423,13 @@ export default function ConversationActionsSheet({
       setGroupMembers((current) => current.filter((member: any) => (member.userId || member.$id) !== targetId));
       setCurrentConversation((current) => {
         if (!current) return current;
+        const nextParticipants = Array.isArray(current.participants)
+          ? current.participants.filter((id: string) => id !== targetId)
+          : current.participants;
         return {
           ...current,
-          participants: Array.isArray(current.participants)
-            ? current.participants.filter((id: string) => id !== targetId)
-            : current.participants,
+          participants: nextParticipants,
+          participantCount: Array.isArray(nextParticipants) ? nextParticipants.length : current.participantCount,
           admins: Array.isArray(current.admins)
             ? current.admins.filter((id: string) => id !== targetId)
             : current.admins,

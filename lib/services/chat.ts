@@ -19,6 +19,12 @@ const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messa
 const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
 const GROUP_AVATAR_ROUTE = `${KYLRIX_AUTH_URI}/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
+const conversationPreviewCache = new Map<string, {
+    lastMessageId: string;
+    lastMessageText: string;
+    lastMessageAt: string;
+    lastMessageSenderId?: string | null;
+}>();
 
 const arraysEqual = (left: string[], right: string[]) =>
     left.length === right.length && left.every((value, index) => value === right[index]);
@@ -30,6 +36,48 @@ const uniqueIds = (ids: Array<string | null | undefined>) =>
     Array.from(new Set(ids.map((value) => String(value || '').trim()).filter(Boolean)));
 
 const buildGroupAvatarUrl = (conversationId: string) => `${GROUP_AVATAR_ROUTE}?conversationId=${encodeURIComponent(conversationId)}`;
+
+const setConversationPreviewCache = (
+    conversationId: string,
+    preview: {
+        lastMessageId: string;
+        lastMessageText: string;
+        lastMessageAt: string;
+        lastMessageSenderId?: string | null;
+    } | null,
+) => {
+    if (!conversationId) return;
+    if (!preview?.lastMessageId) {
+        conversationPreviewCache.delete(conversationId);
+        return;
+    }
+
+    conversationPreviewCache.set(conversationId, {
+        lastMessageId: preview.lastMessageId,
+        lastMessageText: preview.lastMessageText || '',
+        lastMessageAt: preview.lastMessageAt || new Date().toISOString(),
+        lastMessageSenderId: preview.lastMessageSenderId || null,
+    });
+};
+
+const getConversationPreviewCache = (conversationId: string) => conversationPreviewCache.get(conversationId) || null;
+
+const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
+    const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
+        Query.equal('conversationId', conversationId),
+        Query.limit(1000),
+    ]).catch(() => ({ rows: [] as any[] }));
+
+    const participants = uniqueIds([
+        ...(memberRows.rows || []).map((row: any) => row.userId),
+    ]);
+
+    if (participants.length > 0) {
+        return participants;
+    }
+
+    return uniqueIds(fallbackParticipants);
+};
 
 const getConversationActivityAt = (row: any) =>
     row?.lastMessageAt || row?.updatedAt || row?.createdAt || row?.$updatedAt || row?.$createdAt || null;
@@ -466,6 +514,28 @@ export const ChatService = {
         return key;
     },
 
+    getConversationPreviewSnapshot(conversationId: string) {
+        return getConversationPreviewCache(conversationId);
+    },
+
+    rememberConversationPreview(conversationId: string, preview: {
+        lastMessageId: string;
+        lastMessageText: string;
+        lastMessageAt: string;
+        lastMessageSenderId?: string | null;
+    } | null) {
+        setConversationPreviewCache(conversationId, preview);
+    },
+
+    clearConversationPreviewCache(conversationId?: string) {
+        if (conversationId) {
+            conversationPreviewCache.delete(conversationId);
+            return;
+        }
+
+        conversationPreviewCache.clear();
+    },
+
     async rewrapConversationKeys(_conversationId: string) {
         return;
     },
@@ -611,6 +681,7 @@ export const ChatService = {
                 ...conversation,
                 participants: Array.from(new Set((participants || []).filter(Boolean)))
             };
+            const cachedPreview = getConversationPreviewCache(conversation.$id);
             const latestMessage = latestMessageByConversation.get(conversation.$id);
             const hydratedConversation = latestMessage ? {
                 ...normalizedConversation,
@@ -618,7 +689,14 @@ export const ChatService = {
                 lastMessageText: await getMessagePreview(latestMessage, conversation.$id)
             } : normalizedConversation;
 
-            return this._decryptConversation(hydratedConversation, userId);
+            const hydratedAt = new Date(getConversationActivityAt(hydratedConversation) || 0).getTime();
+            const cachedAt = cachedPreview ? new Date(cachedPreview.lastMessageAt || 0).getTime() : -1;
+            const withCache = cachedPreview && (cachedAt >= hydratedAt || !hydratedConversation.lastMessageText) ? {
+                ...hydratedConversation,
+                ...cachedPreview,
+            } : hydratedConversation;
+
+            return this._decryptConversation(withCache, userId);
         }));
 
         rows.sort((a, b) => {
@@ -883,6 +961,13 @@ export const ChatService = {
             }
         }
 
+        setConversationPreviewCache(conversationId, {
+            lastMessageId: message.$id,
+            lastMessageText: type === 'text' || type === 'attachment' ? content : `[${type}]`,
+            lastMessageAt: message.$createdAt || message.createdAt || new Date().toISOString(),
+            lastMessageSenderId: senderId,
+        });
+
         // 3. (Background) Re-keying check
         if (ecosystemSecurity.status.isUnlocked && conversation?.creatorId === senderId) {
             this.rewrapConversationKeys(conversationId).catch(err =>
@@ -964,6 +1049,18 @@ export const ChatService = {
             }
             return msg;
         }));
+
+        const latestMessage = res.rows[0];
+        if (latestMessage) {
+            setConversationPreviewCache(conversationId, {
+                lastMessageId: latestMessage.$id,
+                lastMessageText: latestMessage.type === 'text' || latestMessage.type === 'attachment'
+                    ? String(latestMessage.content || '')
+                    : `[${latestMessage.type || 'message'}]`,
+                lastMessageAt: getMessageActivityAt(latestMessage) || latestMessage.$createdAt || latestMessage.$updatedAt || new Date().toISOString(),
+                lastMessageSenderId: latestMessage.senderId || null,
+            });
+        }
 
         return res;
     },
@@ -1090,6 +1187,10 @@ export const ChatService = {
     }>) {
         const current = await this.getConversationById(conversationId).catch(() => null);
         const patch: Record<string, unknown> = { ...data };
+        if (Array.isArray(patch.participants)) {
+            patch.participants = uniqueIds(patch.participants as string[]);
+            patch.participantCount = (patch.participants as string[]).length;
+        }
         const nextInviteLink = Object.prototype.hasOwnProperty.call(patch, 'inviteLink')
             ? patch.inviteLink
             : current?.inviteLink;
@@ -1140,8 +1241,10 @@ export const ChatService = {
                 }
             }
 
+            const updatedParticipants = await getConversationMemberSnapshot(conversationId, [...participants, userId]);
             const updated = await this.updateConversation(conversationId, {
-                participants: [...participants, userId]
+                participants: updatedParticipants,
+                participantCount: updatedParticipants.length,
             });
             await syncConversationAccess(
                 conversationId,
@@ -1151,11 +1254,10 @@ export const ChatService = {
             );
             await syncConversationAvatarAccess(
                 conv.avatarFileId || null,
-                [...participants, userId],
+                updatedParticipants,
             );
 
             if (requiresRotation && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
-                const updatedParticipants = Array.from(new Set([...participants, userId]));
                 const nextKey = await ecosystemSecurity.generateConversationKey();
                 ecosystemSecurity.setConversationKey(conversationId, nextKey);
                 conversationKeyCache.set(conversationId, nextKey);
@@ -1229,8 +1331,10 @@ export const ChatService = {
             await tablesDB.deleteRow(DB_ID, CONV_MEMBERS_TABLE, memberRows.rows[0].$id).catch(() => null);
         }
 
+        const updatedParticipants = await getConversationMemberSnapshot(conversationId, participants);
         const updated = await this.updateConversation(conversationId, {
-            participants,
+            participants: updatedParticipants,
+            participantCount: updatedParticipants.length,
             admins
         });
         await revokeConversationAvatarAccess(

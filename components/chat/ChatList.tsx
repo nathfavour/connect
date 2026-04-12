@@ -185,6 +185,7 @@ export const ChatList = () => {
     }, []);
 
     const handleConversationDeleted = useCallback((conversationId: string) => {
+        ChatService.clearConversationPreviewCache(conversationId);
         setConversations((prev) => {
             const next = prev.filter((conv) => conv.$id !== conversationId);
             conversationsRef.current = next;
@@ -279,8 +280,24 @@ export const ChatList = () => {
             }
 
             const baseRows = rows.map((conv: any) => {
+                const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
+                const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
+                const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
+                const useMemoryPreview = Boolean(memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText));
+                const previewText = useMemoryPreview ? memoryPreview?.lastMessageText : conv.lastMessageText;
+                const previewAt = useMemoryPreview ? memoryPreview?.lastMessageAt : conv.lastMessageAt;
+                const previewId = useMemoryPreview ? memoryPreview?.lastMessageId : conv.lastMessageId;
+                const previewSenderId = useMemoryPreview ? memoryPreview?.lastMessageSenderId : conv.lastMessageSenderId;
+
                 if (conv.type !== 'direct') {
-                    return { ...conv, name: conv.name || 'Group Chat' };
+                    return {
+                        ...conv,
+                        name: conv.name || 'Group Chat',
+                        lastMessageText: previewText,
+                        lastMessageAt: previewAt,
+                        lastMessageId: previewId,
+                        lastMessageSenderId: previewSenderId,
+                    };
                 }
 
                 const isActuallySelf = conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id);
@@ -292,7 +309,11 @@ export const ChatList = () => {
                         otherUserId: user!.$id,
                         name: `${myName} (You)`,
                         isSelf: true,
-                        avatarUrl: cachedMe?.avatar || null
+                        avatarUrl: cachedMe?.avatar || null,
+                        lastMessageText: previewText,
+                        lastMessageAt: previewAt,
+                        lastMessageId: previewId,
+                        lastMessageSenderId: previewSenderId,
                     };
                 }
 
@@ -302,7 +323,11 @@ export const ChatList = () => {
                     ...conv,
                     otherUserId: otherId,
                     name: cachedOther?.displayName || cachedOther?.username || (otherId ? `@${otherId.slice(0, 7)}` : 'Direct Chat'),
-                    avatarUrl: cachedOther?.avatar || null
+                    avatarUrl: cachedOther?.avatar || null,
+                    lastMessageText: previewText,
+                    lastMessageAt: previewAt,
+                    lastMessageId: previewId,
+                    lastMessageSenderId: previewSenderId,
                 };
             });
 
@@ -393,6 +418,7 @@ export const ChatList = () => {
             if (status.isUnlocked) {
                 loadConversations();
             } else {
+                ChatService.clearConversationPreviewCache();
                 setConversations([]);
                 setLoading(false);
             }
@@ -418,6 +444,7 @@ export const ChatList = () => {
 
             if (isConversationEvent) {
                 if (response.events.some(e => e.includes('.delete'))) {
+                    ChatService.clearConversationPreviewCache(relatedConversationId);
                     setConversations(prev => prev.filter(c => c.$id !== relatedConversationId));
                     return;
                 }
@@ -426,6 +453,7 @@ export const ChatList = () => {
             }
 
             if (response.events.some(e => e.includes('.delete'))) {
+                ChatService.clearConversationPreviewCache(relatedConversationId);
                 setConversations(prev => prev.filter(c => c.$id !== relatedConversationId));
                 conversationsRef.current = conversationsRef.current.filter(c => c.$id !== relatedConversationId);
                 setLivePreviewByConversation((prev) => {
@@ -716,12 +744,22 @@ export const ChatList = () => {
                                     <ListItemText
                                         primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
                                         secondary={
-                                            (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(livePreviewByConversation[conv.$id]?.lastMessageText || conv.lastMessageText)) ? (
+                                            (() => {
+                                                const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
+                                                const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
+                                                const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
+                                                const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText)
+                                                    ? memoryPreview.lastMessageText
+                                                    : null;
+                                                const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
+
+                                                return (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(resolvedPreview)) ? (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <LockIcon sx={{ fontSize: 12, opacity: 0.5 }} />
                                                     <span>Encrypted message</span>
                                                 </Box>
-                                            ) : (livePreviewByConversation[conv.$id]?.lastMessageText || conv.lastMessageText || 'No messages yet')
+                                                ) : resolvedPreview;
+                                            })()
                                         }
                                         primaryTypographyProps={{
                                             fontWeight: 700,
