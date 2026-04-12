@@ -38,6 +38,7 @@ import { useSudo } from '@/context/SudoContext';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
+import ConversationActionsSheet from './ConversationActionsSheet';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
     const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
@@ -85,13 +86,29 @@ export const ChatList = () => {
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+    const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
     const conversationsRef = React.useRef<any[]>([]);
     const loadRequestRef = React.useRef(0);
+    const handledMessageIdsRef = React.useRef<Set<string>>(new Set());
+    const [livePreviewByConversation, setLivePreviewByConversation] = useState<Record<string, {
+        lastMessageId: string;
+        lastMessageText: string;
+        lastMessageAt: string;
+    }>>({});
+    const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
 
     const isLikelyEncrypted = (val: string) => {
         if (!val) return false;
         return val.length > 40 && !val.includes(' ');
     };
+
+    const formatPreviewFromMessage = useCallback((message: any) => {
+        if (!message) return 'No messages yet';
+        if (message.type === 'text' || message.type === 'attachment') {
+            return message.content || `[${message.type}]`;
+        }
+        return `[${message.type || 'message'}]`;
+    }, []);
 
     const handleGlobalSearch = useCallback(async (query: string) => {
         if (!query.trim() || query.length < 2) {
@@ -156,6 +173,32 @@ export const ChatList = () => {
             }
         });
     };
+
+    const handleConversationUpdated = useCallback((updatedConversation: any) => {
+        if (!updatedConversation?.$id) return;
+        setConversations((prev) => {
+            const next = prev.map((conv) => conv.$id === updatedConversation.$id ? { ...conv, ...updatedConversation } : conv);
+            next.sort((a, b) => new Date(b.lastMessageAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.createdAt || 0).getTime());
+            conversationsRef.current = next;
+            return next;
+        });
+    }, []);
+
+    const handleConversationDeleted = useCallback((conversationId: string) => {
+        setConversations((prev) => {
+            const next = prev.filter((conv) => conv.$id !== conversationId);
+            conversationsRef.current = next;
+            return next;
+        });
+        setLivePreviewByConversation((prev) => {
+            if (!prev[conversationId]) return prev;
+            const next = { ...prev };
+            delete next[conversationId];
+            return next;
+        });
+        setActivePreviewConversationId((current) => current === conversationId ? null : current);
+        setSelectedConversation((current) => current?.$id === conversationId ? null : current);
+    }, []);
 
     const loadConversations = React.useCallback(async () => {
         const requestId = ++loadRequestRef.current;
@@ -385,6 +428,13 @@ export const ChatList = () => {
             if (response.events.some(e => e.includes('.delete'))) {
                 setConversations(prev => prev.filter(c => c.$id !== relatedConversationId));
                 conversationsRef.current = conversationsRef.current.filter(c => c.$id !== relatedConversationId);
+                setLivePreviewByConversation((prev) => {
+                    if (!prev[relatedConversationId]) return prev;
+                    const next = { ...prev };
+                    delete next[relatedConversationId];
+                    return next;
+                });
+                setActivePreviewConversationId((current) => current === relatedConversationId ? null : current);
                 return;
             }
 
@@ -394,14 +444,61 @@ export const ChatList = () => {
                 return;
             }
 
+            if (response.events.some(e => e.includes('.create')) && payload?.$id && !handledMessageIdsRef.current.has(payload.$id)) {
+                handledMessageIdsRef.current.add(payload.$id);
+                const livePreviewAt = payload.$createdAt || payload.createdAt || new Date().toISOString();
+
+                let livePreviewText = formatPreviewFromMessage(payload);
+                try {
+                    const latest = await ChatService.getMessages(relatedConversationId, 1, 0, user?.$id);
+                    const latestMessage = latest.rows?.[0];
+                    if (latestMessage) {
+                        livePreviewText = formatPreviewFromMessage(latestMessage);
+                    }
+                } catch (error) {
+                    console.warn('[ChatList] Failed to hydrate live preview:', error);
+                }
+
+                setLivePreviewByConversation((prev) => ({
+                    ...prev,
+                    [relatedConversationId]: {
+                        lastMessageId: payload.$id,
+                        lastMessageText: livePreviewText,
+                        lastMessageAt: livePreviewAt,
+                    },
+                }));
+                setActivePreviewConversationId(relatedConversationId);
+                window.setTimeout(() => {
+                    setActivePreviewConversationId((current) => current === relatedConversationId ? null : current);
+                }, 900);
+
+                setConversations(prev => {
+                    const next = [...prev];
+                    const current = next[existingIndex];
+                    next[existingIndex] = {
+                        ...current,
+                        lastMessageAt: livePreviewAt,
+                        lastMessageId: payload.$id,
+                        lastMessageSenderId: payload.senderId || current.lastMessageSenderId,
+                        lastMessageText: livePreviewText,
+                    };
+
+                    next.sort((a, b) => new Date(b.lastMessageAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.createdAt || 0).getTime());
+                    conversationsRef.current = next;
+                    return next;
+                });
+                return;
+            }
+
             setConversations(prev => {
                 const next = [...prev];
                 const current = next[existingIndex];
                 next[existingIndex] = {
                     ...current,
                     lastMessageAt: payload.$createdAt || payload.createdAt || current.lastMessageAt,
+                    lastMessageId: payload.$id || current.lastMessageId,
                     lastMessageSenderId: payload.senderId || current.lastMessageSenderId,
-                    lastMessageText: payload.type === 'text' && payload.content ? payload.content : current.lastMessageText,
+                    lastMessageText: formatPreviewFromMessage(payload) || current.lastMessageText,
                 };
 
                 next.sort((a, b) => new Date(b.lastMessageAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.createdAt || 0).getTime());
@@ -414,7 +511,7 @@ export const ChatList = () => {
             if (typeof subscription === 'function') subscription();
             else if (subscription?.unsubscribe) subscription.unsubscribe();
         };
-    }, [user, loadConversations]);
+    }, [user, loadConversations, formatPreviewFromMessage]);
 
     if (loading) return (
         <Box sx={{ p: 2 }}>
@@ -440,7 +537,7 @@ export const ChatList = () => {
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
             <Box sx={{ p: 3, pb: 2 }}>
                 <Typography
                     variant="h5"
@@ -570,33 +667,61 @@ export const ChatList = () => {
                                     sx={{
                                         borderRadius: '12px',
                                         py: 1.5,
+                                        transition: 'all 160ms ease',
+                                        ...(activePreviewConversationId === conv.$id ? {
+                                            bgcolor: 'rgba(99, 102, 241, 0.08)',
+                                            boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 10px 24px rgba(0, 0, 0, 0.24)',
+                                            transform: 'translateY(-1px)',
+                                        } : {}),
                                         '&:hover': {
                                             bgcolor: 'rgba(255, 255, 255, 0.03)'
                                         }
                                     }}
                                 >
-                                        <Avatar
-                                            src={conv.avatarUrl}
+                                        <Box
+                                            component="span"
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                setSelectedConversation(conv);
+                                            }}
+                                            onKeyDown={(event) => {
+                                                if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                setSelectedConversation(conv);
+                                            }}
                                             sx={{
-                                            bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
-                                            color: conv.isSelf ? '#6366F1' : '#F59E0B',
-                                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                                            boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                                            width: 44,
-                                            height: 44
-                                        }}
-                                    >
-                                        {conv.isSelf ? <BookmarkIcon sx={{ fontSize: 20 }} /> : (conv.type === 'group' ? <GroupIcon sx={{ fontSize: 22 }} /> : (conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || <PersonIcon sx={{ fontSize: 22, color: '#F59E0B' }} />))}
-                                    </Avatar>
+                                                mr: 1.25,
+                                                display: 'inline-flex',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <Avatar
+                                                src={conv.avatarUrl}
+                                                sx={{
+                                                    bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
+                                                    color: conv.isSelf ? '#6366F1' : '#F59E0B',
+                                                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                                    width: 44,
+                                                    height: 44
+                                                }}
+                                            >
+                                                {conv.isSelf ? <BookmarkIcon sx={{ fontSize: 20 }} /> : (conv.type === 'group' ? <GroupIcon sx={{ fontSize: 22 }} /> : (conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || <PersonIcon sx={{ fontSize: 22, color: '#F59E0B' }} />))}
+                                            </Avatar>
+                                        </Box>
                                     <ListItemText
                                         primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
                                         secondary={
-                                            (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(conv.lastMessageText)) ? (
+                                            (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(livePreviewByConversation[conv.$id]?.lastMessageText || conv.lastMessageText)) ? (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <LockIcon sx={{ fontSize: 12, opacity: 0.5 }} />
                                                     <span>Encrypted message</span>
                                                 </Box>
-                                            ) : (conv.lastMessageText || 'No messages yet')
+                                            ) : (livePreviewByConversation[conv.$id]?.lastMessageText || conv.lastMessageText || 'No messages yet')
                                         }
                                         primaryTypographyProps={{
                                             fontWeight: 700,
@@ -643,6 +768,14 @@ export const ChatList = () => {
                     </List>
                 )}
             </Box>
+
+            <ConversationActionsSheet
+                conversation={selectedConversation}
+                open={Boolean(selectedConversation)}
+                onClose={() => setSelectedConversation(null)}
+                onConversationUpdated={handleConversationUpdated}
+                onConversationDeleted={handleConversationDeleted}
+            />
 
         </Box>
     );

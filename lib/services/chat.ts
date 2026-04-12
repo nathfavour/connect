@@ -474,7 +474,7 @@ export const ChatService = {
             const hydratedConversation = latestMessage ? {
                 ...normalizedConversation,
                 lastMessageAt: getMessageActivityAt(latestMessage) || normalizedConversation.lastMessageAt,
-                lastMessageText: normalizedConversation.lastMessageText || await getMessagePreview(latestMessage, conversation.$id)
+                lastMessageText: await getMessagePreview(latestMessage, conversation.$id)
             } : normalizedConversation;
 
             return this._decryptConversation(hydratedConversation, userId);
@@ -866,6 +866,42 @@ export const ChatService = {
         return { success: true };
     },
 
+    async deleteConversationFully(conversationId: string) {
+        const conversation = await this.getConversationById(conversationId).catch(() => null);
+
+        const deleteAllRows = async (dbId: string, tableId: string, query: any[]) => {
+            const rows = await tablesDB.listRows(dbId, tableId, query).catch(() => ({ rows: [] as any[] }));
+            const batches: Promise<unknown>[] = [];
+            for (let i = 0; i < (rows.rows || []).length; i += 10) {
+                const batch = rows.rows.slice(i, i + 10).map((row: any) => tablesDB.deleteRow(dbId, tableId, row.$id));
+                batches.push(Promise.all(batch));
+            }
+            await Promise.all(batches);
+        };
+
+        await this.nuclearWipe(conversationId);
+
+        await deleteAllRows(DB_ID, CONV_MEMBERS_TABLE, [
+            Query.equal('conversationId', conversationId),
+            Query.limit(1000)
+        ]);
+
+        await deleteAllRows(DB_ID, EPOCHS_TABLE, [
+            Query.equal('resourceId', conversationId),
+            Query.limit(1000)
+        ]);
+
+        await deleteAllRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
+            Query.equal('resourceId', conversationId),
+            Query.limit(1000)
+        ]);
+
+        await tablesDB.deleteRow(DB_ID, CONV_TABLE, conversationId);
+        conversationKeyCache.delete(conversationId);
+
+        return { success: true, conversation };
+    },
+
     async updateConversation(conversationId: string, data: Partial<{
         name: string;
         description: string;
@@ -886,6 +922,10 @@ export const ChatService = {
     async addParticipant(conversationId: string, userId: string) {
         const conv = await this.getConversationById(conversationId);
         const participants = conv.participants || [];
+        const requiresRotation = conv?.type === 'group' && String(conv?.encryptionVersion || '').toUpperCase() === 'T4';
+        if (requiresRotation && (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.status.hasIdentity)) {
+            throw new Error('Security vault is locked; cannot rotate group epoch');
+        }
         if (!participants.includes(userId)) {
             const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
                 Query.equal('conversationId', conversationId),
@@ -921,6 +961,58 @@ export const ChatService = {
                 conv.type === 'direct' ? 'write' : 'read',
                 conv.creatorId || participants[0] || userId
             );
+
+            if (requiresRotation && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
+                const updatedParticipants = Array.from(new Set([...participants, userId]));
+                const nextKey = await ecosystemSecurity.generateConversationKey();
+                ecosystemSecurity.setConversationKey(conversationId, nextKey);
+                conversationKeyCache.set(conversationId, nextKey);
+
+                const epochsRes = await tablesDB.listRows(DB_ID, EPOCHS_TABLE, [
+                    Query.equal('resourceId', conversationId),
+                    Query.orderDesc('epochNumber'),
+                    Query.limit(1),
+                ]).catch(() => ({ rows: [] as any[] }));
+                const nextEpochNumber = Number(epochsRes.rows?.[0]?.epochNumber || 0) + 1;
+
+                const creatorProfile = await UsersService.getProfileById(conv.creatorId);
+                const creatorPublicKey = creatorProfile?.publicKey || null;
+                if (!creatorPublicKey) {
+                    throw new Error('Creator public key missing; cannot rotate group key');
+                }
+
+                const keyMappings: LockboxEntry[] = [];
+                for (const participantId of updatedParticipants) {
+                    const profile = await UsersService.getProfileById(participantId);
+                    if (!profile?.publicKey) {
+                        throw new Error(`Missing public key for member ${participantId}`);
+                    }
+
+                    keyMappings.push({
+                        resourceType: 'epoch',
+                        resourceId: conversationId,
+                        grantee: participantId,
+                        wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(nextKey, profile.publicKey),
+                        metadata: buildLockboxMetadata({
+                            wrappedBy: conv.creatorId,
+                            wrappedByPublicKey: creatorPublicKey,
+                            conversationId,
+                            conversationType: 'group',
+                            version: 't4',
+                            rotation: 'member-added',
+                        }),
+                    });
+                }
+
+                await callPermissionsApi('POST', {
+                    action: 'rotate_epoch',
+                    resourceId: conversationId,
+                    ownerId: conv.creatorId || participants[0] || userId,
+                    participantUserIds: updatedParticipants,
+                    epochNumber: nextEpochNumber,
+                    keyMappings,
+                });
+            }
             return updated;
         }
         return conv;

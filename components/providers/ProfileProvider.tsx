@@ -72,28 +72,26 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
                 localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
             }
 
-            setIsLoading(false);
-
-            void queueProfileBootstrap(user).then((resolvedProfile) => {
-                if (!resolvedProfile) return;
-
-                let nextProfile = resolvedProfile;
-                void syncCurrentUserVerification(user.$id).then((syncedProfile) => {
-                    if (syncedProfile) {
-                        nextProfile = syncedProfile;
-                        invalidate(`profile_${user.$id}`);
+            try {
+                const bootstrappedProfile = await queueProfileBootstrap(user);
+                if (bootstrappedProfile) {
+                    let nextProfile = bootstrappedProfile;
+                    try {
+                        const syncedProfile = await syncCurrentUserVerification(user.$id);
+                        if (syncedProfile) {
+                            nextProfile = syncedProfile;
+                            invalidate(`profile_${user.$id}`);
+                        }
+                    } catch (error) {
+                        console.warn('[ProfileProvider] Failed to sync verification state:', error);
                     }
+
                     setProfile(nextProfile);
                     localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
-                }).catch((error) => {
-                    console.warn('[ProfileProvider] Failed to sync verification state:', error);
-                    setProfile(nextProfile);
-                    localStorage.setItem(`${PROFILE_SETUP_KEY}_${user.$id}`, 'true');
-                });
-            }).catch((error) => {
+                }
+            } catch (error) {
                 console.error('[ProfileProvider] Failed to bootstrap profile in background:', error);
-            });
-            return;
+            }
         } catch (error) {
             console.error('[ProfileProvider] Failed to load/setup profile:', error);
         } finally {

@@ -3,6 +3,7 @@
 import { AppShell } from '@/components/layout/AppShell';
 import { UserSearch } from '@/components/search/UserSearch';
 import { ChatList } from '@/components/chat/ChatList';
+import ChatQuickActionsFab from '@/components/chat/ChatQuickActionsFab';
 import { Box, Button, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -167,11 +168,11 @@ export default function Home() {
   }, []);
 
   return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <ChatHandler />
-      </Suspense>
-      <Box sx={{ position: 'relative', height: '100%' }}>
+        <AppShell>
+        <Suspense fallback={null}>
+          <ChatHandler />
+        </Suspense>
+        <Box sx={{ position: 'relative', height: '100%' }}>
         {isUnlocked ? (
           <Box
             sx={{
@@ -229,6 +230,7 @@ export default function Home() {
             }}
           />
         )}
+        <ChatQuickActionsFab hidden={!isUnlocked} />
       </Box>
     </AppShell>
   );

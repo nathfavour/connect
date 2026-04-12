@@ -1228,6 +1228,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 zIndex: 1,
+                pt: 'env(safe-area-inset-top)',
                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                 '&::after': {
                     content: '""',
@@ -1239,7 +1240,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     background: 'rgba(255,255,255,0.05)'
                 }
             }}>
-                <Toolbar sx={{ gap: 1 }}>
+                <Toolbar sx={{ gap: 1, minHeight: '72px' }}>
                     <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'text.secondary' }}>
                         <ChevronLeft size={20} strokeWidth={1.5} />
                     </IconButton>
