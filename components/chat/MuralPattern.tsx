@@ -2,8 +2,8 @@
 
 import { Box } from '@mui/material';
 
-const TILE_WIDTH = 560;
-const TILE_HEIGHT = 400;
+const TILE_WIDTH = 640;
+const TILE_HEIGHT = 456;
 const STROKE = '#f3f0ea';
 
 type MotifType =
@@ -124,7 +124,7 @@ const makeMotifs = (): Motif[] => {
         x,
         y,
         rotate: (rng() - 0.5) * 22,
-        scale: 0.32 + rng() * 0.24,
+        scale: 0.42 + rng() * 0.28,
         opacity: 0.34 + rng() * 0.34,
         width: 0.82 + rng() * 0.72,
         type,
