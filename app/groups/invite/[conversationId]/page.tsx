@@ -145,12 +145,15 @@ export default function GroupInvitePage() {
         >
           <Stack spacing={2.5} alignItems="center" textAlign="center">
             <Avatar
+              src={preview?.avatarUrl || undefined}
+              imgProps={{ referrerPolicy: 'no-referrer' }}
               sx={{
                 width: 72,
                 height: 72,
                 bgcolor: alpha('#F59E0B', 0.12),
                 color: '#F59E0B',
                 border: '1px solid rgba(255,255,255,0.08)',
+                '& img': { objectFit: 'cover' },
               }}
             >
               <Users size={30} />
