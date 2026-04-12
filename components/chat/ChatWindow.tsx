@@ -72,6 +72,7 @@ import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 import { FormattedText } from '../common/FormattedText';
 import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
+import MuralPattern from './MuralPattern';
 
 type ChatMessage = Models.Row & Record<string, any>;
 
@@ -1219,29 +1220,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             bgcolor: '#0A0908',
             position: 'relative',
             overflow: 'hidden',
-            '&::before': {
-                content: '""',
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                opacity: 0.22,
-                backgroundImage: `
-                    radial-gradient(circle at 18% 22%, rgba(255,255,255,0.08) 0 1px, transparent 1.6px),
-                    radial-gradient(circle at 62% 18%, rgba(255,255,255,0.05) 0 1px, transparent 1.4px),
-                    radial-gradient(circle at 84% 46%, rgba(255,255,255,0.07) 0 1px, transparent 1.5px),
-                    radial-gradient(circle at 34% 74%, rgba(255,255,255,0.05) 0 1px, transparent 1.5px),
-                    radial-gradient(circle at 72% 82%, rgba(255,255,255,0.06) 0 1px, transparent 1.6px),
-                    linear-gradient(135deg, rgba(255,255,255,0.02) 0 1px, transparent 1px),
-                    linear-gradient(45deg, rgba(255,255,255,0.015) 0 1px, transparent 1px)
-                `,
-                backgroundSize: '180px 180px, 220px 220px, 260px 260px, 240px 240px, 200px 200px, 72px 72px, 96px 96px',
-                backgroundPosition: '0 0, 20px 40px, 80px 10px, 120px 90px, 30px 130px, 0 0, 12px 12px'
-            }
         }}>
+            <MuralPattern />
             <AppBar position="static" color="transparent" elevation={0} sx={{ 
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
                 bgcolor: '#0A0908', 
                 backdropFilter: 'blur(10px)',
+                position: 'relative',
+                zIndex: 1,
                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
                 '&::after': {
                     content: '""',
@@ -1372,7 +1358,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             </Menu>
 
             {/* Messages Area */}
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 1 }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
                     <Box sx={{ p: 2, mb: 2, bgcolor: alpha('#6366F1', 0.05), borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#6366F1' }}>
@@ -1445,7 +1431,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             maxWidth: '80%',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 0.5
+                            gap: 0.5,
+                            position: 'relative',
+                            zIndex: 2
                         }}>
                             <Paper 
                                 onContextMenu={(e) => handleMessageContextMenu(e, msg)}
@@ -1453,12 +1441,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 p: 1.2,
                                 px: 1.8,
                                 borderRadius: msg.senderId === user?.$id ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                bgcolor: msg.senderId === user?.$id ? alpha('#6366F1', 0.15) : alpha('#F59E0B', 0.1),
+                                bgcolor: msg.senderId === user?.$id ? '#2E3192' : '#7A4A0A',
+                                backgroundImage: msg.senderId === user?.$id
+                                    ? 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 34%, rgba(0,0,0,0.06) 100%)'
+                                    : 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.015) 34%, rgba(0,0,0,0.08) 100%)',
                                 border: '1px solid',
-                                borderColor: msg.senderId === user?.$id ? alpha('#6366F1', 0.3) : alpha('#F59E0B', 0.2),
+                                borderColor: msg.senderId === user?.$id ? '#4F55D6' : '#A36211',
                                 color: 'text.primary',
-                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                boxShadow: msg.senderId === user?.$id
+                                    ? '0 12px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.22)'
+                                    : '0 12px 24px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.24)',
                                 position: 'relative',
+                                zIndex: 2,
                                 '&::after': {
                                     content: '""',
                                     position: 'absolute',
@@ -1479,13 +1473,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         sx={{ 
                                             mb: 1, 
                                             p: 1, 
-                                            bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                                            bgcolor: '#2A2623', 
                                             borderRadius: '8px', 
                                             borderLeft: '3px solid',
                                             borderColor: 'primary.main',
                                             cursor: 'pointer',
                                             opacity: 0.8,
-                                            '&:hover': { opacity: 1, bgcolor: 'rgba(255, 255, 255, 0.08)' }
+                                             '&:hover': { opacity: 1, bgcolor: '#332F2B' }
                                         }}
                                     >
                                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', mb: 0.5 }}>
@@ -1505,21 +1499,21 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 )}
                                 {renderMessageContent(msg)}
                             </Paper>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5 }}>
-                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: msg.senderId === user?.$id ? 'flex-end' : 'flex-start', px: 0.5, position: 'relative', zIndex: 2 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 1, color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>
                                     {format(new Date(msg.$createdAt || Date.now()), 'h:mm a')}
                                 </Typography>
                                         {msg.senderId === user?.$id && (
                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                 {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
-                                                    <Box sx={{ opacity: 0.4, display: 'flex' }}><Clock size={11} strokeWidth={2.5} /></Box>
+                                                    <Box sx={{ opacity: 1, display: 'flex', color: 'rgba(255,255,255,0.72)' }}><Clock size={11} strokeWidth={2.5} /></Box>
                                                 ) : (msg as any).status === 'error' ? (
-                                                    <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px' }}>Failed</Typography>
+                                                    <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px', opacity: 1 }}>Failed</Typography>
                                                 ) : (
                                                     getMessageTimestamp(msg) <= clientReadSegments.outgoingReadAt ? (
-                                                        <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} />
+                                                        <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} style={{ opacity: 1 }} />
                                                     ) : (
-                                                        <Check size={13} strokeWidth={2.5} style={{ opacity: 0.4 }} />
+                                                        <Check size={13} strokeWidth={2.5} style={{ opacity: 1, color: 'rgba(255,255,255,0.72)' }} />
                                                     )
                                                 )}
                                             </Box>
@@ -1534,7 +1528,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             </Box>
 
             {/* Input Area */}
-            <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 1 }}>
+            <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
                 {replyingTo && (
                     <Box sx={{ 
                         mb: 1, 
@@ -1567,11 +1561,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     alignItems: 'center',
                     gap: 0.75,
                     borderRadius: replyingTo ? '0 0 24px 24px' : '24px',
-                    bgcolor: 'rgba(255, 255, 255, 0.03)',
+                    bgcolor: '#161412',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
+                    position: 'relative',
+                    zIndex: 2,
                     '&:focus-within': {
                         borderColor: 'primary.main',
-                        bgcolor: 'rgba(255, 255, 255, 0.05)',
+                        bgcolor: '#1C1A18',
                     }
                 }}>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
@@ -1605,7 +1601,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </MenuItem>
                     </Menu>
 
-                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#0A0908', zIndex: 1 }}>
+                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#0A0908', zIndex: 2 }}>
                     <ChatDraftInput
                         key={conversationId}
                         attachment={attachment}
