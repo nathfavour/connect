@@ -16,6 +16,7 @@ const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
 const ACCOUNTS_API_URL = `${KYLRIX_AUTH_URI}/api/permissions`;
 const ACCOUNTS_MESSAGE_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messages`;
 const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/message-reactions`;
+const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 
 const arraysEqual = (left: string[], right: string[]) =>
@@ -172,6 +173,29 @@ async function callMessageReactionApi(
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Reaction update failed');
+    }
+
+    return response.json().catch(() => ({}));
+}
+
+async function callJoinRequestApi(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    payload?: Record<string, unknown>,
+    auth?: { jwt?: string; cookie?: string }
+) {
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_JOIN_REQUESTS_API_URL, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Join request update failed');
     }
 
     return response.json().catch(() => ({}));
@@ -963,6 +987,8 @@ export const ChatService = {
         isMuted: string[];
         isArchived: string[];
         tags: string[];
+        inviteLink: string | null;
+        inviteLinkExpiry: string | null;
     }>) {
         return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
             ...data
@@ -1140,6 +1166,45 @@ export const ChatService = {
         }
 
         return updated;
+    },
+
+    async getJoinRequests(conversationId: string) {
+        const { rows } = await tablesDB.listRows(DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
+            Query.equal('resourceType', 'chat.conversation'),
+            Query.equal('resourceId', conversationId),
+            Query.equal('status', 'pending'),
+            Query.limit(1000),
+        ]);
+
+        return rows;
+    },
+
+    async updateConversationInvite(conversationId: string, enabled: boolean) {
+        return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
+            inviteLink: enabled ? conversationId : null,
+            inviteLinkExpiry: null,
+        });
+    },
+
+    async resolveJoinRequest(
+        resourceType: string,
+        resourceId: string,
+        requesterId: string,
+        action: 'accept' | 'reject'
+    ) {
+        return callJoinRequestApi('PATCH', {
+            resourceType,
+            resourceId,
+            requesterId,
+            action,
+        });
+    },
+
+    async cancelJoinRequest(resourceType: string, resourceId: string) {
+        return callJoinRequestApi('DELETE', {
+            resourceType,
+            resourceId,
+        });
     },
 
     async deleteMessage(messageId: string) {

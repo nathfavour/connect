@@ -4213,9 +4213,9 @@
                 {
                     "key": "status",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "default": "pending",
+                    "default": null,
                     "format": "enum",
                     "elements": [
                         "pending",
@@ -4226,7 +4226,7 @@
                 {
                     "key": "createdAt",
                     "type": "datetime",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "default": null,
                     "format": ""

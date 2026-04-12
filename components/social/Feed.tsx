@@ -1984,13 +1984,6 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             }}
                             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
                         >
-                            <IconButton 
-                                size="small"
-                                onClick={(e) => handleToggleLike(e, moment)}
-                                sx={{ p: 0, mr: 0.5 }}
-                            >
-                                <Heart size={14} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
-                            </IconButton>
                             <Typography sx={{ fontWeight: 700, opacity: 0.5 }} variant="caption">{moment.stats?.likes || 0}</Typography>
                         </Box>
                     </Box>

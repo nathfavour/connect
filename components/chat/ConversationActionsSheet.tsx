@@ -26,12 +26,16 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { Query } from 'appwrite';
 import { MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/lib/auth';
+import { tablesDB } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
+import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 
 type ConversationActionsSheetProps = {
@@ -153,6 +157,9 @@ export default function ConversationActionsSheet({
   const [directLoading, setDirectLoading] = useState(false);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<any[]>([]);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(false);
+  const [requesterProfiles, setRequesterProfiles] = useState<Record<string, any>>({});
   const [memberTab, setMemberTab] = useState<'members' | 'add' | 'remove'>('members');
   const [memberQuery, setMemberQuery] = useState('');
   const [memberResults, setMemberResults] = useState<any[]>([]);
@@ -162,6 +169,11 @@ export default function ConversationActionsSheet({
 
   const isGroup = currentConversation?.type === 'group';
   const isDirect = Boolean(currentConversation && !isGroup);
+  const inviteEnabled = Boolean(currentConversation?.inviteLink && currentConversation.inviteLink === currentConversation.$id);
+  const inviteLink = useMemo(() => {
+    if (!currentConversation?.$id || typeof window === 'undefined') return '';
+    return `${window.location.origin}/groups/invite/${currentConversation.$id}`;
+  }, [currentConversation?.$id]);
   const participantIds = useMemo(
     () => {
       const ids = Array.isArray(currentConversation?.participants)
@@ -184,12 +196,63 @@ export default function ConversationActionsSheet({
     return updated;
   }, [currentConversation?.$id, onConversationUpdated, user?.$id]);
 
+  const loadPendingRequests = useCallback(async () => {
+    if (!open || !isGroup || !isAdmin || !currentConversation?.$id) {
+      setPendingJoinRequests([]);
+      return;
+    }
+
+    setPendingRequestsLoading(true);
+    try {
+      const { rows } = await tablesDB.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
+        Query.equal('resourceType', 'chat.conversation'),
+        Query.equal('resourceId', currentConversation.$id),
+        Query.equal('status', 'pending'),
+        Query.orderAsc('createdAt'),
+        Query.limit(100),
+      ]);
+
+      setPendingJoinRequests(rows || []);
+
+      const unknownProfiles = Array.from(new Set(
+        (rows || [])
+          .map((row: any) => row.requesterId)
+          .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+          .filter((id: string) => !getCachedIdentityById(id) && !requesterProfiles[id])
+      ));
+
+      if (unknownProfiles.length > 0) {
+        const profiles = await Promise.all(
+          unknownProfiles.map((id) => UsersService.getProfileById(id).then((profile) => seedIdentityCache(profile)).catch(() => null))
+        );
+
+        const mapped = profiles.reduce<Record<string, any>>((acc, profile) => {
+          if (profile?.userId) {
+            acc[profile.userId] = profile;
+          }
+          return acc;
+        }, {});
+
+        if (Object.keys(mapped).length > 0) {
+          setRequesterProfiles((current) => ({ ...current, ...mapped }));
+        }
+      }
+    } catch (error) {
+      console.error('[ConversationActionsSheet] Failed to load join requests:', error);
+      setPendingJoinRequests([]);
+    } finally {
+      setPendingRequestsLoading(false);
+    }
+  }, [currentConversation?.$id, isAdmin, isGroup, open, requesterProfiles]);
+
   useEffect(() => {
     if (!open || !conversation) return;
     setCurrentConversation(conversation);
     setMemberTab('members');
     setMemberQuery('');
     setMemberResults([]);
+    setPendingJoinRequests([]);
+    setRequesterProfiles({});
     setDeleteConfirmOpen(false);
   }, [open, conversation?.$id]);
 
@@ -289,6 +352,10 @@ export default function ConversationActionsSheet({
     };
   }, [open, isGroup, memberTab, memberQuery, participantIds, user?.$id]);
 
+  useEffect(() => {
+    void loadPendingRequests();
+  }, [loadPendingRequests]);
+
   const handleOpenDirectChat = () => {
     if (!currentConversation) return;
     router.push(`/chat/${currentConversation.$id}`);
@@ -341,6 +408,50 @@ export default function ConversationActionsSheet({
     } catch (error: any) {
       console.error('[ConversationActionsSheet] Failed to remove member:', error);
       toast.error(error?.message || 'Failed to remove member');
+    } finally {
+      setMutating(false);
+    }
+  };
+
+  const handleToggleInviteLink = async () => {
+    if (!currentConversation?.$id) return;
+
+    setMutating(true);
+    try {
+      await ChatService.updateConversationInvite(currentConversation.$id, !inviteEnabled);
+      await refreshConversation();
+      toast.success(inviteEnabled ? 'Invite link disabled' : 'Invite link enabled');
+    } catch (error: any) {
+      console.error('[ConversationActionsSheet] Failed to update invite link:', error);
+      toast.error(error?.message || 'Failed to update invite link');
+    } finally {
+      setMutating(false);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteEnabled || !inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success('Invite link copied');
+    } catch (error) {
+      console.error('[ConversationActionsSheet] Failed to copy invite link:', error);
+      toast.error('Failed to copy invite link');
+    }
+  };
+
+  const handleResolveRequest = async (request: any, action: 'accept' | 'reject') => {
+    if (!currentConversation?.$id || !request?.requesterId) return;
+
+    setMutating(true);
+    try {
+      await ChatService.resolveJoinRequest('chat.conversation', currentConversation.$id, request.requesterId, action);
+      await refreshConversation();
+      await loadPendingRequests();
+      toast.success(action === 'accept' ? 'Request accepted' : 'Request rejected');
+    } catch (error: any) {
+      console.error('[ConversationActionsSheet] Failed to resolve join request:', error);
+      toast.error(error?.message || 'Failed to update request');
     } finally {
       setMutating(false);
     }
@@ -488,6 +599,56 @@ export default function ConversationActionsSheet({
 
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
 
+          {isAdmin && (
+            <Box sx={{ px: 2.5, pt: 1.75 }}>
+              <Paper
+                sx={{
+                  p: 1.5,
+                  borderRadius: '18px',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800 }}>Invite link</Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.65 }}>
+                        {inviteEnabled ? 'Anyone with the link can request access.' : 'Invite link is disabled.'}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant={inviteEnabled ? 'outlined' : 'contained'}
+                      size="small"
+                      onClick={() => void handleToggleInviteLink()}
+                      disabled={mutating}
+                    >
+                      {inviteEnabled ? 'Disable' : 'Enable'}
+                    </Button>
+                  </Stack>
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={inviteEnabled ? inviteLink : 'Disabled'}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => void handleCopyInviteLink()}
+                    disabled={!inviteEnabled}
+                  >
+                    Copy link
+                  </Button>
+                </Stack>
+              </Paper>
+            </Box>
+          )}
+
           <Box sx={{ px: 2.5, pt: 1.5 }}>
             <Tabs
               value={isAdmin ? memberTab : 'members'}
@@ -521,6 +682,90 @@ export default function ConversationActionsSheet({
 
             {memberTab === 'members' && (
               <Stack spacing={1}>
+                {isAdmin && (
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      mb: 1,
+                      bgcolor: 'rgba(245,158,11,0.06)',
+                      border: '1px solid rgba(245,158,11,0.18)',
+                      borderRadius: '18px',
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 800 }}>Pending requests</Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                          {pendingJoinRequests.length} awaiting review
+                        </Typography>
+                      </Box>
+                      <Chip size="small" label={pendingJoinRequests.length} sx={{ bgcolor: 'rgba(245,158,11,0.14)' }} />
+                    </Stack>
+
+                    {pendingRequestsLoading ? (
+                      <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                        Loading requests...
+                      </Typography>
+                    ) : pendingJoinRequests.length === 0 ? (
+                      <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                        No pending requests.
+                      </Typography>
+                    ) : (
+                      <Stack spacing={1}>
+                        {pendingJoinRequests.map((request: any) => {
+                          const requesterId = request.requesterId;
+                          const requester =
+                            requesterProfiles[requesterId] ||
+                            getCachedIdentityById(requesterId) ||
+                            { userId: requesterId, username: requesterId?.slice(0, 8), displayName: requesterId?.slice(0, 8) };
+
+                          return (
+                            <Paper
+                              key={request.$id || requesterId}
+                              sx={{
+                                p: 1.25,
+                                bgcolor: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: '16px',
+                              }}
+                            >
+                              <Stack direction="row" alignItems="center" spacing={1.5}>
+                                <MemberAvatar user={requester} />
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography sx={{ fontWeight: 800 }} noWrap>
+                                    {requester.displayName || requester.username || 'Unknown'}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ opacity: 0.6 }} noWrap>
+                                    @{requester.username || requesterId?.slice(0, 8)}
+                                  </Typography>
+                                </Box>
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => void handleResolveRequest(request, 'reject')}
+                                    disabled={mutating}
+                                  >
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    onClick={() => void handleResolveRequest(request, 'accept')}
+                                    disabled={mutating}
+                                  >
+                                    Accept
+                                  </Button>
+                                </Stack>
+                              </Stack>
+                            </Paper>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Paper>
+                )}
+
                 {membersLoading ? (
                   <Typography variant="body2" sx={{ opacity: 0.6 }}>Loading members...</Typography>
                 ) : (
