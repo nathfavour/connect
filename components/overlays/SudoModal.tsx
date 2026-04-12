@@ -14,6 +14,8 @@ import {
     Stack,
     alpha,
     InputAdornment,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import {
     Lock,
@@ -44,6 +46,8 @@ export function SudoModal({
     intent,
 }: SudoModalProps) {
     const { user } = useAuth();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -229,14 +233,14 @@ export function SudoModal({
         <Drawer
             open={isOpen}
             onClose={() => { }} // Prevent closing by clicking outside
-            anchor="bottom"
+            anchor={isDesktop ? "right" : "bottom"}
             ModalProps={{ keepMounted: true }}
             sx={{ zIndex: 2200 }}
             PaperProps={{
                 sx: {
-                    borderTopLeftRadius: '32px',
-                    borderTopRightRadius: '32px',
-                    borderBottomLeftRadius: 0,
+                    borderTopLeftRadius: isDesktop ? '32px' : '32px',
+                    borderTopRightRadius: isDesktop ? 0 : '32px',
+                    borderBottomLeftRadius: isDesktop ? '32px' : 0,
                     borderBottomRightRadius: 0,
                     bgcolor: '#0A0908',
                     backdropFilter: 'none',
@@ -248,8 +252,8 @@ export function SudoModal({
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 'auto',
-                    maxHeight: 'calc(100dvh - 12px)',
+                    height: isDesktop ? '100dvh' : 'auto',
+                    maxHeight: isDesktop ? '100dvh' : 'calc(100dvh - 12px)',
                 }
             }}
         >
