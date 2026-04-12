@@ -1,5 +1,5 @@
 import { ID, Permission, Query, Role } from 'appwrite';
-import { account, tablesDB } from '../appwrite/client';
+import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
@@ -17,6 +17,7 @@ const ACCOUNTS_API_URL = `${KYLRIX_AUTH_URI}/api/permissions`;
 const ACCOUNTS_MESSAGE_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messages`;
 const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/message-reactions`;
 const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
+const GROUP_AVATAR_ROUTE = `${KYLRIX_AUTH_URI}/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 
 const arraysEqual = (left: string[], right: string[]) =>
@@ -24,6 +25,11 @@ const arraysEqual = (left: string[], right: string[]) =>
 
 const canonicalizeParticipantsForMatch = (participants: string[]) =>
     Array.from(new Set((participants || []).filter(Boolean))).sort();
+
+const uniqueIds = (ids: Array<string | null | undefined>) =>
+    Array.from(new Set(ids.map((value) => String(value || '').trim()).filter(Boolean)));
+
+const buildGroupAvatarUrl = (conversationId: string) => `${GROUP_AVATAR_ROUTE}?conversationId=${encodeURIComponent(conversationId)}`;
 
 const getConversationActivityAt = (row: any) =>
     row?.lastMessageAt || row?.updatedAt || row?.createdAt || row?.$updatedAt || row?.$createdAt || null;
@@ -413,6 +419,43 @@ async function syncConversationAccess(
         ownerId,
         action: 'grant',
     });
+}
+
+async function syncConversationAvatarAccess(
+    conversationId: string,
+    avatarFileId: string | null,
+    participantIds: string[],
+    auth?: { jwt?: string; cookie?: string }
+) {
+    if (!avatarFileId) return null;
+    const targets = uniqueIds(participantIds);
+    if (targets.length === 0) return null;
+
+    return callPermissionsApi('POST', {
+        storageBucketId: APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS,
+        fileId: avatarFileId,
+        targetUserIds: targets,
+        permission: 'read',
+        action: 'grant',
+    }, auth);
+}
+
+async function revokeConversationAvatarAccess(
+    avatarFileId: string | null,
+    participantIds: string[],
+    auth?: { jwt?: string; cookie?: string }
+) {
+    if (!avatarFileId) return null;
+    const targets = uniqueIds(participantIds);
+    if (targets.length === 0) return null;
+
+    return callPermissionsApi('DELETE', {
+        storageBucketId: APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS,
+        fileId: avatarFileId,
+        targetUserIds: targets,
+        permission: 'read',
+        action: 'revoke',
+    }, auth);
 }
 
 export const ChatService = {
@@ -1025,7 +1068,8 @@ export const ChatService = {
     async updateConversation(conversationId: string, data: Partial<{
         name: string;
         description: string;
-        avatar: string;
+        avatarUrl: string | null;
+        avatarFileId: string | null;
         settings: string;
         participants: string[];
         admins: string[];
@@ -1046,6 +1090,11 @@ export const ChatService = {
 
         if (inviteEnabled && !Object.prototype.hasOwnProperty.call(patch, 'inviteMeta')) {
             patch.inviteMeta = buildInviteMeta(current, patch);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(patch, 'avatarUrl') || Object.prototype.hasOwnProperty.call(patch, 'avatarFileId')) {
+            patch.avatarUrl = typeof patch.avatarUrl === 'string' ? patch.avatarUrl : patch.avatarUrl ?? null;
+            patch.avatarFileId = typeof patch.avatarFileId === 'string' ? patch.avatarFileId : patch.avatarFileId ?? null;
         }
 
         return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, patch);
@@ -1092,6 +1141,11 @@ export const ChatService = {
                 [userId],
                 conv.type === 'direct' ? 'write' : 'read',
                 conv.creatorId || participants[0] || userId
+            );
+            await syncConversationAvatarAccess(
+                conversationId,
+                conv.avatarFileId || null,
+                [...participants, userId],
             );
 
             if (requiresRotation && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
@@ -1173,6 +1227,10 @@ export const ChatService = {
             participants,
             admins
         });
+        await revokeConversationAvatarAccess(
+            conv.avatarFileId || null,
+            [userId],
+        );
         await callPermissionsApi('DELETE', {
             databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
             tableId: CONV_TABLE,
@@ -1239,6 +1297,23 @@ export const ChatService = {
         return await this.updateConversation(conversationId, {
             inviteLink: enabled ? conversationId : null,
             inviteLinkExpiry: null,
+        });
+    },
+
+    async updateConversationAvatar(conversationId: string, file: File, auth?: { jwt?: string; cookie?: string }) {
+        const current = await this.getConversationById(conversationId);
+        const existingParticipants = uniqueIds([
+            ...(Array.isArray(current?.participants) ? current.participants : []),
+            current?.creatorId,
+            ...(Array.isArray(current?.admins) ? current.admins : []),
+        ]);
+
+        const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, ID.unique(), file);
+        await syncConversationAvatarAccess(conversationId, uploaded.$id, existingParticipants, auth);
+
+        return await this.updateConversation(conversationId, {
+            avatarFileId: uploaded.$id,
+            avatarUrl: buildGroupAvatarUrl(conversationId),
         });
     },
 

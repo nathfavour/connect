@@ -42,6 +42,7 @@ export const APPWRITE_CONFIG = {
         VOICE: 'voice',
         VIDEO: 'video',
         PROFILE_PICTURES: 'profile_pictures',
+        GROUP_AVATARS: 'group_avatars',
         COVERS: 'covers'
     },
     FUNCTIONS: {

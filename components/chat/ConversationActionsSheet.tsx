@@ -163,6 +163,7 @@ export default function ConversationActionsSheet({
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
   const [detailsSaving, setDetailsSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [memberTab, setMemberTab] = useState<'members' | 'add' | 'remove'>('members');
   const [memberQuery, setMemberQuery] = useState('');
   const [memberResults, setMemberResults] = useState<any[]>([]);
@@ -173,6 +174,7 @@ export default function ConversationActionsSheet({
   const isGroup = currentConversation?.type === 'group';
   const isDirect = Boolean(currentConversation && !isGroup);
   const inviteEnabled = Boolean(currentConversation?.inviteLink && currentConversation.inviteLink === currentConversation.$id);
+  const groupAvatarSrc = currentConversation?.avatarUrl || undefined;
   const inviteLink = useMemo(() => {
     if (!currentConversation?.$id || typeof window === 'undefined') return '';
     return `${window.location.origin}/groups/invite/${currentConversation.$id}`;
@@ -460,6 +462,22 @@ export default function ConversationActionsSheet({
     }
   };
 
+  const handleUploadGroupAvatar = async (file: File | null) => {
+    if (!currentConversation?.$id || !file) return;
+
+    setAvatarUploading(true);
+    try {
+      await ChatService.updateConversationAvatar(currentConversation.$id, file);
+      await refreshConversation();
+      toast.success('Group avatar updated');
+    } catch (error: any) {
+      console.error('[ConversationActionsSheet] Failed to update group avatar:', error);
+      toast.error(error?.message || 'Failed to update group avatar');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleCopyInviteLink = async () => {
     if (!inviteEnabled || !inviteLink) return;
     try {
@@ -604,6 +622,7 @@ export default function ConversationActionsSheet({
           <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Avatar
+                src={groupAvatarSrc}
                 sx={{
                   width: 56,
                   height: 56,
@@ -612,7 +631,7 @@ export default function ConversationActionsSheet({
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
-                <Users size={24} />
+                {!groupAvatarSrc && <Users size={24} />}
               </Avatar>
               <Box>
                 <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
@@ -692,6 +711,33 @@ export default function ConversationActionsSheet({
               >
                 <Stack spacing={1.5}>
                   <Typography sx={{ fontWeight: 800 }}>Group details</Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Avatar
+                      src={groupAvatarSrc}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        bgcolor: alpha('#6366F1', 0.12),
+                        color: '#6366F1',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      {!groupAvatarSrc && <Users size={22} />}
+                    </Avatar>
+                    <Button component="label" variant="outlined" size="small" disabled={avatarUploading}>
+                      {avatarUploading ? 'Uploading...' : 'Upload avatar'}
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          void handleUploadGroupAvatar(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </Button>
+                  </Stack>
                   <TextField
                     fullWidth
                     size="small"
