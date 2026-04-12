@@ -53,7 +53,7 @@ export default function GroupInvitePage() {
   }, [inviteUrl, loading, user]);
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || loading) return;
 
     let active = true;
     const loadPreview = async () => {
@@ -61,8 +61,9 @@ export default function GroupInvitePage() {
       setError(null);
 
       try {
+        const requesterId = user?.$id ? `&requesterId=${encodeURIComponent(user.$id)}` : '';
         const response = await fetch(
-          `${KYLRIX_AUTH_URI}/api/connect/join-requests?resourceType=chat.conversation&resourceId=${encodeURIComponent(conversationId)}`,
+          `${KYLRIX_AUTH_URI}/api/connect/join-requests?resourceType=chat.conversation&resourceId=${encodeURIComponent(conversationId)}${requesterId}`,
           { credentials: 'include' }
         );
 
@@ -93,7 +94,7 @@ export default function GroupInvitePage() {
     return () => {
       active = false;
     };
-  }, [conversationId]);
+  }, [conversationId, loading, user?.$id]);
 
   const handleRequestJoin = async () => {
     if (!conversationId) return;
