@@ -673,6 +673,19 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setMessageAnchorEl(null);
     };
 
+    const handleReact = async (emoji: string) => {
+        if (!messageAnchorEl?.msg || !user) return;
+        try {
+            await ChatService.reactToMessage(conversationId, messageAnchorEl.msg.$id, emoji);
+            toast.success('Reaction sent');
+        } catch (error) {
+            console.error('Reaction failed:', error);
+            toast.error('Failed to react');
+        } finally {
+            setMessageAnchorEl(null);
+        }
+    };
+
     const handleSend = async (text: string) => {
         if ((!text.trim() && !attachment) || !user || sending) return false;
 
@@ -1807,6 +1820,20 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 </MenuItem>
                 <MenuItem onClick={() => handleCopy(messageAnchorEl!.msg.content as string)} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
                     <Copy size={16} /> Copy Text
+                </MenuItem>
+                <Box sx={{ px: 1, py: 0.75, opacity: 0.6 }}>
+                    <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        React
+                    </Typography>
+                </Box>
+                <MenuItem onClick={() => handleReact('👍')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
+                    👍 Like
+                </MenuItem>
+                <MenuItem onClick={() => handleReact('❤️')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
+                    ❤️ Love
+                </MenuItem>
+                <MenuItem onClick={() => handleReact('😂')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
+                    😂 Laugh
                 </MenuItem>
                 {messageAnchorEl?.msg.senderId === user?.$id && (
                     <MenuItem onClick={() => { _handleDeleteMessage(messageAnchorEl!.msg.$id, true); setMessageAnchorEl(null); }} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600, color: '#ff4d4d' }}>
