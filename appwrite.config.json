@@ -3120,15 +3120,6 @@
                     "format": ""
                 },
                 {
-                    "key": "inviteMeta",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "category",
                     "type": "string",
                     "required": false,
@@ -3163,6 +3154,14 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "inviteMeta",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": true
                 }
             ],
             "indexes": [
@@ -3910,6 +3909,138 @@
             ]
         },
         {
+            "$id": "epochs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "epochs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "epochNumber",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_resource",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "resourceId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "unique_epoch",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "resourceId",
+                        "epochNumber"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "conversationMembers",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Conversation Members",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "unique_conversation_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_conversation",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "profiles",
             "$permissions": [
                 "create(\"users\")",
@@ -4051,17 +4182,17 @@
             ]
         },
         {
-            "$id": "epochs",
+            "$id": "messageReactions",
             "$permissions": [
                 "create(\"users\")"
             ],
             "databaseId": "chat",
-            "name": "epochs",
+            "name": "Message Reactions",
             "enabled": true,
             "rowSecurity": true,
             "columns": [
                 {
-                    "key": "resourceId",
+                    "key": "conversationId",
                     "type": "string",
                     "required": true,
                     "array": false,
@@ -4070,63 +4201,7 @@
                     "encrypt": false
                 },
                 {
-                    "key": "epochNumber",
-                    "type": "integer",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "min": 0,
-                    "max": 2147483647
-                },
-                {
-                    "key": "createdBy",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 36,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_resource",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "resourceId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "unique_epoch",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "resourceId",
-                        "epochNumber"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "conversationMembers",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "Conversation Members",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "conversationId",
+                    "key": "messageId",
                     "type": "string",
                     "required": true,
                     "array": false,
@@ -4142,41 +4217,60 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "emoji",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
                 }
             ],
             "indexes": [
                 {
-                    "key": "unique_conversation_user",
-                    "type": "unique",
+                    "key": "idx_msgreact_msg",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "messageId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_msgreact_conv_created",
+                    "type": "key",
                     "status": "available",
                     "columns": [
                         "conversationId",
-                        "userId"
+                        "createdAt"
                     ],
                     "orders": [
                         "ASC",
-                        "ASC"
+                        "DESC"
                     ]
                 },
                 {
-                    "key": "idx_conversation",
-                    "type": "key",
+                    "key": "uniq_msgreact_user_msg",
+                    "type": "unique",
                     "status": "available",
                     "columns": [
-                        "conversationId"
+                        "userId",
+                        "messageId"
                     ],
                     "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
@@ -4298,101 +4392,6 @@
                     ],
                     "orders": [
                         "ASC",
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "messageReactions",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "Message Reactions",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "messageId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "emoji",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 16,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "createdAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_msgreact_msg",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "messageId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_msgreact_conv_created",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "conversationId",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "uniq_msgreact_user_msg",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "messageId"
-                    ],
-                    "orders": [
                         "ASC",
                         "ASC"
                     ]

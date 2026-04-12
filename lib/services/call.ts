@@ -120,6 +120,7 @@ export const CallService = {
             // We always fetch the latest activity doc ID for the sender to ensure we update the right one
             const existing = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
                 Query.equal('userId', senderId),
+                Query.orderDesc('$updatedAt'),
                 Query.limit(1)
             ]);
 

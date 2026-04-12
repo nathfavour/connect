@@ -28,14 +28,18 @@ import {
     Calendar,
     Clock
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { client, account as authAccount } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { ChatService } from '@/lib/services/chat';
 
 export function PublicCall({ id }: { id: string }) {
     const { user, login } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callerRequested = searchParams.get('caller') === 'true';
+    const requestedType = searchParams.get('type') === 'audio' ? 'audio' : 'video';
     const [linkData, setLinkData] = useState<any>(null);
     const [hostProfile, setHostProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -48,6 +52,10 @@ export function PublicCall({ id }: { id: string }) {
     const [showPreCheck, setShowPreCheck] = useState(false);
     const [mediaSettings, setMediaSettings] = useState({ video: true, audio: true, companion: false });
     const [isCompanionDetected, setIsCompanionDetected] = useState(false);
+    const [callMode, setCallMode] = useState<'link' | 'conversation' | null>(null);
+    const [autoStartAfterPreCheck, setAutoStartAfterPreCheck] = useState(false);
+    const [conversationTitle, setConversationTitle] = useState<string>('');
+    const [resolvedTargetId, setResolvedTargetId] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         setLocalUser(user);
@@ -86,28 +94,70 @@ export function PublicCall({ id }: { id: string }) {
                 link = await CallService.getCallLinkByCode(id);
             }
 
-            if (!link) {
+            if (link) {
+                setCallMode('link');
+                setLinkData(link);
+                setShowPreCheck(false);
+                setAutoStartAfterPreCheck(false);
+                setResolvedTargetId(link.userId);
+                
+                // Fetch host profile
+                const host = await UsersService.getProfileById(link.userId);
+                setHostProfile(host);
+
+                // Detect companion mode
+                if (user) {
+                    const participants = await CallService.getActiveParticipants(id);
+                    const isAlreadyIn = participants.some((p: any) => p.userId === user.$id);
+                    setIsCompanionDetected(isAlreadyIn);
+                }
+                return;
+            }
+
+            const conversation = await ChatService.getConversationById(id, user?.$id);
+            const participants = Array.from(new Set(
+                (conversation?.participants || [])
+                    .filter((participant: unknown): participant is string => typeof participant === 'string' && participant.length > 0)
+            ));
+            const currentUserId = user?.$id;
+            if (!conversation || !currentUserId || !participants.includes(currentUserId)) {
                 setLoading(false);
                 return;
             }
-            setLinkData(link);
-            
-            // Fetch host profile
-            const host = await UsersService.getProfileById(link.userId);
-            setHostProfile(host);
 
-            // Detect companion mode
-            if (user) {
-                const participants = await CallService.getActiveParticipants(id);
-                const isAlreadyIn = participants.some((p: any) => p.userId === user.$id);
-                setIsCompanionDetected(isAlreadyIn);
+            const otherParticipantId =
+                participants.find((participant) => participant !== currentUserId) ||
+                conversation.otherUserId ||
+                conversation.creatorId;
+
+            if (!otherParticipantId) {
+                setLoading(false);
+                return;
             }
+
+            setCallMode('conversation');
+            setLinkData({
+                $id: conversation.$id,
+                userId: currentUserId,
+                type: requestedType,
+                title: conversation.name || 'Direct Chat',
+                isExpired: false,
+                isScheduled: false,
+                startsAt: null,
+                expiresAt: null
+            });
+            setConversationTitle(conversation.name || 'Direct Chat');
+            setResolvedTargetId(otherParticipantId);
+            setHostProfile(await UsersService.getProfileById(otherParticipantId));
+            setIsCompanionDetected(false);
+            setAutoStartAfterPreCheck(false);
+            setShowPreCheck(true);
         } catch (_e) {
             console.error('Failed to load call details:', _e);
         } finally {
             setLoading(false);
         }
-    }, [id, user]);
+    }, [id, requestedType, user]);
 
     useEffect(() => {
         loadCallDetails();
@@ -120,7 +170,7 @@ export function PublicCall({ id }: { id: string }) {
         const unsubscribe = client.subscribe(
             `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`,
             (response: any) => {
-                if (response.events.some((e: string) => e.includes('.update'))) {
+                if (response.events.some((e: string) => e.includes('.update') || e.includes('.create'))) {
                     const activity = response.payload;
                     if (!activity.customStatus) return;
                     
@@ -129,6 +179,7 @@ export function PublicCall({ id }: { id: string }) {
                         if (signal.target === localUser.$id && signal.type === 'let_in' && (signal.callId === id || !signal.callId)) {
                             setShowPreCheck(true);
                             setJoining(false);
+                            setAutoStartAfterPreCheck(true);
                             toast.success("Host admitted you to the call!");
                         }
                     } catch (_e) {}
@@ -157,10 +208,11 @@ export function PublicCall({ id }: { id: string }) {
                 setLocalUser(activeUser);
             }
 
-            // 2. If host OR authenticated user, skip request and go to pre-check
-            if (activeUser.$id === linkData.userId || user) {
+            // 2. If host, skip request and go to pre-check
+            if (activeUser.$id === linkData.userId) {
                 setShowPreCheck(true);
                 setJoining(false);
+                setAutoStartAfterPreCheck(false);
                 return;
             }
 
@@ -184,6 +236,13 @@ export function PublicCall({ id }: { id: string }) {
         setIsAdmitted(true);
         setShowPreCheck(false);
     };
+
+    const isConversationCall = callMode === 'conversation';
+    const interfaceIsCaller = isConversationCall ? callerRequested : localUser?.$id === linkData?.userId;
+    const interfaceTargetId = isConversationCall ? resolvedTargetId : (interfaceIsCaller ? undefined : linkData?.userId);
+    const interfaceAutoInitiate = isConversationCall ? callerRequested : autoStartAfterPreCheck;
+    const interfaceTitle = isConversationCall ? conversationTitle : (linkData?.title || 'Join Call');
+    const contactLabel = isConversationCall ? 'Calling' : 'Hosted by';
 
     if (loading) return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -231,12 +290,13 @@ export function PublicCall({ id }: { id: string }) {
 
         return (
             <CallInterface 
-                isCaller={localUser?.$id === linkData.userId} 
-                callType={linkData.type} 
-                targetId={localUser?.$id === linkData.userId ? undefined : linkData.userId}
+                isCaller={Boolean(interfaceIsCaller)} 
+                callType={isConversationCall ? requestedType : linkData.type} 
+                targetId={interfaceTargetId}
                 callCode={id}
                 initialMediaSettings={mediaSettings}
-                callTitle={linkData.title}
+                autoInitiate={interfaceAutoInitiate}
+                callTitle={interfaceTitle}
                 expiresAt={linkData.expiresAt}
             />
         );
@@ -280,10 +340,10 @@ export function PublicCall({ id }: { id: string }) {
 
                         <Box>
                             <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', mb: 1 }}>
-                                {linkData.title || 'Join Call'}
+                                {interfaceTitle}
                             </Typography>
                             <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
-                                Hosted by <span style={{ color: '#6366F1' }}>@{hostProfile?.username || 'user'}</span>
+                                {contactLabel} <span style={{ color: '#6366F1' }}>@{hostProfile?.username || 'user'}</span>
                             </Typography>
                         </Box>
 

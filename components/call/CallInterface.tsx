@@ -68,6 +68,7 @@ export const CallInterface = ({
     targetId: initialTargetId,
     callCode,
     initialMediaSettings = { video: true, audio: true, companion: false },
+    autoInitiate = false,
     callTitle,
     expiresAt
 }: { 
@@ -77,6 +78,7 @@ export const CallInterface = ({
     targetId?: string,
     callCode?: string,
     initialMediaSettings?: { video: boolean, audio: boolean, companion: boolean },
+    autoInitiate?: boolean,
     callTitle?: string,
     expiresAt?: string
 }) => {
@@ -102,6 +104,7 @@ export const CallInterface = ({
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const rtcManager = useRef<WebRTCManager | null>(null);
+    const hasInitiatedCall = useRef(false);
     const router = useRouter();
     const callStartTime = useRef<number | null>(null);
     
@@ -233,11 +236,12 @@ export const CallInterface = ({
                 localVideoRef.current.srcObject = stream;
             }
             
-            // 3. If caller and has target, initiate
-            if (isCaller && targetId) {
+            // 3. If this side should initiate, do it once the media stream is ready.
+            if ((isCaller || autoInitiate) && targetId && !hasInitiatedCall.current) {
+                hasInitiatedCall.current = true;
                 rtcManager.current?.createOffer(user.$id, targetId);
-            } else if (isCaller && !targetId) {
-                 setStatus('Waiting for participants...');
+            } else if ((isCaller || autoInitiate) && !targetId) {
+                  setStatus('Waiting for participants...');
             }
         }).catch(err => {
              console.error("Failed to init media stream:", err);
@@ -274,9 +278,12 @@ export const CallInterface = ({
                             setStatus('Joining...');
                             setTargetId(signal.sender);
                             // Small delay to ensure host is ready
-                            setTimeout(() => {
-                                rtcManager.current?.createOffer(user.$id, signal.sender);
-                            }, 500);
+                            if (!hasInitiatedCall.current) {
+                                hasInitiatedCall.current = true;
+                                setTimeout(() => {
+                                    rtcManager.current?.createOffer(user.$id, signal.sender);
+                                }, 500);
+                            }
                         } else if (signal.type === 'chat_message') {
                             setChatMessages(prev => [...prev, signal.message]);
                             // We use a ref or a separate state for unread count to avoid re-running this effect
@@ -299,7 +306,7 @@ export const CallInterface = ({
                 rtcManager.current.cleanup();
             }
         };
-    }, [user, isCaller, callCode, conversationId, initialMediaSettings.audio, initialMediaSettings.video, isCompanion, targetId]);
+    }, [user, isCaller, autoInitiate, callCode, conversationId, initialMediaSettings.audio, initialMediaSettings.video, isCompanion, targetId]);
 
     const handleAcceptRequest = async (request: JoinRequest) => {
         if (!user) return;
