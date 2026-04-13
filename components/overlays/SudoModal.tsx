@@ -480,27 +480,6 @@ export function SudoModal({
                             </Button>
                         )}
 
-                        {mode === "password" && (
-                            <Button
-                                fullWidth
-                                variant="text"
-                                size="small"
-                                onClick={() => {
-                                    const callbackUrl = encodeURIComponent(window.location.href);
-                                    window.location.href = `https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`;
-                                }}
-                                sx={{
-                                    color: 'error.main',
-                                    fontSize: '0.75rem',
-                                    mt: 1,
-                                    '&:hover': { bgcolor: alpha('#ef4444', 0.1) },
-                                    textTransform: 'none',
-                                    fontWeight: 600
-                                }}
-                            >
-                                Reset Master Password
-                            </Button>
-                        )}
                     </Stack>
                 )}
             </DialogContent>
