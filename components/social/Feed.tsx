@@ -66,6 +66,7 @@ import { EventViewDrawer } from './EventViewDrawer';
 import { CallSelectorModal } from './CallSelectorModal';
 import ActorsListDrawer from './ActorsListDrawer';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
+import { formatPostTimestamp } from '@/lib/time';
 
 import toast from 'react-hot-toast';
 
@@ -1508,7 +1509,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             }
                             subheader={
                                 <Typography variant="caption" sx={feedSubheaderSx}>
-                                    {new Date(moment.$createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    {formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
                                 </Typography>
                             }
                             action={

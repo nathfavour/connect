@@ -47,10 +47,10 @@ import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { resolveIdentity } from '@/lib/identity-format';
 import { getCachedMomentPreview, seedMomentPreview } from '@/lib/moment-preview';
 import { getCachedMomentThread, seedMomentThread } from '@/lib/moment-thread-cache';
-import { format } from 'date-fns';
 import { FormattedText } from '@/components/common/FormattedText';
 import toast from 'react-hot-toast';
 import { TextField, InputAdornment, Alert, Menu, MenuItem } from '@mui/material';
+import { formatPostTimestamp } from '@/lib/time';
 
 const EXPORT_CARD = '#161412';
 const EXPORT_PAD = 16;
@@ -63,9 +63,7 @@ const clampText = (value: string, limit: number) => {
 };
 
 const getMomentTimeLabel = (moment: any) => {
-    const raw = moment?.$createdAt || moment?.createdAt;
-    if (!raw) return 'Just now';
-    return format(new Date(raw), 'MMM d · h:mm a');
+    return formatPostTimestamp(moment?.$createdAt || moment?.createdAt, moment?.$updatedAt || moment?.updatedAt) || 'Just now';
 };
 
 const wrapLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
@@ -839,8 +837,10 @@ export function PostViewClient() {
         return ancestors;
     }, [hydrateMoment, user?.$id]);
 
+    const isQuoteMoment = moment?.metadata?.type === 'quote' && Boolean(moment?.sourceMoment);
+
     const revealAncestorThread = useCallback(async () => {
-        if (!moment?.metadata?.sourceId || ancestorLoading || showAncestors) return;
+        if (!moment?.metadata?.sourceId || isQuoteMoment || ancestorLoading || showAncestors) return;
         setAncestorLoading(true);
         try {
             const ancestors = await fetchAncestorThread(moment.metadata.sourceId);
@@ -861,20 +861,20 @@ export function PostViewClient() {
             pullStartYRef.current = null;
             pullActiveRef.current = false;
         }
-    }, [ancestorLoading, fetchAncestorThread, moment, momentId, replies, showAncestors]);
+    }, [ancestorLoading, fetchAncestorThread, isQuoteMoment, moment, momentId, replies, showAncestors]);
 
     const onPullPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-        if (!moment?.metadata?.sourceId || showAncestors) return;
+        if (!moment?.metadata?.sourceId || isQuoteMoment || showAncestors) return;
         pullStartYRef.current = event.clientY;
         pullActiveRef.current = true;
         (event.currentTarget as HTMLDivElement).setPointerCapture?.(event.pointerId);
-    }, [moment?.metadata?.sourceId, showAncestors]);
+    }, [isQuoteMoment, moment?.metadata?.sourceId, showAncestors]);
 
     const onPullPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-        if (!pullActiveRef.current || pullStartYRef.current === null || !moment?.metadata?.sourceId || showAncestors) return;
+        if (!pullActiveRef.current || pullStartYRef.current === null || !moment?.metadata?.sourceId || isQuoteMoment || showAncestors) return;
         const distance = Math.max(0, event.clientY - pullStartYRef.current);
         setPullDistance(Math.min(distance, 120));
-    }, [moment?.metadata?.sourceId, showAncestors]);
+    }, [isQuoteMoment, moment?.metadata?.sourceId, showAncestors]);
 
     const onPullPointerUp = useCallback(() => {
         if (!pullActiveRef.current) return;
@@ -888,9 +888,9 @@ export function PostViewClient() {
     }, [pullDistance, revealAncestorThread]);
 
     const triggerScrollReveal = useCallback(() => {
-        if (!moment?.metadata?.sourceId || ancestorLoading || showAncestors) return;
+        if (!moment?.metadata?.sourceId || isQuoteMoment || ancestorLoading || showAncestors) return;
         void revealAncestorThread();
-    }, [ancestorLoading, moment?.metadata?.sourceId, revealAncestorThread, showAncestors]);
+    }, [ancestorLoading, isQuoteMoment, moment?.metadata?.sourceId, revealAncestorThread, showAncestors]);
 
     const onWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
         if (event.deltaY > 12) triggerScrollReveal();
@@ -1137,7 +1137,6 @@ export function PostViewClient() {
     const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
     const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
     const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar);
-    const isQuoteMoment = moment.metadata?.type === 'quote' && Boolean(moment.sourceMoment);
     const quotedIdentity = isQuoteMoment
         ? resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId)
         : null;
@@ -1209,7 +1208,7 @@ export function PostViewClient() {
                     </Alert>
                 )}
 
-                {moment.metadata?.sourceId && !showAncestors && ancestorLoading && (
+                {moment.metadata?.sourceId && !isQuoteMoment && !showAncestors && ancestorLoading && (
                     <Box
                         onPointerDown={onPullPointerDown}
                         onPointerMove={onPullPointerMove}
@@ -1254,7 +1253,7 @@ export function PostViewClient() {
                     </Box>
                 )}
 
-                {(showAncestors && threadAncestors.length > 0) || moment ? (
+                {(!isQuoteMoment && showAncestors && threadAncestors.length > 0) || moment ? (
                     <Box
                         sx={{
                             bgcolor: '#161412',
@@ -1276,7 +1275,7 @@ export function PostViewClient() {
                                     key={ancestor.$id}
                                     name={resolvedAncestor.displayName}
                                     handle={resolvedAncestor.handle}
-                                    timeLabel={format(new Date(ancestor.$createdAt || ancestor.createdAt), 'h:mm a')}
+                                    timeLabel={formatPostTimestamp(ancestor.$createdAt, ancestor.$updatedAt)}
                                     caption={ancestor.caption}
                                     avatarSrc={ancestor.creator?.avatar}
                                     avatarLabel={resolvedAncestor.displayName?.charAt(0).toUpperCase()}
@@ -1303,7 +1302,7 @@ export function PostViewClient() {
                             <QuoteMomentView
                                 name={creatorName}
                                 handle={resolvedCreator.handle}
-                                timeLabel={format(new Date(moment.$createdAt), 'h:mm a')}
+                                timeLabel={formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
                                 caption={moment.caption}
                                 avatarSrc={creatorAvatar}
                                 avatarLabel={creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
@@ -1328,7 +1327,7 @@ export function PostViewClient() {
                             <ThreadPostView
                                 name={creatorName}
                                 handle={resolvedCreator.handle}
-                                timeLabel={format(new Date(moment.$createdAt), 'h:mm a')}
+                                timeLabel={formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
                                 caption={moment.caption}
                                 avatarSrc={creatorAvatar}
                                 avatarLabel={creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
@@ -1414,7 +1413,7 @@ export function PostViewClient() {
                                         key={reply.$id}
                                         name={rCreatorName}
                                         handle={rResolvedCreator.handle}
-                                        timeLabel={format(new Date(reply.$createdAt), 'h:mm a')}
+                                        timeLabel={formatPostTimestamp(reply.$createdAt, reply.$updatedAt)}
                                         caption={reply.caption}
                                         avatarSrc={reply.creator?.avatar}
                                         avatarLabel={rCreatorName.replace(/^@/, '').charAt(0).toUpperCase()}
