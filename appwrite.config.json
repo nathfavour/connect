@@ -4417,6 +4417,228 @@
             ]
         },
         {
+            "$id": "unorganic_emails",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Unorganic Emails",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "eventType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceApp",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "actorId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "recipientId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "recipientEmail",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "templateKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "priority",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "queued",
+                        "sending",
+                        "sent",
+                        "suppressed",
+                        "failed"
+                    ]
+                },
+                {
+                    "key": "dedupeKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "attempts",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "sentAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "processedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "blockedReason",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_dedupeKey",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "dedupeKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_recipient_status_sentAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "recipientId",
+                        "status",
+                        "sentAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_recipient_sentAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "recipientId",
+                        "sentAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_status_priority",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status",
+                        "priority"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "focusSessions",
             "$permissions": [
                 "create(\"users\")"
@@ -5200,29 +5422,6 @@
             "antivirus": true
         },
         {
-            "$id": "group_avatars",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")",
-                "delete(\"users\")"
-            ],
-            "fileSecurity": true,
-            "name": "group_avatars",
-            "enabled": true,
-            "maximumFileSize": 5242880,
-            "allowedFileExtensions": [
-                "png",
-                "jpg",
-                "jpeg",
-                "webp",
-                "gif"
-            ],
-            "compression": "none",
-            "encryption": true,
-            "antivirus": true
-        },
-        {
             "$id": "notes_attachments",
             "$permissions": [
                 "create(\"users\")",
@@ -5622,6 +5821,29 @@
                 "webp"
             ],
             "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "group_avatars",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "fileSecurity": true,
+            "name": "group_avatars",
+            "enabled": true,
+            "maximumFileSize": 5242880,
+            "allowedFileExtensions": [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "gif"
+            ],
+            "compression": "none",
             "encryption": true,
             "antivirus": true
         }

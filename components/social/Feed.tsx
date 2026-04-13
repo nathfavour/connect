@@ -58,6 +58,7 @@ import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from
 import { resolveIdentity, resolveIdentityUsername } from '@/lib/identity-format';
 import { seedMomentPreview } from '@/lib/moment-preview';
 import { FormattedText } from '../common/FormattedText';
+import { FastDraftInput, FastDraftInputHandle } from '../common/FastDraftInput';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { NoteViewDrawer } from './NoteViewDrawer';
 import { EventSelectorModal } from './EventSelectorModal';
@@ -519,11 +520,13 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [editingMoment, setEditingMoment] = useState<any>(null);
+    const [hasDraftText, setHasDraftText] = useState(Boolean(editingMoment?.caption?.trim()));
     const momentsRef = React.useRef<any[]>([]);
     const feedCacheRef = React.useRef<Record<string, any[]>>({});
     const feedCacheAgeRef = React.useRef<Record<string, number>>({});
     const feedLoadSeqRef = React.useRef(0);
     const feedPrefetchRef = React.useRef<Record<string, Promise<void> | undefined>>({});
+    const draftInputRef = React.useRef<FastDraftInputHandle | null>(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -899,6 +902,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         setEditingMoment(moment);
         // If there are attachments, we'd ideally load them here, but for now we focus on caption
         setPulseTarget(moment.sourceMoment || null);
+        setHasDraftText(Boolean(moment.caption?.trim()));
         setIsComposerOpen(true);
         setPostMenuAnchorEl(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -906,6 +910,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
     const handleCancelComposer = useCallback(() => {
         setEditingMoment(null);
+        setHasDraftText(false);
         setSelectedNote(null);
         setSelectedEvent(null);
         setSelectedCall(null);
@@ -1399,6 +1404,9 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     onClearCall={() => setSelectedCall(null)}
                     onClearPulseTarget={() => setPulseTarget(null)}
                     onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+                    draftInputRef={draftInputRef}
+                    hasDraftText={hasDraftText}
+                    setHasDraftText={setHasDraftText}
                 />
             )}
 
