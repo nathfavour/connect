@@ -255,7 +255,7 @@ type ThreadPostViewProps = {
     avatarLabel: string;
     replyingTo?: string | null;
     stats: { replies?: number; pulses?: number; likes?: number; views?: number };
-    showThreadLine?: boolean;
+    threadLineMode?: 'up' | 'down' | 'both' | 'none';
     onClick?: () => void;
     onLike?: (event: React.MouseEvent) => void;
     onPulse?: (event: React.MouseEvent) => void;
@@ -271,7 +271,7 @@ const ThreadPostView = ({
     avatarLabel,
     replyingTo,
     stats,
-    showThreadLine,
+    threadLineMode = 'none',
     onClick,
     onLike,
     onPulse,
@@ -290,17 +290,14 @@ const ThreadPostView = ({
         }}
     >
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1.5, flexShrink: 0, width: 48 }}>
-            <Box sx={{ position: 'relative', width: 48, display: 'flex', justifyContent: 'center' }}>
-                {showThreadLine && (
+            <Box sx={{ width: 48, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {(threadLineMode === 'up' || threadLineMode === 'both') && (
                     <Box
                         sx={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: 0,
-                            bottom: 0,
                             width: '2px',
-                            transform: 'translateX(-1px)',
+                            height: threadLineMode === 'both' ? 14 : 20,
                             bgcolor: 'rgba(255,255,255,0.16)',
+                            mb: 0.45,
                         }}
                     />
                 )}
@@ -319,6 +316,17 @@ const ThreadPostView = ({
                 >
                     {avatarLabel}
                 </Avatar>
+                {(threadLineMode === 'down' || threadLineMode === 'both') && (
+                    <Box
+                        sx={{
+                            width: '2px',
+                            minHeight: threadLineMode === 'both' ? 14 : 18,
+                            flexGrow: 1,
+                            bgcolor: 'rgba(255,255,255,0.16)',
+                            mt: 0.45,
+                        }}
+                    />
+                )}
             </Box>
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1015,7 +1023,7 @@ export function PostViewClient() {
                                         likes: ancestor.stats?.likes || 0,
                                         views: ancestor.stats?.views || 0,
                                     }}
-                                    showThreadLine={index < threadAncestors.length - 1 || Boolean(moment?.metadata?.sourceId)}
+                                    threadLineMode="down"
                                     onClick={() => router.push(`/post/${ancestor.$id}`)}
                                     onLike={(e) => { e.stopPropagation(); handleToggleLike(ancestor); }}
                                     onPulse={(e) => {
@@ -1045,7 +1053,7 @@ export function PostViewClient() {
                         likes: moment.stats?.likes || 0,
                         views: moment.stats?.views || 0,
                     }}
-                    showThreadLine={Boolean(moment.metadata?.sourceId || replies.length)}
+                    threadLineMode={moment.metadata?.sourceId && !showAncestors ? 'up' : (replies.length > 0 ? 'down' : 'none')}
                     onLike={(e) => { e.stopPropagation(); handleToggleLike(); }}
                     onPulse={(e) => {
                         e.stopPropagation();
@@ -1214,7 +1222,7 @@ export function PostViewClient() {
                                     likes: reply.stats?.likes || 0,
                                     views: reply.stats?.views || 0,
                                 }}
-                                showThreadLine={index < replies.length - 1}
+                                threadLineMode={index < replies.length - 1 ? 'down' : 'none'}
                                 onClick={() => router.push(`/post/${reply.$id}`)}
                                 onLike={(e) => {
                                     e.stopPropagation();
