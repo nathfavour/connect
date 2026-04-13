@@ -1103,7 +1103,19 @@ export function PostViewClient() {
                 )}
 
                 {(showAncestors && threadAncestors.length > 0) || moment ? (
-                    <Box sx={{ bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', boxShadow: '0 14px 36px rgba(0, 0, 0, 0.18)', overflow: 'hidden' }}>
+                    <Box
+                        sx={{
+                            bgcolor: '#161412',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            borderRadius: '20px',
+                            boxShadow: '0 14px 36px rgba(0, 0, 0, 0.18)',
+                            overflow: 'hidden',
+                            maxHeight: { xs: '58dvh', md: '60dvh' },
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
+                    >
                         {showAncestors && threadAncestors.length > 0 && threadAncestors.map((ancestor, index) => {
                             const ancestorId = ancestor.userId || ancestor.creatorId;
                             const resolvedAncestor = resolveIdentity(ancestor.creator, ancestorId);
@@ -1163,7 +1175,17 @@ export function PostViewClient() {
                     </Box>
                 ) : null}
 
-                <Box id="comments-section" sx={{ pt: 2 }}>
+                <Box
+                    id="comments-section"
+                    sx={{
+                        pt: 2,
+                        maxHeight: { xs: '36dvh', md: '30dvh' },
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
+                        WebkitOverflowScrolling: 'touch',
+                        pr: 0.5,
+                    }}
+                >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, mb: 1 }}>
                         <Typography sx={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'text.secondary' }}>
                             Comments

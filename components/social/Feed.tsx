@@ -85,13 +85,50 @@ const momentCardSx = {
         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.32)'
     }
 } as const;
+const feedAvatarSx = {
+    width: 40,
+    height: 40,
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+} as const;
+const feedTitleSx = {
+    fontWeight: 850,
+    fontSize: '0.93rem',
+    lineHeight: 1.2,
+    color: 'white',
+    fontFamily: 'var(--font-clash)',
+    letterSpacing: '0.01em',
+} as const;
+const feedSubheaderSx = {
+    opacity: 0.42,
+    fontWeight: 700,
+    fontSize: '0.8rem',
+    lineHeight: 1.2,
+    fontFamily: 'var(--font-mono)',
+} as const;
+const feedBodySx = {
+    color: 'text.primary',
+    fontSize: '0.92rem',
+    lineHeight: 1.45,
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
+} as const;
+const feedActionCountSx = {
+    fontWeight: 700,
+    opacity: 0.5,
+    fontSize: '0.72rem',
+    lineHeight: 1,
+} as const;
 
 const FeedSkeleton = () => (
     <Stack spacing={3}>
         {[1, 2, 3].map((i) => (
-            <Card key={i} sx={{ borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
-                <CardHeader
-                    avatar={<Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
+                    <Card key={i} sx={{ borderRadius: '20px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                        <CardHeader
+                    avatar={<Skeleton variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
                     title={<Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
                     subheader={<Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
                 />
@@ -1340,12 +1377,13 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             elevation={0}
                                         >
                                             <CardHeader
-                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }} src={creatorAvatar} sx={{ width: 36, height: 36, borderRadius: '12px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)' }} />}
-                                                title={<Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{creatorName}</Typography>}
-                                                subheader={<Typography variant="caption" sx={{ opacity: 0.5 }}>{new Date(moment.createdAt).toLocaleDateString()}</Typography>}
+                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }} src={creatorAvatar} sx={{ ...feedAvatarSx, width: 36, height: 36, cursor: 'pointer' }} />}
+                                                sx={{ px: 2, pt: 2, pb: 0.5, '& .MuiCardHeader-content': { minWidth: 0 } }}
+                                                title={<Typography sx={feedTitleSx}>{creatorName}</Typography>}
+                                                subheader={<Typography sx={feedSubheaderSx}>{new Date(moment.createdAt).toLocaleDateString()}</Typography>}
                                             />
-                                            <CardContent sx={{ pt: 0 }}>
-                                                <Typography variant="body2" sx={{ opacity: 0.8, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            <CardContent sx={{ pt: 0.25, px: 2, pb: 1.5 }}>
+                                                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.8, WebkitLineClamp: 3 }}>
                                                     {moment.caption}
                                                 </Typography>
                                             </CardContent>
@@ -1440,12 +1478,13 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 return (
                     <Card key={moment.$id} sx={{ ...momentCardSx, mb: 3 }} elevation={0}>
                         <CardHeader
+                            sx={{ px: 2, pt: 2, pb: 0.75, '& .MuiCardHeader-content': { minWidth: 0 } }}
                             avatar={
                                 <Avatar
                                     src={creatorAvatar}
                                     sx={{ 
-                                        width: 44,
-                                        height: 44,
+                                        width: 40,
+                                        height: 40,
                                         bgcolor: isOwnPost ? '#F59E0B' : '#161412', 
                                         color: isOwnPost ? '#000' : 'text.secondary', 
                                         border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -1458,17 +1497,17 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 </Avatar>
                             }
                             title={
-                                <Typography sx={{ fontWeight: 900, fontSize: '1rem', color: isOwnPost ? '#F59E0B' : 'white', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
+                                <Typography sx={{ ...feedTitleSx, color: isOwnPost ? '#F59E0B' : 'white' }}>
                                     {creatorName}
                                     {isOwnPost && (
-                                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.62rem' }}>
                                             Author
                                         </Typography>
                                     )}
                                 </Typography>
                             }
                             subheader={
-                                <Typography variant="caption" sx={{ opacity: 0.4, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                                <Typography variant="caption" sx={feedSubheaderSx}>
                                     {new Date(moment.$createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </Typography>
                             }
@@ -1486,15 +1525,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 )
                             }
                         />
-                        <CardContent 
-                            sx={{ pt: 0, px: 3, pb: 2, cursor: 'pointer' }}
+                        <CardContent
+                            sx={{ pt: 0.25, px: 2, pb: 1.5, cursor: 'pointer' }}
                             onClick={() => handleOpenMoment(moment)}
                         >
                         {/* Repost/Pulse Header */}
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, color: '#10B981', opacity: 0.9 }}>
-                                <Repeat2 size={14} strokeWidth={3} />
-                                <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, color: '#10B981', opacity: 0.9 }}>
+                                <Repeat2 size={13} strokeWidth={3} />
+                                <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                     {isOwnPost ? 'PULSED BY YOU' : `PULSED BY ${creatorName.toUpperCase()}`}
                                 </Typography>
                             </Box>
@@ -1502,7 +1541,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
                         {/* Comment Thread Context */}
                         {moment.metadata?.type === 'reply' && moment.sourceMoment && (
-                            <Box sx={{ mb: 2.5, position: 'relative' }}>
+                            <Box sx={{ mb: 2, position: 'relative' }}>
                                 <Box sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
@@ -1515,8 +1554,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     e.stopPropagation();
                                     handleOpenMoment(moment.sourceMoment);
                                 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 18, height: 18, borderRadius: '5px' }} />
-                                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em' }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 16, height: 16, borderRadius: '5px' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em', fontSize: '0.72rem' }}>
                                         Replying to {resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}
                                     </Typography>
                                 </Box>
@@ -1524,15 +1563,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     position: 'absolute', 
                                     left: 8, 
                                     top: 20, 
-                                    bottom: -12, 
+                                    bottom: -10, 
                                     width: '1.5px', 
                                     bgcolor: 'rgba(255,255,255,0.08)',
                                     borderRadius: '1px'
                                 }} />
                                 <Paper sx={{ 
-                                    p: 1.5, 
+                                    p: 1.25, 
                                     ml: 3,
-                                    borderRadius: '14px', 
+                                    borderRadius: '12px', 
                                     bgcolor: 'rgba(255, 255, 255, 0.02)', 
                                     border: '1px solid rgba(255, 255, 255, 0.04)',
                                     pointerEvents: 'none'
@@ -1543,8 +1582,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                         WebkitLineClamp: 2, 
                                         WebkitBoxOrient: 'vertical', 
                                         overflow: 'hidden',
-                                        fontSize: '0.8rem',
-                                        lineHeight: 1.5,
+                                        fontSize: '0.76rem',
+                                        lineHeight: 1.4,
                                         fontStyle: 'italic'
                                     }}>
                                         {moment.sourceMoment.caption}
@@ -1558,9 +1597,10 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 text={moment.caption}
                                 variant="body1"
                                 sx={{ 
-                                    lineHeight: 1.6, 
-                                    fontSize: '1.05rem', 
-                                    mb: (moment.attachedNote || (moment.sourceMoment && moment.metadata?.type !== 'reply') || moment.metadata?.attachments?.length) ? 2 : 0,
+                                    ...feedBodySx,
+                                    lineHeight: 1.5,
+                                    fontSize: '0.94rem',
+                                    mb: (moment.attachedNote || (moment.sourceMoment && moment.metadata?.type !== 'reply') || moment.metadata?.attachments?.length) ? 1.5 : 0,
                                     mt: moment.metadata?.type === 'reply' ? 1 : 0 
                                 }}
                             />
@@ -1572,8 +1612,8 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 display: 'grid', 
                                 gap: 1, 
                                 gridTemplateColumns: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
-                                mb: 2.5,
-                                borderRadius: '18px',
+                                mb: 2,
+                                borderRadius: '16px',
                                 overflow: 'hidden',
                                 border: '1px solid rgba(255, 255, 255, 0.08)',
                                 bgcolor: 'rgba(0,0,0,0.2)'
@@ -1585,7 +1625,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                         src={SocialService.getMediaPreview(att.id, 800, 600)} 
                                         sx={{ 
                                             width: '100%', 
-                                            height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 340 : 200, 
+                                            height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 300 : 180, 
                                             objectFit: 'cover',
                                             transition: 'transform 0.5s ease',
                                             '&:hover': { transform: 'scale(1.02)' }
@@ -1598,27 +1638,19 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                         {/* Pulsed/Reposted Content */}
                         {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
                             <Paper sx={{ 
-                                p: 2, 
-                                borderRadius: '18px', 
+                                p: 1.5, 
+                                borderRadius: '16px', 
                                 bgcolor: 'rgba(255,255,255,0.01)', 
                                 border: '1px solid rgba(255,255,255,0.05)',
                                 transition: 'all 0.2s ease',
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
                             }}>
-                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
+                                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
                                 </Stack>
-                                <Typography variant="body2" sx={{ 
-                                    opacity: 0.7, 
-                                    display: '-webkit-box', 
-                                    WebkitLineClamp: 3, 
-                                    WebkitBoxOrient: 'vertical', 
-                                    overflow: 'hidden',
-                                    lineHeight: 1.6,
-                                    fontSize: '0.9rem'
-                                }}>
+                                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
                                     {moment.sourceMoment.caption}
                                 </Typography>
                             </Paper>
@@ -1626,27 +1658,19 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
                         {moment.metadata?.type === 'quote' && moment.sourceMoment && (
                             <Paper sx={{ 
-                                p: 2, 
-                                borderRadius: '18px', 
+                                p: 1.5, 
+                                borderRadius: '16px', 
                                 bgcolor: 'rgba(255,255,255,0.01)', 
                                 border: '1px solid rgba(255,255,255,0.05)',
                                 transition: 'all 0.2s ease',
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
                             }}>
-                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 24, height: 24, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
+                                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
+                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
                                 </Stack>
-                                <Typography variant="body2" sx={{ 
-                                    opacity: 0.7, 
-                                    display: '-webkit-box', 
-                                    WebkitLineClamp: 3, 
-                                    WebkitBoxOrient: 'vertical', 
-                                    overflow: 'hidden',
-                                    lineHeight: 1.6,
-                                    fontSize: '0.9rem'
-                                }}>
+                                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
                                     {moment.sourceMoment.caption}
                                 </Typography>
                             </Paper>
@@ -1672,15 +1696,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 }}
                             >
                                 <Box sx={{
-                                    p: 3,
+                                    p: 2,
                                     background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(0, 163, 255, 0.02) 100%)',
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
                                 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                                         <Box
                                             sx={{
-                                                width: 40,
-                                                height: 40,
+                                                width: 34,
+                                                height: 34,
                                                 borderRadius: 1.5,
                                                 bgcolor: 'rgba(99, 102, 241, 0.1)',
                                                 display: 'flex',
@@ -1693,54 +1717,33 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             <FileText size={20} color="#6366F1" strokeWidth={1.5} />
                                         </Box>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography
-                                                variant="subtitle1"
-                                                fontWeight={900}
-                                                sx={{
-                                                    color: 'white',
-                                                    fontFamily: 'var(--font-space-grotesk)',
-                                                    letterSpacing: '-0.01em',
-                                                    lineHeight: 1.2
-                                                }}
-                                            >
-                                                {moment.attachedNote.title || 'Untitled Note'}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                                                Public Note • {new Date(moment.attachedNote.updatedAt || moment.attachedNote.$updatedAt).toLocaleDateString()}
-                                            </Typography>
+                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                                    {moment.attachedNote.title || 'Untitled Note'}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                                    Public Note • {new Date(moment.attachedNote.updatedAt || moment.attachedNote.$updatedAt).toLocaleDateString()}
+                                                </Typography>
+                                            </Box>
                                         </Box>
-                                    </Box>
 
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            lineHeight: 1.7,
-                                            fontSize: '0.925rem',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 4,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden',
-                                            fontFamily: 'var(--font-inter)'
-                                        }}
-                                    >
-                                        {moment.attachedNote.content?.replace(/[#*`]/g, '')}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{
-                                    px: 3,
-                                    py: 1.5,
+                                        <Typography variant="body2" sx={{ ...feedBodySx, color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.5, fontSize: '0.86rem', WebkitLineClamp: 4 }}>
+                                            {moment.attachedNote.content?.replace(/[#*`]/g, '')}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{
+                                    px: 2,
+                                    py: 1.25,
                                     bgcolor: 'rgba(0, 0, 0, 0.2)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
                                 }}>
-                                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                         Shared via Kylrix Note
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         {moment.attachedNote.tags?.slice(0, 2).map((_tag: string, i: number) => (
-                                            <Box key={i} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.05)', fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700 }}>
+                                            <Box key={i} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.05)', fontSize: '0.62rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700 }}>
                                                 #{_tag}
                                             </Box>
                                         ))}
@@ -1769,15 +1772,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 }}
                             >
                                 <Box sx={{
-                                    p: 3,
+                                    p: 2,
                                     background: 'linear-gradient(135deg, rgba(0, 163, 255, 0.05) 0%, rgba(0, 120, 255, 0.02) 100%)',
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
                                 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                                         <Box
                                             sx={{
-                                                width: 40,
-                                                height: 40,
+                                                width: 34,
+                                                height: 34,
                                                 borderRadius: 1.5,
                                                 bgcolor: 'rgba(0, 163, 255, 0.1)',
                                                 display: 'flex',
@@ -1790,35 +1793,26 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             <Calendar size={20} color="#00A3FF" strokeWidth={1.5} />
                                         </Box>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography
-                                                variant="subtitle1"
-                                                fontWeight={900}
-                                                sx={{
-                                                    color: 'white',
-                                                    fontFamily: 'var(--font-space-grotesk)',
-                                                    letterSpacing: '-0.01em',
-                                                    lineHeight: 1.2
-                                                }}
-                                            >
-                                                {moment.attachedEvent.title || 'Untitled Event'}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                                                Kylrix Flow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
-                                            </Typography>
+                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                                    {moment.attachedEvent.title || 'Untitled Event'}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                                    Kylrix Flow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
+                                                </Typography>
+                                            </Box>
                                         </Box>
-                                    </Box>
 
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                            <Clock size={14} strokeWidth={1.5} />
-                                            <Typography variant="caption" fontWeight={600}>
+                                            <Clock size={13} strokeWidth={1.5} />
+                                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
                                                 {new Date(moment.attachedEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(moment.attachedEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </Typography>
                                         </Box>
                                         {moment.attachedEvent.location && (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                                <MapPin size={14} strokeWidth={1.5} />
-                                                <Typography variant="caption" fontWeight={600}>
+                                                <MapPin size={13} strokeWidth={1.5} />
+                                                <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
                                                     {moment.attachedEvent.location}
                                                 </Typography>
                                             </Box>
@@ -1826,17 +1820,17 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     </Box>
                                 </Box>
                                 <Box sx={{
-                                    px: 3,
-                                    py: 1.5,
+                                    px: 2,
+                                    py: 1.25,
                                     bgcolor: 'rgba(0, 0, 0, 0.2)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
                                 }}>
-                                    <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                    <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                         Scheduled via Kylrixflow
                                     </Typography>
-                                    <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.65rem' }}>
+                                    <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.6rem' }}>
                                         View Details
                                     </Button>
                                 </Box>
@@ -1863,15 +1857,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 }}
                             >
                                 <Box sx={{
-                                    p: 3,
+                                    p: 2,
                                     background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 100%)',
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
                                 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                                         <Box
                                             sx={{
-                                                width: 40,
-                                                height: 40,
+                                                width: 34,
+                                                height: 34,
                                                 borderRadius: 1.5,
                                                 bgcolor: 'rgba(245, 158, 11, 0.1)',
                                                 display: 'flex',
@@ -1884,64 +1878,55 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                             {moment.attachedCall.type === 'video' ? <Video size={20} color="#F59E0B" strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" strokeWidth={1.5} />}
                                         </Box>
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography
-                                                variant="subtitle1"
-                                                fontWeight={900}
-                                                sx={{
-                                                    color: 'white',
-                                                    fontFamily: 'var(--font-space-grotesk)',
-                                                    letterSpacing: '-0.01em',
-                                                    lineHeight: 1.2
-                                                }}
-                                            >
-                                                {moment.attachedCall.title || `${moment.attachedCall.type.charAt(0).toUpperCase() + moment.attachedCall.type.slice(1)} Call`}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
-                                                Kylrix Connect Call • {new Date(moment.attachedCall.startsAt).toLocaleDateString()}
-                                            </Typography>
+                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                                    {moment.attachedCall.title || `${moment.attachedCall.type.charAt(0).toUpperCase() + moment.attachedCall.type.slice(1)} Call`}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                                    Kylrix Connect Call • {new Date(moment.attachedCall.startsAt).toLocaleDateString()}
+                                                </Typography>
+                                            </Box>
                                         </Box>
-                                    </Box>
 
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                            <Clock size={14} strokeWidth={1.5} />
-                                            <Typography variant="caption" fontWeight={600}>
+                                            <Clock size={13} strokeWidth={1.5} />
+                                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
                                                 Starts: {new Date(moment.attachedCall.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </Typography>
                                         </Box>
                                     </Box>
                                 </Box>
                                 <Box sx={{
-                                    px: 3,
-                                    py: 1.5,
+                                    px: 2,
+                                    py: 1.25,
                                     bgcolor: 'rgba(0, 0, 0, 0.2)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
                                 }}>
-                                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                         Hosted via Kylrix Connect
                                     </Typography>
-                                    <Button size="small" variant="text" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.65rem' }}>
+                                    <Button size="small" variant="text" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.6rem' }}>
                                         Join Call
                                     </Button>
                                 </Box>
                             </Paper>
                         ) }
                     </CardContent>
-                        <CardActions sx={{ px: 2, pb: 1, pt: 0, justifyContent: 'space-around', color: 'rgba(255, 255, 255, 0.4)' }}>
+                        <CardActions sx={{ px: 2, pb: 1.25, pt: 1, justifyContent: 'space-around', color: 'rgba(255, 255, 255, 0.4)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                         <Tooltip title="Reply">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <IconButton 
                                     size="small"
                                     sx={{ 
-                                        p: 1,
+                                        p: 0.75,
                                         '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
                                     }}
                                 >
-                                    <MessageCircle size={19} strokeWidth={1.5} />
+                                    <MessageCircle size={17} strokeWidth={1.5} />
                                 </IconButton>
-                                <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.5 }}>{moment.stats?.replies || 0}</Typography>
+                                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.replies || 0}</Typography>
                             </Box>
                         </Tooltip>
 
@@ -1961,15 +1946,15 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                         setMenuMoment(moment);
                                     }}
                                     sx={{ 
-                                        p: 1,
+                                        p: 0.75,
                                         color: moment.isPulsed ? '#10B981' : 'inherit',
                                         bgcolor: moment.isPulsed ? 'rgba(16,185,129,0.06)' : 'transparent',
                                         '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.12) } 
                                     }}
                                 >
-                                    <Repeat2 size={19} strokeWidth={moment.isPulsed ? 2 : 1.5} />
+                                    <Repeat2 size={17} strokeWidth={moment.isPulsed ? 2 : 1.5} />
                                 </IconButton>
-                                <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.5 }}>{moment.stats?.pulses || 0}</Typography>
+                                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.pulses || 0}</Typography>
                             </Box>
                         </Tooltip>
 
@@ -1979,12 +1964,12 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             size="small"
                             onClick={(e) => handleToggleLike(e, moment)}
                             sx={{ 
-                                p: 1,
+                                p: 0.75,
                                 color: moment.isLiked ? '#F59E0B' : 'inherit',
                                 '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
                             }}
                         >
-                            <Heart size={19} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
+                            <Heart size={17} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
                         </IconButton>
                         <Box
                             onClick={(e) => {
@@ -1993,7 +1978,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             }}
                             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
                         >
-                            <Typography sx={{ fontWeight: 700, opacity: 0.5 }} variant="caption">{moment.stats?.likes || 0}</Typography>
+                            <Typography sx={feedActionCountSx} variant="caption">{moment.stats?.likes || 0}</Typography>
                         </Box>
                     </Box>
                 </Tooltip>
@@ -2002,11 +1987,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                             <IconButton 
                                 size="small"
                                 sx={{ 
-                                    p: 1,
+                                    p: 0.75,
                                     '&:hover': { color: '#EC4899', bgcolor: alpha('#EC4899', 0.1) } 
                                 }}
                             >
-                                <Bookmark size={19} strokeWidth={1.5} />
+                                <Bookmark size={17} strokeWidth={1.5} />
                             </IconButton>
                         </Tooltip>
 
@@ -2019,11 +2004,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     setSelectedMoment(moment); 
                                 }}
                                 sx={{ 
-                                    p: 1,
+                                    p: 0.75,
                                     '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
                                 }}
                             >
-                                <Share size={19} strokeWidth={1.5} />
+                                <Share size={17} strokeWidth={1.5} />
                             </IconButton>
                         </Tooltip>
                     </CardActions>
