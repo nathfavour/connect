@@ -1,6 +1,8 @@
 import { ID, Query, Permission, Role } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
+import { getEcosystemUrl } from '../constants';
+import { sendKylrixEmailNotification } from '../email-notifications';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
@@ -157,11 +159,30 @@ export const CallService = {
             payload.metadata = JSON.stringify({ receiverId, conversationId });
         }
 
-        return await tablesDB.createRow(DB_ID, LINKS_TABLE, ID.unique(), payload, [
+        const call = await tablesDB.createRow(DB_ID, LINKS_TABLE, ID.unique(), payload, [
             Permission.read(Role.any()),
             Permission.update(Role.user(callerId)),
             Permission.delete(Role.user(callerId)),
         ]);
+
+        if (receiverId) {
+            sendKylrixEmailNotification({
+                eventType: 'call_started',
+                sourceApp: 'connect',
+                actorName: callerId,
+                recipientIds: [receiverId],
+                resourceId: call.$id,
+                resourceTitle: type === 'audio' ? 'Audio call' : 'Video call',
+                resourceType: 'call',
+                templateKey: `connect:call-started:${conversationId || receiverId}`,
+                ctaUrl: `${getEcosystemUrl('connect')}/call/${call.$id}`,
+                ctaText: 'Join call',
+            }).catch((error) => {
+                console.error('[CallService] Failed to queue call email', error);
+            });
+        }
+
+        return call;
     },
 
     async updateCallStatus(callId: string, status: 'completed' | 'declined' | 'missed', _duration: number = 0) {

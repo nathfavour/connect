@@ -5,6 +5,7 @@ import { KYLRIX_AUTH_URI } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
+import { sendKylrixEmailNotification } from '../email-notifications';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -86,6 +87,36 @@ const getConversationActivityAt = (row: any) =>
 
 const getMessageActivityAt = (row: any) =>
     row?.createdAt || row?.updatedAt || row?.$createdAt || row?.$updatedAt || null;
+
+async function notifyMessageStreak(conversation: any, senderId: string, conversationId: string) {
+    const recipientIds = Array.isArray(conversation?.participants)
+        ? uniqueIds(conversation.participants).filter((id) => id !== senderId)
+        : [];
+
+    if (recipientIds.length !== 1) return;
+
+    const recentMessages = await tablesDB.listRows(DB_ID, MSG_TABLE, [
+        Query.equal('conversationId', conversationId),
+        Query.orderDesc('createdAt'),
+        Query.limit(5),
+    ]);
+
+    if (recentMessages.rows.length < 5) return;
+    if (!recentMessages.rows.every((row: any) => row.senderId === senderId)) return;
+
+    await sendKylrixEmailNotification({
+        eventType: 'message_streak',
+        sourceApp: 'connect',
+        actorName: senderId,
+        recipientIds,
+        resourceId: conversationId,
+        resourceTitle: conversation?.name || conversation?.title || 'Conversation',
+        resourceType: 'conversation',
+        templateKey: `connect:message-streak:${conversationId}:${senderId}`,
+        ctaUrl: `${KYLRIX_AUTH_URI}/chat/${conversationId}`,
+        ctaText: 'Open chat',
+    });
+}
 
 const buildConversationMemberPermissions = (_participantIds: string[], creatorId: string) => {
     return [
@@ -997,6 +1028,12 @@ export const ChatService = {
             attachments,
             replyTo,
         }, permissionSyncAuth);
+
+        if (type === 'text') {
+            notifyMessageStreak(conversation, senderId, conversationId).catch((error) => {
+                console.error('[ChatService] Failed to queue message streak email', error);
+            });
+        }
 
         // 2. Best-effort conversation preview update.
         // In a client-only model only the creator can mutate the shared row, so list UIs must
