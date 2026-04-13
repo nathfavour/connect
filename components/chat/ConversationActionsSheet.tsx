@@ -140,6 +140,12 @@ const MemberAvatar = ({ user }: { user: any }) => {
   );
 };
 
+function formatActionError(error: any, fallback: string) {
+  const message = String(error?.message || '').trim();
+  if (message) return message;
+  return fallback;
+}
+
 export default function ConversationActionsSheet({
   conversation,
   open,
@@ -406,7 +412,7 @@ export default function ConversationActionsSheet({
       setMemberResults([]);
     } catch (error: any) {
       console.error('[ConversationActionsSheet] Failed to add member:', error);
-      toast.error(error?.message || 'Failed to add member');
+      toast.error(formatActionError(error, 'Failed to add member'));
     } finally {
       setMutating(false);
     }
@@ -525,7 +531,7 @@ export default function ConversationActionsSheet({
       toast.success(action === 'accept' ? 'Request accepted' : 'Request rejected');
     } catch (error: any) {
       console.error('[ConversationActionsSheet] Failed to resolve join request:', error);
-      toast.error(error?.message || 'Failed to update request');
+      toast.error(formatActionError(error, 'Failed to update request'));
     } finally {
       setMutating(false);
     }
