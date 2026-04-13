@@ -38,6 +38,7 @@ import {
     BarChart3,
     SlidersHorizontal,
     ArrowDownWideNarrow,
+    ArrowLeft,
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/user-utils';
@@ -990,6 +991,9 @@ export function PostViewClient() {
     const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar);
     const currentHasPrev = showAncestors || Boolean(moment.metadata?.sourceId);
     const currentThreadLineMode: ThreadPostViewProps['threadLineMode'] = currentHasPrev ? 'up' : 'none';
+    const handleBackToFeed = useCallback(() => {
+        router.push('/');
+    }, [router]);
 
     return (
         <AppShell>
@@ -1003,13 +1007,33 @@ export function PostViewClient() {
                     width: '100%',
                     maxWidth: 600,
                     mx: 'auto',
-                    py: 0,
-                    px: 0,
+                    pt: { xs: 1.5, sm: 2.5 },
                     pb: { xs: 3, sm: 4 },
+                    px: 0,
                     borderLeft: '1px solid rgba(255,255,255,0.08)',
                     borderRight: '1px solid rgba(255,255,255,0.08)',
                 }}
             >
+                <Box sx={{ px: 2, mb: 1.5 }}>
+                    <Button
+                        onClick={handleBackToFeed}
+                        startIcon={<ArrowLeft size={18} />}
+                        sx={{
+                            px: 1.5,
+                            py: 1,
+                            borderRadius: '14px',
+                            textTransform: 'none',
+                            fontWeight: 800,
+                            color: 'text.primary',
+                            bgcolor: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                        }}
+                    >
+                        Back to feed
+                    </Button>
+                </Box>
+
                 {/* Public Access Banner */}
                 {!user && (
                     <Alert 

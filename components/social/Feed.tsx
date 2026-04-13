@@ -71,6 +71,20 @@ import toast from 'react-hot-toast';
 
 const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
+const momentCardSx = {
+    borderRadius: '20px',
+    bgcolor: '#161412',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    boxShadow: '0 16px 36px rgba(0, 0, 0, 0.24)',
+    overflow: 'hidden',
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&:hover': {
+        bgcolor: '#1C1A18',
+        transform: 'translateY(-2px)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.32)'
+    }
+} as const;
 
 const FeedSkeleton = () => (
     <Stack spacing={3}>
@@ -1319,21 +1333,14 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                                     return (
-                                        <Card 
-                                            key={moment.$id} 
-                                onClick={() => handleOpenMoment(moment)}
-                                            sx={{ 
-                                                borderRadius: '24px', 
-                                                bgcolor: '#161412', 
-                                                border: '1px solid rgba(255, 255, 255, 0.05)', 
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease', 
-                                                '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(245, 158, 11, 0.2)' } 
-                                            }} 
+                                        <Card
+                                            key={moment.$id}
+                                            onClick={() => handleOpenMoment(moment)}
+                                            sx={{ ...momentCardSx, cursor: 'pointer' }}
                                             elevation={0}
                                         >
                                             <CardHeader
-                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }} src={creatorAvatar} sx={{ width: 32, height: 32, borderRadius: '8px', cursor: 'pointer' }} />}
+                            avatar={<Avatar onClick={(e) => { e.stopPropagation(); const username = resolveIdentityUsername(moment.creator || cachedCreator, creatorId); if (username) router.push(`/u/${username}`); }} src={creatorAvatar} sx={{ width: 36, height: 36, borderRadius: '12px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)' }} />}
                                                 title={<Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{creatorName}</Typography>}
                                                 subheader={<Typography variant="caption" sx={{ opacity: 0.5 }}>{new Date(moment.createdAt).toLocaleDateString()}</Typography>}
                                             />
@@ -1431,43 +1438,19 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                 return (
-                    <Card key={moment.$id} sx={{ 
-                        mb: 3, 
-                        borderRadius: '24px', 
-                        bgcolor: '#161412', 
-                        border: '1px solid rgba(255, 255, 255, 0.05)', 
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
-                        position: 'relative',
-                        overflow: 'visible',
-                        '&:hover': { 
-                            bgcolor: '#1C1A18',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '1px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '24px 24px 0 0',
-                        }
-                    }} elevation={0}>
+                    <Card key={moment.$id} sx={{ ...momentCardSx, mb: 3 }} elevation={0}>
                         <CardHeader
                             avatar={
                                 <Avatar
                                     src={creatorAvatar}
                                     sx={{ 
-                                        width: 42,
-                                        height: 42,
+                                        width: 44,
+                                        height: 44,
                                         bgcolor: isOwnPost ? '#F59E0B' : '#161412', 
                                         color: isOwnPost ? '#000' : 'text.secondary', 
                                         border: '1px solid rgba(255, 255, 255, 0.08)',
                                         fontWeight: 800,
-                                        borderRadius: '12px',
+                                        borderRadius: '14px',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                                     }}
                                 >
