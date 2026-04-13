@@ -1,10 +1,33 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
-import { Box, Typography, Stack, useTheme, useMediaQuery, Button } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Stack,
+  useTheme,
+  useMediaQuery,
+  Button,
+  Paper,
+  TextField,
+  List,
+  ListItemButton,
+  ListItemAvatar,
+  Avatar,
+  InputAdornment,
+  Divider,
+  alpha,
+} from '@mui/material';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useSudo } from '@/context/SudoContext';
+import { ChatService } from '@/lib/services/chat';
+import { UsersService } from '@/lib/services/users';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
+import { seedIdentityCache } from '@/lib/identity-cache';
+import toast from 'react-hot-toast';
 import { 
   CheckCircle as SuccessIcon, 
   Error as ErrorIcon, 
@@ -12,16 +35,26 @@ import {
   Warning as WarningIcon,
   Star as ProIcon,
   EmojiObjects as IdeaIcon,
-  Message as ConnectIcon
+  Message as ConnectIcon,
+  Search as SearchIcon,
+  Sparkles as SparklesIcon,
+  ArrowRight as ArrowRightIcon,
+  X as CloseIcon,
+  MessageCircle as MessageCircleIcon,
+  Phone as PhoneIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 
 export type IslandType = 'success' | 'error' | 'warning' | 'info' | 'pro' | 'system' | 'suggestion' | 'connect';
+
+export type KylrixApp = 'root' | 'vault' | 'flow' | 'note' | 'connect';
 
 export interface IslandNotification {
   id: string;
   type: IslandType;
   title: string;
   message?: string;
+  app?: KylrixApp;
   action?: {
     label: string;
     onClick: () => void;
@@ -60,10 +93,10 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
 
   const showIsland = useCallback((notification: Omit<IslandNotification, 'id'>) => {
-    const id = Date.now().toString(36) + (notifications.length).toString(36);
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     const newNotif = { ...notification, id, duration: notification.duration || (notification.majestic ? 10000 : 6000) };
-    setNotifications(prev => [...prev, newNotif]);
-  }, [notifications.length]);
+    setNotifications((prev) => [...prev, newNotif]);
+  }, []);
 
   const dismissIsland = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
