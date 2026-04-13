@@ -1,0 +1,3 @@
+patchedDependencies:
+  baseline-browser-mapping: patches/baseline-browser-mapping.patch
+  next: patches/next.patch

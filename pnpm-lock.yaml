@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  baseline-browser-mapping:
+    hash: 48331895fc1e7f628bfd007a61460968fba34b2c23f31c856024ef145f4f90c6
+    path: patches/baseline-browser-mapping.patch
+  next:
+    hash: 1c0de442a0ac88e1e2983c2b3b4828a7cc19379af2207054e1d6137fe3f84803
+    path: patches/next.patch
+
 importers:
 
   .:
@@ -61,7 +69,7 @@ importers:
         version: 0.562.0(react@19.2.1)
       next:
         specifier: 16.0.8
-        version: 16.0.8(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        version: 16.0.8(patch_hash=1c0de442a0ac88e1e2983c2b3b4828a7cc19379af2207054e1d6137fe3f84803)(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       otplib:
         specifier: ^13.1.1
         version: 13.3.0
@@ -92,7 +100,7 @@ importers:
         version: 1.0.0
       baseline-browser-mapping:
         specifier: ^2.10.18
-        version: 2.10.18
+        version: 2.10.18(patch_hash=48331895fc1e7f628bfd007a61460968fba34b2c23f31c856024ef145f4f90c6)
       eslint:
         specifier: ^9
         version: 9.39.2
@@ -3558,7 +3566,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  baseline-browser-mapping@2.10.18: {}
+  baseline-browser-mapping@2.10.18(patch_hash=48331895fc1e7f628bfd007a61460968fba34b2c23f31c856024ef145f4f90c6): {}
 
   bech32@2.0.0: {}
 
@@ -3616,7 +3624,7 @@ snapshots:
 
   browserslist@4.28.1:
     dependencies:
-      baseline-browser-mapping: 2.10.18
+      baseline-browser-mapping: 2.10.18(patch_hash=48331895fc1e7f628bfd007a61460968fba34b2c23f31c856024ef145f4f90c6)
       caniuse-lite: 1.0.30001770
       electron-to-chromium: 1.5.286
       node-releases: 2.0.27
@@ -4602,7 +4610,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.0.8(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+  next@16.0.8(patch_hash=1c0de442a0ac88e1e2983c2b3b4828a7cc19379af2207054e1d6137fe3f84803)(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
       '@next/env': 16.0.8
       '@swc/helpers': 0.5.15
