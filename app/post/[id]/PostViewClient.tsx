@@ -22,7 +22,8 @@ import {
     ListItemText,
     useMediaQuery,
     useTheme,
-    Skeleton
+    Skeleton,
+    Paper
 } from '@mui/material';
 import ActorsListDrawer from '@/components/social/ActorsListDrawer';
 import {
@@ -493,6 +494,20 @@ const QuoteMomentView = ({
             </Box>
         </Box>
 
+        {caption && caption.trim() !== '' && (
+            <FormattedText
+                text={caption}
+                variant="body1"
+                sx={{
+                    color: 'text.primary',
+                    fontSize: '0.94rem',
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                }}
+            />
+        )}
+
         <Paper
             sx={{
                 p: 1.5,
@@ -510,20 +525,6 @@ const QuoteMomentView = ({
                 {quotedCaption}
             </Typography>
         </Paper>
-
-        {caption && caption.trim() !== '' && (
-            <FormattedText
-                text={caption}
-                variant="body1"
-                sx={{
-                    color: 'text.primary',
-                    fontSize: '0.94rem',
-                    lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                }}
-            />
-        )}
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', maxWidth: 425, color: 'text.secondary', fontSize: '0.8rem' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
