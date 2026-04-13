@@ -618,6 +618,7 @@ export function PostViewClient() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const pullStartYRef = React.useRef<number | null>(null);
+    const touchStartYRef = React.useRef<number | null>(null);
     const pullActiveRef = React.useRef(false);
 
     const fetchActorsForPulses = async (momentId: string) => {
@@ -714,6 +715,30 @@ export function PostViewClient() {
         setPullDistance(0);
         pullStartYRef.current = null;
     }, [pullDistance, revealAncestorThread]);
+
+    const triggerScrollReveal = useCallback(() => {
+        if (!moment?.metadata?.sourceId || ancestorLoading || showAncestors) return;
+        void revealAncestorThread();
+    }, [ancestorLoading, moment?.metadata?.sourceId, revealAncestorThread, showAncestors]);
+
+    const onWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        if (event.deltaY > 12) triggerScrollReveal();
+    }, [triggerScrollReveal]);
+
+    const onTouchStartCapture = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+        touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    }, []);
+
+    const onTouchMoveCapture = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+        if (touchStartYRef.current === null) return;
+        const currentY = event.touches[0]?.clientY;
+        if (currentY === undefined) return;
+        if (currentY - touchStartYRef.current > 16) triggerScrollReveal();
+    }, [triggerScrollReveal]);
+
+    const onTouchEndCapture = useCallback(() => {
+        touchStartYRef.current = null;
+    }, []);
 
     const openActorsList = async (title: string, fetcher: () => Promise<any[]>) => {
         setActorsTitle(title);
@@ -924,6 +949,11 @@ export function PostViewClient() {
     return (
         <AppShell>
             <Box
+                onWheelCapture={onWheelCapture}
+                onTouchStartCapture={onTouchStartCapture}
+                onTouchMoveCapture={onTouchMoveCapture}
+                onTouchEndCapture={onTouchEndCapture}
+                onTouchCancelCapture={onTouchEndCapture}
                 sx={{
                     width: '100%',
                     maxWidth: 600,
