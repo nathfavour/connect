@@ -896,7 +896,7 @@ export const SocialService = {
 
     async getReplies(momentId: string, currentUserId?: string) {
         const cachedThread = getCachedMomentThread(momentId);
-        if (cachedThread) return cachedThread.replies || [];
+        if (cachedThread?.replies?.length) return cachedThread.replies;
 
         const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
             Query.equal('sourceId', momentId),

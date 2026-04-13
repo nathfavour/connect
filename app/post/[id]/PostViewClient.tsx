@@ -290,18 +290,23 @@ const ThreadPostView = ({
             py: 1.5,
             position: 'relative',
             cursor: onClick ? 'pointer' : 'default',
-            '&:hover': onClick ? { bgcolor: 'rgba(255,255,255,0.02)' } : undefined,
+            bgcolor: '#161412',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '20px',
+            boxShadow: '0 14px 36px rgba(0, 0, 0, 0.18)',
+            overflow: 'hidden',
+            '&:hover': onClick ? { bgcolor: '#1C1A18' } : undefined,
         }}
     >
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1.5, flexShrink: 0, width: 48 }}>
             <Box sx={{ position: 'relative', width: 48, height: '100%', display: 'flex', justifyContent: 'center' }}>
-                {threadLineMode !== 'none' && (
+                {(threadLineMode === 'up' || threadLineMode === 'both') && (
                     <Box
                         sx={{
                             position: 'absolute',
                             left: '50%',
-                            top: -12,
-                            bottom: -12,
+                            top: 0,
+                            bottom: '50%',
                             width: '2px',
                             transform: 'translateX(-1px)',
                             bgcolor: 'rgba(255,255,255,0.16)',
@@ -323,6 +328,19 @@ const ThreadPostView = ({
                 >
                     {avatarLabel}
                 </Avatar>
+                {(threadLineMode === 'down' || threadLineMode === 'both') && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            bottom: 0,
+                            width: '2px',
+                            transform: 'translateX(-1px)',
+                            bgcolor: 'rgba(255,255,255,0.16)',
+                        }}
+                    />
+                )}
             </Box>
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -771,18 +789,16 @@ export function PostViewClient() {
         pullStartYRef.current = null;
         pullActiveRef.current = false;
         const cachedThread = getCachedMomentThread(momentId);
-        if (cachedThread?.moment) {
-            setMoment(cachedThread.moment);
-            setReplies(cachedThread.replies || []);
-            setLoading(false);
-            return;
-        }
         try {
-            const rawMoment = await SocialService.getMomentById(momentId, user?.$id);
-            const enrichedMoment = await hydrateMoment(rawMoment);
+            const enrichedMoment = cachedThread?.moment
+                ? cachedThread.moment
+                : await hydrateMoment(await SocialService.getMomentById(momentId, user?.$id));
             setMoment(enrichedMoment);
             seedMomentPreview(enrichedMoment);
             seedIdentityCache(enrichedMoment.creator);
+            if (cachedThread?.replies?.length) {
+                setReplies(cachedThread.replies);
+            }
 
             // Fetch replies
             const replyData = await SocialService.getReplies(momentId, user?.$id);
@@ -815,6 +831,7 @@ export function PostViewClient() {
 
     useEffect(() => {
         if (!momentId || !moment) return;
+        if (!replies.length && !showAncestors && !threadAncestors.length) return;
         seedMomentThread(momentId, {
             moment,
             replies,
@@ -1120,9 +1137,7 @@ export function PostViewClient() {
                     liked={moment.isLiked}
                 />
 
-                <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.08)', mt: 1.5 }} />
-
-                <Box id="comments-section" sx={{ pt: 1.5 }}>
+                <Box id="comments-section" sx={{ pt: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, mb: 1 }}>
                         <Typography sx={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'text.secondary' }}>
                             Comments
@@ -1270,90 +1285,92 @@ export function PostViewClient() {
                     </Box>
                 )}
 
+                {user && isMobile && !replyDrawerOpen && (
+                    <Fab
+                        color="primary"
+                        aria-label="comment"
+                        onClick={() => setReplyDrawerOpen(true)}
+                        sx={{
+                            position: 'fixed',
+                            right: 20,
+                            bottom: 'calc(20px + env(safe-area-inset-bottom))',
+                            zIndex: 1400,
+                            bgcolor: '#F59E0B',
+                            color: '#0A0908',
+                            '&:hover': { bgcolor: alpha('#F59E0B', 0.9) },
+                        }}
+                    >
+                        <MessageCircle size={20} />
+                    </Fab>
+                )}
+
                 {user && isMobile && (
-                    <>
-                        <Fab
-                            color="primary"
-                            aria-label="comment"
-                            onClick={() => setReplyDrawerOpen(true)}
-                            sx={{
-                                position: 'fixed',
-                                right: 20,
-                                bottom: 'calc(20px + env(safe-area-inset-bottom))',
-                                zIndex: 1400,
-                                bgcolor: '#F59E0B',
-                                color: '#0A0908',
-                                '&:hover': { bgcolor: alpha('#F59E0B', 0.9) },
-                            }}
-                        >
-                            <MessageCircle size={20} />
-                        </Fab>
+                    <Drawer
+                        anchor="bottom"
+                        open={replyDrawerOpen}
+                        onClose={() => setReplyDrawerOpen(false)}
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'rgba(22, 20, 18, 0.98)',
+                                borderTopLeftRadius: '24px',
+                                borderTopRightRadius: '24px',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                backgroundImage: 'none',
+                                backdropFilter: 'blur(24px)',
+                                maxWidth: 720,
+                                mx: 'auto',
+                                width: '100%',
+                                boxShadow: '0 -20px 50px rgba(0,0,0,0.55)',
+                                pb: 'env(safe-area-inset-bottom)',
+                            }
+                        }}
+                    >
+                        <Box sx={{ px: 2, pt: 1.5, pb: 2 }}>
+                            <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.12)', mx: 'auto', mb: 2 }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 0.5 }}>
+                                Comment
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                                Add your reply below.
+                            </Typography>
 
-                        <Drawer
-                            anchor="bottom"
-                            open={replyDrawerOpen}
-                            onClose={() => setReplyDrawerOpen(false)}
-                            PaperProps={{
-                                sx: {
-                                    bgcolor: '#161412',
-                                    borderTopLeftRadius: '28px',
-                                    borderTopRightRadius: '28px',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                    backgroundImage: 'none',
-                                    maxWidth: 720,
-                                    mx: 'auto',
-                                    width: '100%',
-                                    pb: 'env(safe-area-inset-bottom)',
-                                }
-                            }}
-                        >
-                            <Box sx={{ px: 2, pt: 1.5, pb: 2 }}>
-                                <Box sx={{ width: 44, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.14)', mx: 'auto', mb: 2 }} />
-                                <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 0.5 }}>
-                                    Comment
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                                    Add your reply below.
-                                </Typography>
-
-                                <Stack direction="row" spacing={2}>
-                                    <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
-                                        {user.name?.charAt(0)}
-                                    </Avatar>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Write a comment"
-                                        variant="standard"
-                                        multiline
-                                        maxRows={10}
-                                        value={replyContent}
-                                        onChange={(e) => setReplyContent(e.target.value)}
-                                        InputProps={{
-                                            disableUnderline: true,
-                                            sx: { color: 'white', py: 0.5, fontSize: '0.92rem' },
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        onClick={handleReply}
-                                                        disabled={!replyContent.trim() || replying}
-                                                        sx={{
-                                                            p: 0.8,
-                                                            bgcolor: '#F59E0B',
-                                                            color: 'black',
-                                                            '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                                                            '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
-                                                        }}
-                                                    >
-                                                        {replying ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            )
-                                        }}
-                                    />
-                                </Stack>
-                            </Box>
-                        </Drawer>
-                    </>
+                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', p: 1.5 }}>
+                                <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
+                                    {user.name?.charAt(0)}
+                                </Avatar>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Write a comment"
+                                    variant="standard"
+                                    multiline
+                                    maxRows={10}
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    InputProps={{
+                                        disableUnderline: true,
+                                        sx: { color: 'white', py: 0.5, fontSize: '0.92rem' },
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={handleReply}
+                                                    disabled={!replyContent.trim() || replying}
+                                                    sx={{
+                                                        p: 0.8,
+                                                        bgcolor: '#F59E0B',
+                                                        color: 'black',
+                                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
+                                                        '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
+                                                    }}
+                                                >
+                                                    {replying ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                />
+                            </Stack>
+                        </Box>
+                    </Drawer>
                 )}
 
                 <Drawer
