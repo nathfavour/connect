@@ -342,12 +342,13 @@ export default function ConversationActionsSheet({
     let active = true;
     const timer = window.setTimeout(() => {
       setMemberSearching(true);
-      UsersService.searchUsers(memberQuery)
+      UsersService.searchUsers(memberQuery, { requirePublicKey: true })
         .then((res) => {
           if (!active) return;
           const filtered = (res.rows || []).filter((item: any) => {
             const id = item.userId || item.$id;
             if (!id) return false;
+            if (!item.publicKey) return false;
             if (id === user?.$id) return false;
             if (participantIds.includes(id)) return false;
             return true;

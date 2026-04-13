@@ -531,7 +531,7 @@ export const UsersService = {
         });
     },
 
-    async searchUsers(query: string) {
+    async searchUsers(query: string, options?: { requirePublicKey?: boolean }) {
         const cleaned = query.trim().replace(/^@/, '');
         const queries = [
             Query.or([
@@ -540,6 +540,10 @@ export const UsersService = {
             ]),
             Query.limit(20)
         ];
+        if (options?.requirePublicKey) {
+            queries.splice(1, 0, Query.isNotNull('publicKey'));
+            queries.splice(2, 0, Query.notEqual('publicKey', ''));
+        }
         return await tablesDB.listRows(DB_ID, USERS_TABLE, queries);
     },
 
