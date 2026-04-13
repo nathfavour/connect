@@ -97,7 +97,7 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const timer = setTimeout(() => setLastActivity(Date.now()), 0);
     return () => clearTimeout(timer);
   }, []);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
 
@@ -351,7 +351,7 @@ const DynamicIslandOverlay: React.FC<{
   const inputRef = useRef<HTMLInputElement | null>(null);
   const controls = useAnimation();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { requestSudo } = useSudo();
   const { headerHeight } = useAppChrome();
 
@@ -656,21 +656,23 @@ const DynamicIslandOverlay: React.FC<{
               <Box sx={{ position: 'relative', zIndex: 1, p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box
-                      sx={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: '14px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        color: panelTone,
-                        bgcolor: 'rgba(0,0,0,0.96)',
-                        border: `1px solid ${alpha(panelTone, 0.24)}`,
-                        boxShadow: `0 0 18px ${alpha(panelTone, 0.24)}`,
-                      }}
-                    >
-                      {panel === 'profile' ? <UserIcon size={18} /> : <SparklesIcon size={18} />}
-                    </Box>
+                    <motion.div layoutId={panel === 'profile' ? 'connect-profile-trigger' : 'connect-ecosystem-trigger'} style={{ display: 'inline-flex' }}>
+                      <Box
+                        sx={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: '14px',
+                          display: 'grid',
+                          placeItems: 'center',
+                          color: panelTone,
+                          bgcolor: 'rgba(0,0,0,0.96)',
+                          border: `1px solid ${alpha(panelTone, 0.24)}`,
+                          boxShadow: `0 0 18px ${alpha(panelTone, 0.24)}`,
+                        }}
+                      >
+                        {panel === 'profile' ? <UserIcon size={18} /> : <SparklesIcon size={18} />}
+                      </Box>
+                    </motion.div>
                     <Box>
                       <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.1 }}>
                         {panel === 'profile' ? (user?.name || user?.email || 'Profile') : 'Ecosystem apps'}
@@ -747,9 +749,11 @@ const DynamicIslandOverlay: React.FC<{
                         gap: 1.25,
                       }}
                     >
-                      <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(panelTone, 0.12), color: panelTone, flexShrink: 0 }}>
-                        <UserIcon size={16} />
-                      </Box>
+                      <motion.div layoutId="connect-profile-trigger" style={{ display: 'inline-flex' }}>
+                        <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(panelTone, 0.12), color: panelTone, flexShrink: 0 }}>
+                          <UserIcon size={16} />
+                        </Box>
+                      </motion.div>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
                           Profile

@@ -1,0 +1,268 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Typography,
+  IconButton,
+  Tooltip,
+  alpha,
+  Button,
+} from '@mui/material';
+import { Wallet, ChevronDown } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useProfile } from '@/components/providers/ProfileProvider';
+import { getUserProfilePicId } from '@/lib/user-utils';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
+import Logo from '../common/Logo';
+import { WalletSidebar } from '../overlays/WalletSidebar';
+import { getEcosystemUrl } from '@/lib/constants';
+import { useAppChrome } from '@/components/providers/AppChromeProvider';
+import { useIsland } from '@/components/common/DynamicIsland';
+
+export const AppHeader = () => {
+  const { user } = useAuth();
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [profileRecord, setProfileRecord] = useState<any>(null);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const { mode, label, headerHeight } = useAppChrome();
+  const { openPanel, isActive: isIslandActive } = useIsland();
+
+  useEffect(() => {
+    if (searchParams.get('openWallet') === 'true') {
+      setTimeout(() => setIsWalletOpen(true), 0);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('openWallet');
+      const newQuery = params.toString();
+      router.replace(pathname + (newQuery ? `?${newQuery}` : ''));
+    }
+  }, [searchParams, router, pathname]);
+
+  useEffect(() => {
+    let mounted = true;
+    const profilePicId = getUserProfilePicId(user);
+    const cached = getCachedProfilePreview(profilePicId || undefined);
+    if (cached !== undefined && mounted) {
+      setTimeout(() => {
+        if (mounted) setProfileUrl(cached ?? null);
+      }, 0);
+    }
+
+    const fetchPreview = async () => {
+      try {
+        if (profilePicId?.startsWith('http')) {
+          if (mounted) setProfileUrl(profilePicId);
+        } else if (profilePicId) {
+          const url = await fetchProfilePreview(profilePicId, 64, 64);
+          if (mounted) setProfileUrl(url as unknown as string);
+        } else if (mounted) {
+          setProfileUrl(null);
+        }
+      } catch {
+        if (mounted) setProfileUrl(null);
+      }
+    };
+
+    void fetchPreview();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
+  const { profile: myProfile } = useProfile();
+
+  useEffect(() => {
+    let mounted = true;
+    const loadProfileRecord = async () => {
+      if (!user?.$id) return;
+      try {
+        const ensured = myProfile || null;
+        if (mounted && ensured) setProfileRecord(ensured);
+      } catch {
+        if (mounted) setProfileRecord(null);
+      }
+    };
+    void loadProfileRecord();
+    return () => {
+      mounted = false;
+    };
+  }, [myProfile, user?.$id]);
+
+  const identitySignals = computeIdentityFlags({
+    createdAt: profileRecord?.$createdAt || profileRecord?.createdAt || (user as any)?.$createdAt || null,
+    lastUsernameEdit: profileRecord?.last_username_edit || user?.prefs?.last_username_edit || null,
+    profilePicId: profileRecord?.avatar || user?.prefs?.profilePicId || null,
+    username: profileRecord?.username || user?.prefs?.username || user?.name || null,
+    bio: profileRecord?.bio || user?.prefs?.bio || null,
+    tier: profileRecord?.tier || user?.prefs?.tier || null,
+    publicKey: profileRecord?.publicKey || null,
+    emailVerified: Boolean((user as any)?.emailVerification),
+    preferences: profileRecord?.preferences || null,
+  });
+
+  const headerTitle = label || (pathname === '/' ? 'Feed' : pathname === '/chats' ? 'Chats' : pathname === '/calls' ? 'Calls' : pathname?.startsWith('/post/') ? 'Moment' : 'Connect');
+  const isCompact = mode === 'compact';
+
+  const stageMotion = {
+    animate: { opacity: isIslandActive ? 0 : 1, y: isIslandActive ? -4 : 0, scale: isIslandActive ? 0.96 : 1 },
+    transition: { duration: 0.22 },
+    style: { pointerEvents: isIslandActive ? 'none' : 'auto' as const },
+  };
+
+  return (
+    <AppBar
+      position="fixed"
+      elevation={0}
+      sx={{
+        zIndex: 1201,
+        bgcolor: 'rgba(11, 9, 8, 0.95)',
+        backdropFilter: 'blur(25px) saturate(180%)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        backgroundImage: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        height: `${headerHeight}px`,
+        transform: mode === 'hidden' ? 'translateY(-110%)' : 'translateY(0)',
+        opacity: mode === 'hidden' ? 0 : 1,
+        pointerEvents: mode === 'hidden' ? 'none' : 'auto',
+        transition: 'transform 260ms ease, opacity 260ms ease, height 260ms ease',
+      }}
+    >
+      <Toolbar sx={{
+        gap: { xs: 2, md: 4 },
+        px: { xs: 2, md: 4 },
+        minHeight: `${headerHeight}px`,
+        width: '100%',
+        maxWidth: '1440px',
+        margin: '0 auto',
+        justifyContent: 'space-between',
+      }}>
+        <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+          <motion.div layoutId="connect-ecosystem-trigger" style={{ display: 'inline-flex' }}>
+            <Box
+              component="button"
+              onClick={() => openPanel('ecosystem')}
+              sx={{
+                position: 'relative',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'transparent',
+                border: 'none',
+                p: 0,
+                cursor: 'pointer',
+              }}
+            >
+              <Logo app="connect" size={32} sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }} />
+              <IconButton
+                size="small"
+                sx={{
+                  position: 'absolute',
+                  right: -6,
+                  bottom: -6,
+                  width: 18,
+                  height: 18,
+                  bgcolor: '#0A0908',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.55)',
+                  '&:hover': { bgcolor: '#161412', color: 'white' },
+                }}
+              >
+                <ChevronDown size={11} />
+              </IconButton>
+            </Box>
+          </motion.div>
+        </motion.div>
+
+        {isCompact ? (
+          <motion.div {...stageMotion} style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, borderRadius: '999px', bgcolor: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)', color: 'text.primary', fontWeight: 800, letterSpacing: '0.02em', maxWidth: '100%' }}>
+              <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} noWrap>
+                {headerTitle}
+              </Typography>
+            </Box>
+          </motion.div>
+        ) : (
+          <motion.div {...stageMotion} style={{ flexGrow: 1, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+            <Box sx={{ display: { xs: 'none', md: 'block' }, height: 40 }} />
+          </motion.div>
+        )}
+
+        <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+          <Tooltip title="Wallet">
+            <IconButton
+              onClick={() => setIsWalletOpen(true)}
+              sx={{
+                color: isWalletOpen ? '#F59E0B' : 'rgba(255, 255, 255, 0.4)',
+                bgcolor: alpha('#F59E0B', 0.03),
+                border: '1px solid',
+                borderColor: isWalletOpen ? alpha('#F59E0B', 0.3) : alpha('#F59E0B', 0.1),
+                borderRadius: '12px',
+                width: { xs: 36, sm: 42 },
+                height: { xs: 36, sm: 42 },
+                '&:hover': { bgcolor: alpha('#F59E0B', 0.08), boxShadow: '0 0 15px rgba(245, 158, 11, 0.2)' },
+              }}
+            >
+              <Wallet size={18} strokeWidth={1.5} />
+            </IconButton>
+          </Tooltip>
+
+          {user ? (
+            <motion.div layoutId="connect-profile-trigger" style={{ display: 'inline-flex' }}>
+              <Box
+                component="button"
+                onClick={() => openPanel('profile')}
+                sx={{
+                  p: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  '&:hover': { transform: 'scale(1.05)' },
+                  transition: 'transform 0.2s',
+                }}
+              >
+                <IdentityAvatar
+                  src={profileUrl || undefined}
+                  alt={user?.name || user?.email || 'profile'}
+                  fallback={user?.name ? user.name[0].toUpperCase() : 'U'}
+                  verified={identitySignals.verified}
+                  verifiedOn={identitySignals.verifiedOn}
+                  pro={identitySignals.pro}
+                  size={38}
+                  borderRadius="12px"
+                />
+              </Box>
+            </motion.div>
+          ) : (
+            <Button
+              href={`${getEcosystemUrl('accounts')}/login?source=${typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : ''}`}
+              variant="contained"
+              size="small"
+              sx={{
+                ml: 1,
+                bgcolor: '#6366F1',
+                color: '#000',
+                fontWeight: 800,
+                borderRadius: '10px',
+                '&:hover': { bgcolor: alpha('#6366F1', 0.8) },
+              }}
+            >
+              Connect
+            </Button>
+          )}
+        </motion.div>
+      </Toolbar>
+
+      <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
+    </AppBar>
+  );
+};
