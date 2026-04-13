@@ -291,14 +291,17 @@ const ThreadPostView = ({
         }}
     >
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1.5, flexShrink: 0, width: 48 }}>
-            <Box sx={{ width: 48, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {(threadLineMode === 'up' || threadLineMode === 'both') && (
+            <Box sx={{ position: 'relative', width: 48, height: '100%', display: 'flex', justifyContent: 'center' }}>
+                {threadLineMode !== 'none' && (
                     <Box
                         sx={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: -12,
+                            bottom: -12,
                             width: '2px',
-                            height: threadLineMode === 'both' ? 18 : 22,
+                            transform: 'translateX(-1px)',
                             bgcolor: 'rgba(255,255,255,0.16)',
-                            mb: 0,
                         }}
                     />
                 )}
@@ -317,17 +320,6 @@ const ThreadPostView = ({
                 >
                     {avatarLabel}
                 </Avatar>
-                {(threadLineMode === 'down' || threadLineMode === 'both') && (
-                    <Box
-                        sx={{
-                            width: '2px',
-                            minHeight: threadLineMode === 'both' ? 18 : 22,
-                            flexGrow: 1,
-                            bgcolor: 'rgba(255,255,255,0.16)',
-                            mt: 0,
-                        }}
-                    />
-                )}
             </Box>
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
