@@ -245,7 +245,10 @@ const PostComposer = React.memo(function PostComposer({
                         background: '#0A0908',
                         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                         borderRadius: '24px 24px 0 0',
-                        boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
+                        transform: 'translateZ(0)',
+                        willChange: 'transform, opacity',
+                        backfaceVisibility: 'hidden',
                     } : {}}
                 >
                     <Card sx={{
@@ -2105,16 +2108,42 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     color="primary" 
                     sx={{ 
                         position: 'fixed', 
-                        bottom: 100, 
+                        bottom: 'calc(132px + env(safe-area-inset-bottom))', 
                         right: 24, 
-                        bgcolor: '#F59E0B', 
-                        color: 'black',
-                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                        zIndex: 1001
+                        width: 64,
+                        height: 64,
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        bgcolor: '#000000',
+                        color: '#F59E0B',
+                        backgroundImage: 'linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%)',
+                        boxShadow: '0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 158, 11, 0.18), 0 0 28px rgba(245, 158, 11, 0.24)',
+                        backdropFilter: 'blur(16px) saturate(180%)',
+                        transform: 'translateZ(0)',
+                        transition: 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease',
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        zIndex: 1400,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            inset: 6,
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.16), transparent 65%)',
+                            pointerEvents: 'none',
+                        },
+                        '&:hover': {
+                            bgcolor: '#000000',
+                            color: '#F59E0B',
+                            transform: 'translateY(-2px) scale(1.04)',
+                            boxShadow: '0 22px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245, 158, 11, 0.22), 0 0 34px rgba(245, 158, 11, 0.3)',
+                        },
+                        '&:active': {
+                            transform: 'translateY(0) scale(0.98)',
+                        },
                     }}
                     onClick={() => setIsComposerOpen(true)}
                 >
-                    <Plus size={24} />
+                    <Plus size={26} strokeWidth={2.1} />
                 </Fab>
             )}
 
