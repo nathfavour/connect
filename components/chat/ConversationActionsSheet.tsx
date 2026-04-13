@@ -348,7 +348,6 @@ export default function ConversationActionsSheet({
           const filtered = (res.rows || []).filter((item: any) => {
             const id = item.userId || item.$id;
             if (!id) return false;
-            if (!item.publicKey) return false;
             if (id === user?.$id) return false;
             if (participantIds.includes(id)) return false;
             return true;
