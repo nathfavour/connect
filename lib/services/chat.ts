@@ -1,7 +1,7 @@
 import { ID, Permission, Query, Role } from 'appwrite';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { KYLRIX_AUTH_URI } from '../constants';
+import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -113,7 +113,7 @@ async function notifyMessageStreak(conversation: any, senderId: string, conversa
         resourceTitle: conversation?.name || conversation?.title || 'Conversation',
         resourceType: 'conversation',
         templateKey: `connect:message-streak:${conversationId}:${senderId}`,
-        ctaUrl: `${KYLRIX_AUTH_URI}/chat/${conversationId}`,
+        ctaUrl: `${getEcosystemUrl('connect')}/chat/${conversationId}`,
         ctaText: 'Open chat',
     });
 }
