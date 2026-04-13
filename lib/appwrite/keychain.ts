@@ -11,7 +11,7 @@ export const KeychainService = {
             const response = await tablesDB.listRows(
                 DB_ID,
                 KEYCHAIN_TABLE,
-                [Query.equal('userId', userId)]
+                [Query.equal('userId', userId), Query.orderDesc('$createdAt')]
             );
             return response.rows;
         } catch (error: unknown) {

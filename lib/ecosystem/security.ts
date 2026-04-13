@@ -87,6 +87,8 @@ export class EcosystemSecurity {
     try {
       const res = await tablesDB.listRows(PW_DB, KEYCHAIN_TABLE, [
         Query.equal('userId', userId),
+        Query.equal('type', 'password'),
+        Query.orderDesc('$createdAt'),
         Query.limit(1)
       ]);
       return res.rows[0] || null;
@@ -162,6 +164,10 @@ export class EcosystemSecurity {
    * Unwrap MEK with password and salt
    */
   public async unwrapMEK(wrappedKeyBase64: string, password: string, saltBase64: string): Promise<CryptoKey> {
+    if (!wrappedKeyBase64 || !saltBase64) {
+      throw new Error('Invalid master password record');
+    }
+
     const salt = new Uint8Array(atob(saltBase64).split("").map(c => c.charCodeAt(0)));
     const authKey = await this.deriveKey(password, salt);
 
