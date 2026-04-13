@@ -98,7 +98,7 @@ export const AppHeader = () => {
         justifyContent: 'space-between',
       }}>
         <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
-          <motion.div layoutId="connect-ecosystem-trigger" style={{ display: 'inline-flex' }}>
+          <motion.div style={{ display: 'inline-flex' }}>
             <Box
               component="button"
               onClick={() => openPanel('ecosystem')}
@@ -168,7 +168,7 @@ export const AppHeader = () => {
           </Tooltip>
 
           {user ? (
-            <motion.div layoutId="connect-profile-trigger" style={{ display: 'inline-flex' }}>
+            <motion.div style={{ display: 'inline-flex' }}>
               <Box
                 component="button"
                 onClick={() => openPanel('profile')}

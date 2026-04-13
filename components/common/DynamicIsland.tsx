@@ -656,7 +656,7 @@ const DynamicIslandOverlay: React.FC<{
               <Box sx={{ position: 'relative', zIndex: 1, p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <motion.div layoutId={panel === 'profile' ? 'connect-profile-trigger' : 'connect-ecosystem-trigger'} style={{ display: 'inline-flex' }}>
+                    <motion.div style={{ display: 'inline-flex' }}>
                       <Box
                         sx={{
                           width: 38,
@@ -749,7 +749,7 @@ const DynamicIslandOverlay: React.FC<{
                         gap: 1.25,
                       }}
                     >
-                      <motion.div layoutId="connect-profile-trigger" style={{ display: 'inline-flex' }}>
+                      <motion.div style={{ display: 'inline-flex' }}>
                         <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(panelTone, 0.12), color: panelTone, flexShrink: 0 }}>
                           <UserIcon size={16} />
                         </Box>
