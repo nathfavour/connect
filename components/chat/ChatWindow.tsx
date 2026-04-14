@@ -1748,8 +1748,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             sx={{
                                 width: 36,
                                 height: 36,
-                                bgcolor: isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
-                                color: isSelf ? '#6366F1' : '#F59E0B',
+                                bgcolor: conversation?.avatarUrl ? (isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1)) : '#F59E0B',
+                                color: conversation?.avatarUrl ? (isSelf ? '#6366F1' : '#F59E0B') : '#FFFFFF',
                                 border: '1px solid rgba(255, 255, 255, 0.05)',
                                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)'
                             }}

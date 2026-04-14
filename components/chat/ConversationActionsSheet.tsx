@@ -83,8 +83,8 @@ const ConversationAvatar = ({ user }: { user: any }) => {
       sx={{
         width: 64,
         height: 64,
-        bgcolor: alpha('#F59E0B', 0.12),
-        color: '#F59E0B',
+        bgcolor: '#F59E0B',
+        color: '#FFFFFF',
         border: '1px solid rgba(255,255,255,0.08)',
       }}
     >
@@ -130,8 +130,8 @@ const MemberAvatar = ({ user }: { user: any }) => {
       sx={{
         width: 44,
         height: 44,
-        bgcolor: alpha('#6366F1', 0.12),
-        color: '#6366F1',
+        bgcolor: '#F59E0B',
+        color: '#FFFFFF',
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
