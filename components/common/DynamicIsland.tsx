@@ -766,7 +766,7 @@ const DynamicIslandOverlay: React.FC<{
   }, [current, isSearchOpen, query, user?.$id]);
 
   useEffect(() => {
-    if (!panel && !isSearchOpen) return;
+    if (panel || !isSearchOpen) return;
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;

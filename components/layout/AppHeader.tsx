@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   AppBar,
@@ -12,19 +12,18 @@ import {
   alpha,
   Button,
 } from '@mui/material';
-import { Wallet, ChevronDown } from 'lucide-react';
+import { Wallet, ChevronDown, X as CloseIcon } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
-import Logo from '../common/Logo';
+import Logo, { type KylrixApp as LogoApp } from '../common/Logo';
 import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useIsland } from '@/components/common/DynamicIslandContext';
-import { DynamicIslandPanelSurface } from '@/components/common/DynamicIsland';
 
 export const AppHeader = () => {
   const { user } = useAuth();
@@ -35,6 +34,7 @@ export const AppHeader = () => {
   const pathname = usePathname();
   const { mode, label, headerHeight, setChromeState } = useAppChrome();
   const { openPanel, closePanel, panel, isActive: isIslandActive } = useIsland();
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const { profile: myProfile } = useProfile();
   const profilePicId = myProfile?.avatar || getUserProfilePicId(user);
   const profileUrl = useCachedProfilePreview(profilePicId || null, 64, 64);
@@ -66,8 +66,21 @@ export const AppHeader = () => {
   const baseHeaderHeight = mode === 'compact' ? 72 : mode === 'hidden' ? 0 : 88;
 
   useEffect(() => {
-    setChromeState({ dockHeight: panel ? (panel === 'ecosystem' ? 360 : 284) : 0 });
+    setChromeState({ dockHeight: panel ? (panel === 'ecosystem' ? 320 : 260) : 0 });
   }, [panel, setChromeState]);
+
+  useEffect(() => {
+    if (!panel) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target || !headerRef.current || headerRef.current.contains(target)) return;
+      closePanel();
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    return () => window.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [closePanel, panel]);
 
   const stageMotion = {
     animate: { opacity: isIslandActive ? 0 : 1, y: isIslandActive ? -4 : 0, scale: isIslandActive ? 0.96 : 1 },
@@ -77,6 +90,7 @@ export const AppHeader = () => {
 
   return (
     <AppBar
+      ref={headerRef}
       position="fixed"
       elevation={0}
       sx={{
@@ -89,7 +103,7 @@ export const AppHeader = () => {
         flexDirection: 'column',
         alignItems: 'stretch',
         justifyContent: 'flex-start',
-        overflow: 'visible',
+        overflow: 'hidden',
         height: `${headerHeight}px`,
         transform: mode === 'hidden' ? 'translateY(-110%)' : 'translateY(0)',
         opacity: mode === 'hidden' ? 0 : 1,
@@ -223,8 +237,153 @@ export const AppHeader = () => {
       </Toolbar>
 
       {panel && (
-        <Box sx={{ px: { xs: 1.5, md: 2 }, pb: 1.5, width: '100%' }}>
-          <DynamicIslandPanelSurface panel={panel} onClosePanel={closePanel} />
+        <Box
+          sx={{
+            width: '100%',
+            flex: 1,
+            display: 'flex',
+            alignItems: 'stretch',
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            bgcolor: 'rgba(11, 9, 8, 0.99)',
+            overflow: 'hidden',
+          }}
+        >
+          <motion.div
+            key={`dock-${panel}`}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            style={{ width: '100%', display: 'flex' }}
+          >
+            <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: '14px',
+                      display: 'grid',
+                      placeItems: 'center',
+                      color: panel === 'profile' ? '#6366F1' : '#F59E0B',
+                      bgcolor: 'rgba(0,0,0,0.96)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: panel === 'profile'
+                        ? '0 0 18px rgba(99, 102, 241, 0.18)'
+                        : '0 0 18px rgba(245, 158, 11, 0.18)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {panel === 'profile' ? <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={user?.name ? user.name[0].toUpperCase() : 'U'} size={38} borderRadius="14px" /> : <Logo app="connect" size={18} variant="icon" />}
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.1 }} noWrap>
+                      {panel === 'profile' ? (user?.name || user?.email || 'Profile') : 'Ecosystem apps'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.52)', fontWeight: 700 }} noWrap>
+                      {panel === 'profile' ? 'Profile commands' : 'Jump between apps'}
+                    </Typography>
+                  </Box>
+                </Box>
+                <IconButton
+                  onClick={closePanel}
+                  aria-label="Close dynamic island"
+                  size="small"
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: '999px',
+                    color: 'rgba(255,255,255,0.92)',
+                    bgcolor: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    flexShrink: 0,
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
+                  }}
+                >
+                  <CloseIcon size={16} />
+                </IconButton>
+              </Box>
+
+              {panel === 'ecosystem' ? (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {[
+                    { app: 'note' as const, label: 'Note', description: 'Secure notes and research.' },
+                    { app: 'vault' as const, label: 'Vault', description: 'Passwords, 2FA, and keys.' },
+                    { app: 'flow' as const, label: 'Flow', description: 'Tasks and workflows.' },
+                    { app: 'connect' as const, label: 'Connect', description: 'Secure messages and sharing.' },
+                    { app: 'root' as const, label: 'Accounts', description: 'Your Kylrix account.' },
+                  ].map((app) => (
+                    <Box
+                      key={app.label}
+                      component="button"
+                      onClick={() => window.location.assign(getEcosystemUrl(app.app === 'root' ? 'accounts' : app.app))}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 1.5,
+                        py: 1.1,
+                        borderRadius: '18px',
+                        bgcolor: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        color: 'white',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', flexShrink: 0 }}>
+                        <Logo app={app.app as LogoApp} size={16} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
+                          {app.label}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
+                          {app.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Box
+                    component="button"
+                    onClick={() => {
+                      closePanel();
+                      router.push('/settings');
+                    }}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 1.5,
+                      py: 1.1,
+                      borderRadius: '18px',
+                      bgcolor: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      color: 'white',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
+                      <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={user?.name ? user.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
+                        Profile
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
+                        Open your public profile
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </motion.div>
         </Box>
       )}
 
