@@ -24,6 +24,7 @@ import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useIsland } from '@/components/common/DynamicIslandContext';
+import { DynamicIslandPanelSurface } from '@/components/common/DynamicIsland';
 
 export const AppHeader = () => {
   const { user } = useAuth();
@@ -32,8 +33,8 @@ export const AppHeader = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { mode, label, headerHeight } = useAppChrome();
-  const { openPanel, isActive: isIslandActive } = useIsland();
+  const { mode, label, headerHeight, setChromeState } = useAppChrome();
+  const { openPanel, closePanel, panel, isActive: isIslandActive } = useIsland();
   const { profile: myProfile } = useProfile();
   const profilePicId = myProfile?.avatar || getUserProfilePicId(user);
   const profileUrl = useCachedProfilePreview(profilePicId || null, 64, 64);
@@ -62,6 +63,11 @@ export const AppHeader = () => {
 
   const headerTitle = label || (pathname === '/' ? 'Feed' : pathname === '/chats' ? 'Chats' : pathname === '/calls' ? 'Calls' : pathname?.startsWith('/post/') ? 'Moment' : 'Connect');
   const isCompact = mode === 'compact';
+  const baseHeaderHeight = mode === 'compact' ? 72 : mode === 'hidden' ? 0 : 88;
+
+  useEffect(() => {
+    setChromeState({ dockHeight: panel ? (panel === 'ecosystem' ? 360 : 284) : 0 });
+  }, [panel, setChromeState]);
 
   const stageMotion = {
     animate: { opacity: isIslandActive ? 0 : 1, y: isIslandActive ? -4 : 0, scale: isIslandActive ? 0.96 : 1 },
@@ -80,7 +86,10 @@ export const AppHeader = () => {
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
         backgroundImage: 'none',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
+        overflow: 'visible',
         height: `${headerHeight}px`,
         transform: mode === 'hidden' ? 'translateY(-110%)' : 'translateY(0)',
         opacity: mode === 'hidden' ? 0 : 1,
@@ -91,7 +100,7 @@ export const AppHeader = () => {
       <Toolbar sx={{
         gap: { xs: 2, md: 4 },
         px: { xs: 2, md: 4 },
-        minHeight: `${headerHeight}px`,
+        minHeight: `${baseHeaderHeight}px`,
         width: '100%',
         maxWidth: '1440px',
         margin: '0 auto',
@@ -212,6 +221,12 @@ export const AppHeader = () => {
           )}
         </motion.div>
       </Toolbar>
+
+      {panel && (
+        <Box sx={{ px: { xs: 1.5, md: 2 }, pb: 1.5, width: '100%' }}>
+          <DynamicIslandPanelSurface panel={panel} onClosePanel={closePanel} />
+        </Box>
+      )}
 
       <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
     </AppBar>

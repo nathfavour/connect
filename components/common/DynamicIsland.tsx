@@ -217,7 +217,7 @@ function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
 
-function getLogoApp(appId: string) {
+function getLogoApp(appId: string): KylrixApp {
   switch (appId) {
     case 'vault':
     case 'flow':
@@ -637,7 +637,7 @@ const DynamicIslandOverlay: React.FC<{
         color: app.color,
         terms: [app.label.toLowerCase(), app.subdomain, app.id, 'open app', 'launch app'],
         onSelect: openExternal(getEcosystemUrl(app.subdomain)),
-        icon: <SparklesIcon size={16} />,
+        icon: <Logo app={getLogoApp(app.id)} size={16} variant="icon" />,
       })),
     ];
   }, [closeSearch, router]);
