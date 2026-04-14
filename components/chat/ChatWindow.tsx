@@ -305,7 +305,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         '& .MuiOutlinedInput-root': {
                             minHeight: 40,
                             borderRadius: '999px',
-                            bgcolor: '#1C1A18',
+                            bgcolor: '#000000',
                             fontSize: '0.95rem',
                             transition: 'all 0.2s ease',
                             '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.06)' },
@@ -1673,7 +1673,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 );
             default:
                 return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#000000', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <FileIcon size={18} strokeWidth={1.5} />
                         <Typography
                             variant="body2"
@@ -1712,14 +1712,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             flexDirection: 'column',
             height: '100%',
             minHeight: 0,
-            bgcolor: '#0A0908',
+            bgcolor: '#000000',
             position: 'relative',
             overflow: 'hidden',
         }}>
             <MuralPattern />
             <AppBar position="static" color="transparent" elevation={0} sx={{ 
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
-                bgcolor: '#0A0908', 
+                bgcolor: '#000000',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 zIndex: 1,
@@ -1861,7 +1861,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             {/* Messages Area */}
             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
-                    <Box sx={{ p: 2, mb: 2, bgcolor: alpha('#6366F1', 0.05), borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
+                    <Box sx={{ p: 2, mb: 2, bgcolor: '#000000', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.08), 0 0 24px rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#6366F1' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
@@ -1906,7 +1906,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 ) : (
                     <>
                         {showFirstContactWarning && (
-                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: alpha('#F59E0B', 0.08), border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: '#000000', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'text.primary', fontWeight: 600 }}>
                                     {buildSafetyWarning(conversation?.name || 'this contact')}
                                 </Typography>
@@ -1917,7 +1917,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <React.Fragment key={msg.$id}>
                             {index === clientReadSegments.firstUnreadIncomingIndex && (
                                 <Box sx={{ display: 'flex', justifyContent: 'center', my: 0.5 }}>
-                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: alpha('#F59E0B', 0.12), border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: '#000000', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.06)' }}>
                                         <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B' }}>
                                             Unread messages
                                         </Typography>
@@ -1983,16 +1983,16 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                     maxWidth: '100%',
                                                     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
                                                     borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                                    bgcolor: isOutgoing ? '#2E3192' : '#7A4A0A',
+                                                    bgcolor: '#000000',
                                                     backgroundImage: isOutgoing
-                                                        ? 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 34%, rgba(0,0,0,0.06) 100%)'
-                                                        : 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.015) 34%, rgba(0,0,0,0.08) 100%)',
+                                                        ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, rgba(255,255,255,0.02) 34%, rgba(0,0,0,0.16) 100%)'
+                                                        : 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(255,255,255,0.015) 34%, rgba(0,0,0,0.18) 100%)',
                                                     border: '1px solid',
-                                                    borderColor: isOutgoing ? '#4F55D6' : '#A36211',
+                                                    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.45)' : 'rgba(245, 158, 11, 0.35)',
                                                     color: 'text.primary',
                                                     boxShadow: isOutgoing
-                                                        ? '0 12px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.22)'
-                                                        : '0 12px 24px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.24)',
+                                                        ? '0 0 0 1px rgba(99, 102, 241, 0.14), 0 0 26px rgba(99, 102, 241, 0.12), 0 16px 34px rgba(0,0,0,0.42)'
+                                                        : '0 0 0 1px rgba(245, 158, 11, 0.12), 0 0 26px rgba(245, 158, 11, 0.14), 0 16px 34px rgba(0,0,0,0.42)',
                                                     position: 'relative',
                                                     zIndex: 2,
                                                     '&::after': {
@@ -2002,7 +2002,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                         left: 0,
                                                         right: 0,
                                                         height: '1px',
-                                                        background: isOutgoing ? 'rgba(99, 102, 241, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+                                                        background: isOutgoing ? 'rgba(99, 102, 241, 0.1)' : 'rgba(245, 158, 11, 0.1)',
                                                         borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                                                     }
                                                 }}
@@ -2016,13 +2016,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                         sx={{
                                                             mb: 1,
                                                             p: 1,
-                                                            bgcolor: '#2A2623',
+                                                            bgcolor: '#000000',
                                                             borderRadius: '8px',
                                                             borderLeft: '3px solid',
                                                             borderColor: 'primary.main',
                                                             cursor: 'pointer',
                                                             opacity: 0.8,
-                                                            '&:hover': { opacity: 1, bgcolor: '#332F2B' }
+                                                            boxShadow: '0 0 0 1px rgba(255,255,255,0.04)',
+                                                            '&:hover': { opacity: 1, bgcolor: '#000000' }
                                                         }}
                                                     >
                                                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', mb: 0.5 }}>
@@ -2212,13 +2213,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     alignItems: 'center',
                     gap: 0.75,
                     borderRadius: replyingTo ? '0 0 24px 24px' : '24px',
-                    bgcolor: '#161412',
+                    bgcolor: '#000000',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     position: 'relative',
                     zIndex: 2,
                     '&:focus-within': {
                         borderColor: 'primary.main',
-                        bgcolor: '#1C1A18',
+                        bgcolor: '#000000',
                     }
                 }}>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
@@ -2252,7 +2253,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </MenuItem>
                     </Menu>
 
-                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#0A0908', zIndex: 2 }}>
+                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#000000', zIndex: 2 }}>
                     <ChatDraftInput
                         key={conversationId}
                         attachment={attachment}

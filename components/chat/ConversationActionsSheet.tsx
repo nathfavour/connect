@@ -568,7 +568,7 @@ export default function ConversationActionsSheet({
           maxWidth="xs"
           PaperProps={{
             sx: {
-              bgcolor: '#161412',
+              bgcolor: '#000000',
               backgroundImage: 'none',
               borderRadius: isMobile ? 0 : '24px',
               border: '1px solid rgba(255,255,255,0.08)',
@@ -641,7 +641,7 @@ export default function ConversationActionsSheet({
             height: 'calc(100dvh - 88px)',
             maxHeight: 'calc(100dvh - 88px)',
             borderRadius: '24px 24px 0 0',
-            bgcolor: '#161412',
+            bgcolor: '#000000',
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
             overflow: 'hidden',
@@ -696,7 +696,7 @@ export default function ConversationActionsSheet({
 
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
 
-          <Box sx={{ px: 2.5, pt: 1.5, position: 'sticky', top: 0, zIndex: 2, bgcolor: '#161412' }}>
+          <Box sx={{ px: 2.5, pt: 1.5, position: 'sticky', top: 0, zIndex: 2, bgcolor: '#000000' }}>
             <Tabs
               value={isAdmin ? memberTab : 'members'}
               onChange={(_, value) => setMemberTab(value as 'invite' | 'members' | 'add' | 'remove')}
@@ -1120,7 +1120,7 @@ export default function ConversationActionsSheet({
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            bgcolor: '#161412',
+            bgcolor: '#000000',
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: isMobile ? 0 : '20px',

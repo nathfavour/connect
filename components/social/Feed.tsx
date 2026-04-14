@@ -76,16 +76,16 @@ const FEED_CACHE_TTL = 1000 * 60 * 30;
 const profileRegistry = new Map<string, any>();
 const momentCardSx = {
     borderRadius: '20px',
-    bgcolor: '#161412',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
-    boxShadow: '0 16px 36px rgba(0, 0, 0, 0.24)',
+    bgcolor: '#000000',
+    border: '1px solid rgba(255, 255, 255, 0.07)',
+    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 30px rgba(245, 158, 11, 0.12), 0 22px 48px rgba(0, 0, 0, 0.34)',
     overflow: 'hidden',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     '&:hover': {
-        bgcolor: '#1C1A18',
+        bgcolor: '#000000',
         transform: 'translateY(-2px)',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.32)'
+        borderColor: 'rgba(245, 158, 11, 0.18)',
+        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.1), 0 0 38px rgba(245, 158, 11, 0.2), 0 24px 56px rgba(0, 0, 0, 0.38)'
     }
 } as const;
 type FeedCacheRecord = {
@@ -167,7 +167,7 @@ const writeFeedCache = (view: string, rows: any[], cachedAt: number = Date.now()
 const FeedSkeleton = () => (
     <Stack spacing={3}>
         {[1, 2, 3].map((i) => (
-                    <Card key={i} sx={{ borderRadius: '20px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                    <Card key={i} sx={{ borderRadius: '20px', bgcolor: '#000000', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.04), 0 0 24px rgba(245, 158, 11, 0.08)' }} elevation={0}>
                         <CardHeader
                     avatar={<Skeleton variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
                     title={<Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
@@ -724,7 +724,7 @@ const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], on
                                             ml: i === 0 ? 0 : -1,
                                             zIndex: 3 - i,
                                             fontSize: '0.65rem',
-                                            bgcolor: '#161412',
+                                            bgcolor: '#000000',
                                             color: '#F59E0B',
                                             cursor: 'pointer'
                                         }}
@@ -1470,7 +1470,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     p: 1.5, 
                     mb: 4, 
                     borderRadius: '20px', 
-                    bgcolor: '#161412', 
+                    bgcolor: '#000000',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1509,7 +1509,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                         sx={{ 
                                             p: 2, 
                                             borderRadius: '16px', 
-                                            bgcolor: '#161412', 
+                                            bgcolor: '#000000',
                                             border: '1px solid rgba(255, 255, 255, 0.05)',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -1675,7 +1675,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     sx={{ 
                                         width: 40,
                                         height: 40,
-                                        bgcolor: isOwnPost ? '#F59E0B' : '#161412', 
+                                        bgcolor: isOwnPost ? '#F59E0B' : '#000000',
                                         color: isOwnPost ? '#000' : 'text.secondary', 
                                         border: '1px solid rgba(255, 255, 255, 0.08)',
                                         fontWeight: 800,

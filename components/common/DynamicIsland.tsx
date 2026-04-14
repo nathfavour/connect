@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import React, { useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import toast from 'react-hot-toast';
+import { IslandContext, IslandPanel } from './DynamicIslandContext';
 import { 
   CheckCircle as SuccessIcon, 
   Error as ErrorIcon, 
@@ -51,8 +52,6 @@ import {
 export type IslandType = 'success' | 'error' | 'warning' | 'info' | 'pro' | 'system' | 'suggestion' | 'connect';
 
 export type KylrixApp = 'root' | 'vault' | 'flow' | 'note' | 'connect';
-export type IslandPanel = 'ecosystem' | 'profile';
-
 export interface IslandNotification {
   id: string;
   type: IslandType;
@@ -67,25 +66,6 @@ export interface IslandNotification {
   majestic?: boolean;
   shape?: 'island' | 'ball' | 'pill';
   personal?: boolean;
-}
-
-interface IslandContextType {
-  showIsland: (notification: Omit<IslandNotification, 'id'>) => void;
-  dismissIsland: (id: string) => void;
-  openPanel: (panel: IslandPanel) => void;
-  closePanel: () => void;
-  isActive: boolean;
-  panel: IslandPanel | null;
-}
-
-const IslandContext = createContext<IslandContextType | undefined>(undefined);
-
-export function useIsland() {
-  const context = useContext(IslandContext);
-  if (!context) {
-    throw new Error('useIsland must be used within an IslandProvider');
-  }
-  return context;
 }
 
 export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -179,7 +159,7 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [lastActivity, notifications.length, showIsland, user]);
 
   return (
-    <IslandContext.Provider value={{ showIsland, dismissIsland, openPanel, closePanel, isActive: Boolean(panel || notifications.length), panel }}>
+    <IslandContext.Provider value={{ openPanel, closePanel, isActive: Boolean(panel || notifications.length), panel }}>
       {children}
       <DynamicIslandOverlay notifications={notifications} onDismiss={dismissIsland} isMobile={isMobile} panel={panel} onClosePanel={closePanel} />
     </IslandContext.Provider>
@@ -349,6 +329,7 @@ const DynamicIslandOverlay: React.FC<{
   const [searching, setSearching] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const islandRootRef = useRef<HTMLDivElement | null>(null);
   const controls = useAnimation();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -546,6 +527,25 @@ const DynamicIslandOverlay: React.FC<{
     };
   }, [current, isSearchOpen, query, user?.$id]);
 
+  useEffect(() => {
+    if (!panel && !isSearchOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target || !islandRootRef.current || islandRootRef.current.contains(target)) return;
+
+      if (panel) {
+        onClosePanel();
+      }
+      if (isSearchOpen) {
+        closeSearch();
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    return () => window.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [closeSearch, isSearchOpen, onClosePanel, panel]);
+
   const handleSearchSubmit = () => {
     if (routeMatches.length > 0) {
       routeMatches[0].onSelect();
@@ -613,6 +613,7 @@ const DynamicIslandOverlay: React.FC<{
 
   return (
     <Box
+      ref={islandRootRef}
       sx={{
         position: 'fixed',
         top: topOffset,

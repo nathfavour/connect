@@ -23,7 +23,7 @@ import Logo from '../common/Logo';
 import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
-import { useIsland } from '@/components/common/DynamicIsland';
+import { useIsland } from '@/components/common/DynamicIslandContext';
 
 export const AppHeader = () => {
   const { user } = useAuth();

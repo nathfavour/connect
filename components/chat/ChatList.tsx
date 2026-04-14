@@ -584,7 +584,7 @@ export const ChatList = () => {
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', position: 'relative' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0F0E0D', position: 'relative' }}>
             <Box sx={{ p: 3, pb: 2 }}>
                 <Typography
                     variant="h5"
@@ -604,12 +604,12 @@ export const ChatList = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        bgcolor: '#161412',
+                        bgcolor: '#000000',
                         borderRadius: '12px',
                         px: 2,
                         py: 1,
                         border: '1px solid rgba(255, 255, 255, 0.05)',
-                        boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 22px rgba(245, 158, 11, 0.08)',
                         position: 'relative',
                         '&::after': {
                             content: '""',
@@ -623,7 +623,7 @@ export const ChatList = () => {
                         },
                         '&:focus-within': {
                             borderColor: '#6366F1',
-                            bgcolor: '#1C1A18'
+                            bgcolor: '#000000'
                         }
                     }}
                 >
@@ -667,7 +667,14 @@ export const ChatList = () => {
                                             sx={{
                                                 borderRadius: '12px',
                                                 py: 1,
-                                                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' }
+                                                bgcolor: '#000000',
+                                                border: '1px solid rgba(255, 255, 255, 0.07)',
+                                                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
+                                                '&:hover': {
+                                                    bgcolor: '#000000',
+                                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                                    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
+                                                }
                                             }}
                                         >
                                             <ListItemAvatar sx={{ minWidth: 56 }}>
@@ -711,17 +718,22 @@ export const ChatList = () => {
                                 <ListItemButton
                                     component={Link}
                                     href={`/chat/${conv.$id}`}
-                                    sx={{
+                                        sx={{
                                         borderRadius: '12px',
                                         py: 1.5,
                                         transition: 'all 160ms ease',
+                                        bgcolor: '#000000',
+                                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                                        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
                                         ...(activePreviewConversationId === conv.$id ? {
-                                            bgcolor: 'rgba(99, 102, 241, 0.08)',
-                                            boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 10px 24px rgba(0, 0, 0, 0.24)',
+                                            bgcolor: '#000000',
+                                            boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 30px rgba(99, 102, 241, 0.12)',
                                             transform: 'translateY(-1px)',
                                         } : {}),
                                         '&:hover': {
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)'
+                                            bgcolor: '#000000',
+                                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                                            boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
                                         }
                                     }}
                                 >
@@ -749,10 +761,10 @@ export const ChatList = () => {
                                             <Avatar
                                                 src={conv.avatarUrl}
                                                 sx={{
-                                                    bgcolor: conv.isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1),
+                                                    bgcolor: '#000000',
                                                     color: conv.isSelf ? '#6366F1' : '#F59E0B',
                                                     border: '1px solid rgba(255, 255, 255, 0.05)',
-                                                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                                                    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 16px rgba(245, 158, 11, 0.08)',
                                                     width: 44,
                                                     height: 44
                                                 }}
