@@ -279,13 +279,19 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                         overflow: 'hidden',
                         border: '1px solid',
                         borderColor: 'rgba(255, 255, 255, 0.06)',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         zIndex: 1000
                     }} 
                 >
                     <BottomNavigation
                         value={pathname}
-                        sx={{ bgcolor: '#000000', height: 72, pb: 'env(safe-area-inset-bottom)', px: 1 }}
+                        sx={{
+                            bgcolor: '#161412',
+                            backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 18%, #161412 100%)',
+                            height: 72,
+                            pb: 'env(safe-area-inset-bottom)',
+                            px: 1,
+                        }}
                     >
                         {navItems.map((item) => (
                             <BottomNavigationAction
@@ -295,11 +301,13 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                 href={item.href}
                                 value={item.href}
                                 sx={{ 
-                                    color: 'text.secondary',
+                                    color: '#FFFFFF',
                                     minWidth: 0,
                                     padding: '12px 0',
+                                    opacity: 0.92,
                                     '&.Mui-selected': { 
-                                        color: '#6366F1'
+                                        color: '#FFFFFF',
+                                        opacity: 1
                                     }
                                 }}
                             />

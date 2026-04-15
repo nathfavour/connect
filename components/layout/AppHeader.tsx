@@ -243,7 +243,8 @@ export const AppHeader = () => {
             display: 'flex',
             alignItems: 'stretch',
             borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-            bgcolor: 'rgba(11, 9, 8, 0.99)',
+            bgcolor: '#000000',
+            backgroundImage: 'linear-gradient(180deg, rgba(31, 29, 27, 0.95) 0%, rgba(12, 11, 10, 0.98) 46%, #000000 100%)',
             overflow: 'hidden',
           }}
         >
@@ -266,7 +267,7 @@ export const AppHeader = () => {
                       display: 'grid',
                       placeItems: 'center',
                       color: panel === 'profile' ? '#6366F1' : '#F59E0B',
-                      bgcolor: 'rgba(0,0,0,0.96)',
+                      bgcolor: '#000000',
                       border: '1px solid rgba(255,255,255,0.08)',
                       boxShadow: panel === 'profile'
                         ? '0 0 18px rgba(99, 102, 241, 0.18)'
@@ -325,7 +326,7 @@ export const AppHeader = () => {
                         px: 1.5,
                         py: 1.1,
                         borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.03)',
+                        bgcolor: 'rgba(255,255,255,0.02)',
                         border: '1px solid rgba(255,255,255,0.05)',
                         color: 'white',
                         textAlign: 'left',
@@ -361,7 +362,7 @@ export const AppHeader = () => {
                       px: 1.5,
                       py: 1.1,
                       borderRadius: '18px',
-                      bgcolor: 'rgba(255,255,255,0.03)',
+                      bgcolor: 'rgba(255,255,255,0.02)',
                       border: '1px solid rgba(255,255,255,0.05)',
                       color: 'white',
                       textAlign: 'left',
