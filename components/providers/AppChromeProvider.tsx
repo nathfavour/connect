@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 export type AppChromeMode = 'default' | 'compact' | 'hidden';
 
@@ -26,6 +27,7 @@ const AppChromeContext = createContext<AppChromeContextType | undefined>(undefin
 
 export function AppChromeProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppChromeState>(DEFAULT_STATE);
+  const pathname = usePathname();
   const setChromeState = React.useCallback((next: Partial<AppChromeState>) => {
     setState((current) => {
       const merged = { ...current, ...next };
@@ -43,6 +45,16 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
   const resetChromeState = React.useCallback(() => {
     setState(DEFAULT_STATE);
   }, []);
+
+  useEffect(() => {
+    const mood = pathname?.startsWith('/chat/') || pathname?.startsWith('/post/')
+      ? 'focus'
+      : 'ambient';
+    document.body.dataset.uiMood = mood;
+    return () => {
+      document.body.dataset.uiMood = 'ambient';
+    };
+  }, [pathname]);
 
   const value = useMemo<AppChromeContextType>(() => {
     const baseHeight = state.mode === 'compact' ? 72 : state.mode === 'hidden' ? 0 : 88;

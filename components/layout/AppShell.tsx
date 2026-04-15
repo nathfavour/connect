@@ -89,12 +89,12 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
     if (isEmbedded) {
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', p: 2, overflowY: 'auto' }}>
+            <Box sx={{ minHeight: '100vh', bgcolor: '#000000', p: 2, overflowY: 'auto' }}>
                 <Paper
                     elevation={0}
                     sx={{
                         minHeight: '100%',
-                        bgcolor: '#161412',
+                        bgcolor: '#000000',
                         borderRadius: '24px',
                         border: '1px solid',
                         borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -119,7 +119,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     }
 
     return (
-            <Box sx={{ display: 'flex', height: '100dvh', minHeight: '100dvh', overflow: 'hidden', bgcolor: '#0A0908' }}>
+            <Box sx={{ display: 'flex', height: '100dvh', minHeight: '100dvh', overflow: 'hidden', bgcolor: '#000000' }}>
                 {!isFullscreenContent && <AppHeader />}
                 <ProfileSetupDrawer />
 
@@ -136,7 +136,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                             boxSizing: 'border-box', 
                             top: isFullscreenContent ? 0 : headerHeight, 
                             height: isFullscreenContent ? '100%' : `calc(100% - ${headerHeight}px)`,
-                            bgcolor: '#0A0908',
+                             bgcolor: '#000000',
                             borderRight: '1px solid',
                             borderColor: 'rgba(255, 255, 255, 0.05)'
                         },
@@ -221,7 +221,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                     overflow: 'hidden', 
                     position: 'relative', 
                     pt: isFullscreenContent ? 0 : `${headerHeight}px`,
-                    bgcolor: '#0A0908',
+                    bgcolor: '#000000',
                     transition: 'all 0.3s ease-in-out'
                 }}
             >
@@ -240,7 +240,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                         sx={{
                             height: (isInsideChat || isPostActive) ? '100%' : 'auto',
                             minHeight: '100%',
-                            bgcolor: (isInsideChat || isPostActive) ? 'transparent' : '#161412',
+                             bgcolor: (isInsideChat || isPostActive) ? 'transparent' : '#000000',
                             borderRadius: (isInsideChat || isPostActive) ? 0 : '24px',
                             border: (isInsideChat || isPostActive) ? 'none' : '1px solid',
                             borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -255,7 +255,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                                 left: 0,
                                 right: 0,
                                 height: '1px',
-                                background: 'rgba(255, 255, 255, 0.03)',
+                                 background: 'rgba(255, 255, 255, 0.03)',
                                 borderRadius: '24px',
                             },
                         }}

@@ -586,7 +586,7 @@ export const ChatList = () => {
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: '#0F0E0D', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: '#000000', position: 'relative', overflow: 'hidden' }}>
             <Box sx={{ p: 3, pb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
                     <IconButton
@@ -595,7 +595,7 @@ export const ChatList = () => {
                         sx={{
                             width: 40,
                             height: 40,
-                            bgcolor: '#000000',
+                bgcolor: '#000000',
                             color: 'text.primary',
                             border: '1px solid rgba(255, 255, 255, 0.06)',
                             boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 16px rgba(245, 158, 11, 0.08)',
@@ -688,7 +688,7 @@ export const ChatList = () => {
                                             sx={{
                                                 borderRadius: '12px',
                                                 py: 1,
-                                                bgcolor: '#000000',
+                            bgcolor: '#000000',
                                                 border: '1px solid rgba(255, 255, 255, 0.07)',
                                                 boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
                                                 '&:hover': {
@@ -747,12 +747,12 @@ export const ChatList = () => {
                                         border: '1px solid rgba(255, 255, 255, 0.07)',
                                         boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
                                         ...(activePreviewConversationId === conv.$id ? {
-                                            bgcolor: '#000000',
+                                                bgcolor: '#000000',
                                             boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 30px rgba(99, 102, 241, 0.12)',
                                             transform: 'translateY(-1px)',
                                         } : {}),
                                         '&:hover': {
-                                            bgcolor: '#000000',
+                                                    bgcolor: '#000000',
                                             borderColor: 'rgba(255, 255, 255, 0.1)',
                                             boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
                                         }

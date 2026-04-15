@@ -75,13 +75,13 @@ const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
 const momentCardSx = {
     borderRadius: '20px',
-    bgcolor: '#000000',
+    bgcolor: '#161514',
     border: '1px solid rgba(255, 255, 255, 0.07)',
     boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 30px rgba(245, 158, 11, 0.12), 0 22px 48px rgba(0, 0, 0, 0.34)',
     overflow: 'hidden',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     '&:hover': {
-        bgcolor: '#000000',
+        bgcolor: '#161514',
         transform: 'translateY(-2px)',
         borderColor: 'rgba(245, 158, 11, 0.18)',
         boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.1), 0 0 38px rgba(245, 158, 11, 0.2), 0 24px 56px rgba(0, 0, 0, 0.38)'
@@ -281,7 +281,7 @@ const PostComposer = React.memo(function PostComposer({
                         right: 0,
                         zIndex: 2000,
                         padding: '16px',
-                        background: '#0A0908',
+                        background: '#161514',
                         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                         borderRadius: '24px 24px 0 0',
                         boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
@@ -420,7 +420,7 @@ const PostComposer = React.memo(function PostComposer({
                             )}
                         </CardContent>
                         <Divider sx={{ opacity: 0.05 }} />
-                        <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: 'rgba(255, 255, 255, 0.01)' }}>
+                        <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5, bgcolor: '#000000' }}>
                             <Box sx={{ display: 'flex', gap: 0.5 }}>
                                 <input
                                     type="file"
@@ -621,7 +621,6 @@ function MobileComposerDock({
                         color: '#F59E0B',
                         backgroundImage: 'linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.06) 100%)',
                         boxShadow: '0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 158, 11, 0.18), 0 0 28px rgba(245, 158, 11, 0.24)',
-                        backdropFilter: 'blur(16px) saturate(180%)',
                         transform: 'translateZ(0)',
                         transition: 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease',
                         WebkitTapHighlightColor: 'transparent',
@@ -636,7 +635,7 @@ function MobileComposerDock({
                             pointerEvents: 'none',
                         },
                         '&:hover': {
-                            bgcolor: '#000000',
+                        bgcolor: '#000000',
                             color: '#F59E0B',
                             transform: 'translateY(-2px) scale(1.04)',
                             boxShadow: '0 22px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245, 158, 11, 0.22), 0 0 34px rgba(245, 158, 11, 0.3)',
@@ -1758,7 +1757,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                     p: 1.25, 
                                     ml: 3,
                                     borderRadius: '12px', 
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                                    bgcolor: '#000000', 
                                     border: '1px solid rgba(255, 255, 255, 0.04)',
                                     pointerEvents: 'none'
                                 }}>
@@ -1869,7 +1868,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 sx={{
                                     p: 0,
                                     borderRadius: 4,
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                                    bgcolor: '#000000',
                                     borderColor: 'rgba(255, 255, 255, 0.08)',
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1945,7 +1944,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 sx={{
                                     p: 0,
                                     borderRadius: 4,
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                                    bgcolor: '#000000',
                                     borderColor: 'rgba(255, 255, 255, 0.08)',
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -2030,7 +2029,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                                 sx={{
                                     p: 0,
                                     borderRadius: 4,
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                                    bgcolor: '#000000',
                                     borderColor: 'rgba(255, 255, 255, 0.08)',
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -2210,8 +2209,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     sx: {
                         mt: 1,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#000000',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         minWidth: 160
                     }
@@ -2240,8 +2238,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     sx: {
                         mt: 1,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#000000',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         minWidth: 180
                     }
@@ -2269,8 +2266,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     sx: {
                         mt: 1,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#000000',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         minWidth: 200
                     }
@@ -2285,7 +2281,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             </Menu>
 
             {moments.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 10, bgcolor: 'rgba(255, 255, 255, 0.01)', borderRadius: '32px', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                <Box sx={{ textAlign: 'center', py: 10, bgcolor: '#000000', borderRadius: '32px', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
                     <Typography sx={{ color: 'text.secondary', fontWeight: 700 }}>No moments in the feed yet.</Typography>
                     <Typography variant="body2" sx={{ color: 'text.disabled', mt: 1 }}>Be the first to share an update!</Typography>
                 </Box>

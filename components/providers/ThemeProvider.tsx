@@ -6,6 +6,10 @@ import CssBaseline from '@mui/material/CssBaseline';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEcosystemNode } from '@/hooks/useEcosystemNode';
 
+const SURFACE_BACKGROUND = '#000000';
+const SURFACE = '#161514';
+const SURFACE_ELEVATED = '#1F1D1B';
+
 type ColorModeContextType = {
   toggleColorMode: () => void;
   mode: 'light' | 'dark';
@@ -62,8 +66,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             main: '#F59E0B', // Amber
           },
           background: {
-            default: '#0A0908', // Deep Earth
-            paper: '#161412',   // Surface
+            default: SURFACE_BACKGROUND,
+            paper: SURFACE,
           },
           text: {
             primary: '#F2F2F2',   // Titanium
@@ -135,7 +139,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiCssBaseline: {
             styleOverrides: {
               body: {
-                backgroundColor: '#0A0908',
+                backgroundColor: SURFACE_BACKGROUND,
                 color: '#F2F2F2',
                 scrollbarColor: '#222222 transparent',
                 '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
@@ -155,9 +159,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiAppBar: {
             styleOverrides: {
               root: {
-                backgroundColor: 'rgba(11, 9, 8, 0.95)',
-                backdropFilter: 'blur(25px) saturate(180%)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: SURFACE,
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                 boxShadow: 'none',
               },
             },
@@ -165,7 +168,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiDrawer: {
             styleOverrides: {
               paper: {
-                backgroundColor: '#0A0908',
+                backgroundColor: SURFACE_BACKGROUND,
                 borderRight: '1px solid rgba(255, 255, 255, 0.05)',
               },
             },
@@ -216,7 +219,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             styleOverrides: {
               root: {
                 borderRadius: 24,
-                backgroundColor: '#161412',
+                backgroundColor: SURFACE,
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 backgroundImage: 'none',
                 position: 'relative',
@@ -243,7 +246,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           MuiPaper: {
             styleOverrides: {
               root: {
-                backgroundColor: '#161412',
+                backgroundColor: SURFACE,
                 backgroundImage: 'none',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 boxShadow: '0 1px 0 rgba(0, 0, 0, 0.4)',
@@ -254,8 +257,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             styleOverrides: {
               paper: {
                 borderRadius: 24,
-                backgroundColor: '#161412',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: SURFACE_ELEVATED,
+                border: '1px solid rgba(255, 255, 255, 0.06)',
                 backgroundImage: 'none',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.4)',
                 position: 'relative',

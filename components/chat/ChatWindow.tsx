@@ -305,7 +305,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         '& .MuiOutlinedInput-root': {
                             minHeight: 40,
                             borderRadius: '999px',
-                            bgcolor: '#000000',
+                            bgcolor: '#161514',
                             fontSize: '0.95rem',
                             transition: 'all 0.2s ease',
                             '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.06)' },
@@ -384,8 +384,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         mt: 1,
                         minWidth: 220,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.96)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#1F1D1B',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         backgroundImage: 'none',
                     }
@@ -1386,7 +1385,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 overflow: 'hidden',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
-                backdropFilter: 'blur(10px)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                 position: 'relative',
                 '&::before': {
@@ -1673,7 +1671,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 );
             default:
                 return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#000000', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#161514', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <FileIcon size={18} strokeWidth={1.5} />
                         <Typography
                             variant="body2"
@@ -1719,8 +1717,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             <MuralPattern />
             <AppBar position="static" color="transparent" elevation={0} sx={{ 
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
-                bgcolor: '#000000',
-                backdropFilter: 'blur(10px)',
+                bgcolor: '#161514',
                 position: 'relative',
                 zIndex: 1,
                 pt: 'env(safe-area-inset-top)',
@@ -1827,8 +1824,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     sx: {
                         mt: 1,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#1F1D1B',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         backgroundImage: 'none',
                         minWidth: 220
@@ -1861,7 +1857,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             {/* Messages Area */}
             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
-                    <Box sx={{ p: 2, mb: 2, bgcolor: '#000000', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.08), 0 0 24px rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
+                    <Box sx={{ p: 2, mb: 2, bgcolor: '#161514', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.08), 0 0 24px rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#6366F1' }}>
                             This conversation is end-to-end encrypted.
                         </Typography>
@@ -1906,7 +1902,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 ) : (
                     <>
                         {showFirstContactWarning && (
-                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: '#000000', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
+                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: '#161514', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'text.primary', fontWeight: 600 }}>
                                     {buildSafetyWarning(conversation?.name || 'this contact')}
                                 </Typography>
@@ -1917,7 +1913,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         <React.Fragment key={msg.$id}>
                             {index === clientReadSegments.firstUnreadIncomingIndex && (
                                 <Box sx={{ display: 'flex', justifyContent: 'center', my: 0.5 }}>
-                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: '#000000', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.06)' }}>
+                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: '#161514', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.06)' }}>
                                         <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B' }}>
                                             Unread messages
                                         </Typography>
@@ -1983,7 +1979,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                     maxWidth: '100%',
                                                     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
                                                     borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                                    bgcolor: '#000000',
+                                                    bgcolor: '#161514',
                                                     backgroundImage: isOutgoing
                                                         ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, rgba(255,255,255,0.02) 34%, rgba(0,0,0,0.16) 100%)'
                                                         : 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(255,255,255,0.015) 34%, rgba(0,0,0,0.18) 100%)',
@@ -2016,14 +2012,14 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                         sx={{
                                                             mb: 1,
                                                             p: 1,
-                                                            bgcolor: '#000000',
+                                                            bgcolor: '#161514',
                                                             borderRadius: '8px',
                                                             borderLeft: '3px solid',
                                                             borderColor: 'primary.main',
                                                             cursor: 'pointer',
                                                             opacity: 0.8,
                                                             boxShadow: '0 0 0 1px rgba(255,255,255,0.04)',
-                                                            '&:hover': { opacity: 1, bgcolor: '#000000' }
+                                                            '&:hover': { opacity: 1, bgcolor: '#161514' }
                                                         }}
                                                     >
                                                         <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', mb: 0.5 }}>
@@ -2131,8 +2127,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         minWidth: 240,
                         maxWidth: 320,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(15, 15, 15, 0.96)',
-                        backdropFilter: 'blur(18px)',
+                        bgcolor: '#1F1D1B',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         backgroundImage: 'none',
                         p: 1.5,
@@ -2180,7 +2175,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             </Popover>
 
             {/* Input Area */}
-            <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
+                    <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
                 {replyingTo && (
                     <Box sx={{ 
                         mb: 1, 
@@ -2213,13 +2208,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     alignItems: 'center',
                     gap: 0.75,
                     borderRadius: replyingTo ? '0 0 24px 24px' : '24px',
-                    bgcolor: '#000000',
+                    bgcolor: '#161514',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     position: 'relative',
                     zIndex: 2,
                     '&:focus-within': {
                         borderColor: 'primary.main',
-                        bgcolor: '#000000',
+                        bgcolor: '#161514',
                     }
                 }}>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
@@ -2234,8 +2229,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             sx: {
                                 mb: 1,
                                 borderRadius: '16px',
-                                bgcolor: 'rgba(15, 15, 15, 0.95)',
-                                backdropFilter: 'blur(20px)',
+                                bgcolor: '#1F1D1B',
                                 border: '1px solid rgba(255, 255, 255, 0.08)',
                                 backgroundImage: 'none',
                                 minWidth: 200
@@ -2253,7 +2247,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         </MenuItem>
                     </Menu>
 
-                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#000000', zIndex: 2 }}>
+                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#161514', zIndex: 2 }}>
                     <ChatDraftInput
                         key={conversationId}
                         attachment={attachment}
@@ -2299,8 +2293,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 PaperProps={{
                     sx: {
                         borderRadius: '12px',
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
+                        bgcolor: '#1F1D1B',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         minWidth: 160
                     }

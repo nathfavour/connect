@@ -95,8 +95,7 @@ export const AppHeader = () => {
       elevation={0}
       sx={{
         zIndex: 1201,
-        bgcolor: 'rgba(11, 9, 8, 0.95)',
-        backdropFilter: 'blur(25px) saturate(180%)',
+        bgcolor: 'var(--color-surface)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
         backgroundImage: 'none',
         display: 'flex',
