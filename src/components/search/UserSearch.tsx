@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { UsersService } from '@/lib/services/users';
-import { Profiles } from '@/types/appwrite';
+import type { Profiles } from '@/types/appwrite';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
