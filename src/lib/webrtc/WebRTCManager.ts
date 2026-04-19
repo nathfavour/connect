@@ -1,4 +1,5 @@
 import { PeerConnectionEvents, SignalData, PeerState } from '@/types/p2p';
+import { createCloudflareSession, createCloudflareTracks } from '@/lib/server/api';
 
 export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
@@ -30,13 +31,7 @@ export class WebRTCManager {
     if (this.sessionId) return { sessionId: this.sessionId, sessionToken: this.cloudflareSessionToken };
     
     console.log('[WebRTCManager] Fetching Cloudflare session...');
-    const response = await fetch('/api/calls/session', { method: 'POST' });
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('[WebRTCManager] Cloudflare session fetch failed:', err);
-      throw new Error(`Cloudflare session failed: ${response.status} ${err}`);
-    }
-    const data = await response.json();
+    const data = await createCloudflareSession();
     console.log('[WebRTCManager] Cloudflare session created:', data.sessionId);
     this.sessionId = data.sessionId;
     this.cloudflareSessionToken = data.sessionToken;
@@ -208,13 +203,7 @@ export class WebRTCManager {
         trackName: `${track.kind}-${senderId}`
       }));
 
-      const trackRes = await fetch('/api/calls/tracks', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId, tracks })
-      });
-      
-      if (!trackRes.ok) throw new Error('Failed to push tracks to Cloudflare');
-      const trackData = await trackRes.json();
+      const trackData = await createCloudflareTracks({ data: { sessionId, tracks } });
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
