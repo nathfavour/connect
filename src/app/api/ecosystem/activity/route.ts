@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ActivityService, AppActivity } from '@/lib/services/activity';
 import { resolveCurrentUser } from '@/lib/appwrite/client';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
         const user = await resolveCurrentUser(req);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

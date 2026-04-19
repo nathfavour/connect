@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ChatService } from '@/lib/services/chat';
 import { resolveCurrentUser } from '@/lib/appwrite/client';
 
@@ -6,7 +6,7 @@ import { resolveCurrentUser } from '@/lib/appwrite/client';
  * External API for triggering chat messages from other apps.
  * Used for "shared call URIs", "attaching conversation to flow app", etc.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
         const user = await resolveCurrentUser(req);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 /**
  * External API to list conversations for cross-app selection.
  */
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
     try {
         const user = await resolveCurrentUser(req);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
