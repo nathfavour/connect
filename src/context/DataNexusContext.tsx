@@ -36,6 +36,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
 
     const purge = useCallback(() => {
         memoryCache.current.clear();
+        activeRequests.current.clear();
         console.log('[Nexus-Connect] Volatile memory cache purged.');
     }, []);
 
@@ -107,6 +108,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
 
     const invalidate = useCallback((key: string) => {
         memoryCache.current.delete(key);
+        activeRequests.current.delete(key);
         if (typeof window !== 'undefined') {
             localStorage.removeItem(`c_nexus_${key}`);
         }
@@ -119,7 +121,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
     ): Promise<T> {
         // 1. Check if we already have valid decrypted data
         const cached = await getCachedData<T>(key, ttl);
-        if (cached) return cached;
+        if (cached !== null) return cached;
 
         // 2. Deduplication: Check if an identical request is already in flight
         const existingRequest = activeRequests.current.get(key);
