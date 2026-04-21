@@ -1,3 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
 import Page from '@/app/calls/page';
-export const Route = createFileRoute('/calls')({ component: Page });
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
+
+export const Route = createFileRoute('/calls')({ errorComponent: RouteErrorBoundary, component: Page });
