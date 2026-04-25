@@ -360,22 +360,12 @@ export const DynamicIslandPanelSurface: React.FC<{
             width: panelWidth,
             mx: 'auto',
             borderRadius: '30px',
-            bgcolor: 'rgba(10, 9, 8, 0.96)',
-            backdropFilter: 'blur(30px) saturate(180%)',
+            bgcolor: '#161412',
             border: `1px solid ${alpha(panelTone, 0.28)}`,
-            boxShadow: `0 0 0 1px ${alpha(APP_TONES.connect.primary, 0.12)}, 0 0 28px ${alpha(panelTone, 0.2)}, 0 20px 55px rgba(0, 0, 0, 0.5)`,
             overflow: 'hidden',
             position: 'relative',
           }}
         >
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background: `radial-gradient(circle at 50% 0%, ${alpha(panelTone, 0.18)} 0%, transparent 55%)`,
-              pointerEvents: 'none',
-            }}
-          />
           <Box sx={{ position: 'relative', zIndex: 1, p: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -385,14 +375,13 @@ export const DynamicIslandPanelSurface: React.FC<{
                       width: 38,
                       height: 38,
                       borderRadius: '14px',
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: panelTone,
-                      bgcolor: 'rgba(0,0,0,0.96)',
-                      border: `1px solid ${alpha(panelTone, 0.24)}`,
-                      boxShadow: `0 0 18px ${alpha(panelTone, 0.24)}`,
-                    }}
-                  >
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: panelTone,
+                        bgcolor: alpha(panelTone, 0.08),
+                        border: `1px solid ${alpha(panelTone, 0.24)}`,
+                        }}
+                      >
                     {panel === 'profile' ? <UserIcon size={18} /> : <Logo app="connect" size={18} variant="icon" />}
                   </Box>
                 </motion.div>
@@ -819,7 +808,6 @@ const DynamicIslandOverlay: React.FC<{
         height: 10,
         borderRadius: '50%',
         bgcolor: APP_TONES.connect.secondary,
-        boxShadow: `0 0 18px ${alpha(APP_TONES.connect.secondary, 0.7)}`,
       }}
     />
   );
@@ -878,22 +866,12 @@ const DynamicIslandOverlay: React.FC<{
               sx={{
                 width: panelWidth,
                 borderRadius: '30px',
-                bgcolor: 'rgba(10, 9, 8, 0.96)',
-                backdropFilter: 'blur(30px) saturate(180%)',
+                bgcolor: '#161412',
                 border: `1px solid ${alpha(panelTone, 0.28)}`,
-                boxShadow: `0 0 0 1px ${alpha(APP_TONES.connect.primary, 0.12)}, 0 0 28px ${alpha(panelTone, 0.2)}, 0 20px 55px rgba(0, 0, 0, 0.5)`,
                 overflow: 'hidden',
                 position: 'relative',
               }}
             >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: `radial-gradient(circle at 50% 0%, ${alpha(panelTone, 0.18)} 0%, transparent 55%)`,
-                  pointerEvents: 'none',
-                }}
-              />
               <Box sx={{ position: 'relative', zIndex: 1, p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -906,9 +884,8 @@ const DynamicIslandOverlay: React.FC<{
                           display: 'grid',
                           placeItems: 'center',
                           color: panelTone,
-                          bgcolor: 'rgba(0,0,0,0.96)',
+                          bgcolor: alpha(panelTone, 0.08),
                           border: `1px solid ${alpha(panelTone, 0.24)}`,
-                          boxShadow: `0 0 18px ${alpha(panelTone, 0.24)}`,
                         }}
                       >
                         {panel === 'profile' ? <UserIcon size={18} /> : <SparklesIcon size={18} />}
@@ -1081,28 +1058,16 @@ const DynamicIslandOverlay: React.FC<{
                 height: islandHeight,
                 width: islandWidth,
                 borderRadius: '999px',
-                background: current ? 'rgba(10, 9, 8, 0.94)' : '#000',
-                backdropFilter: 'blur(28px) saturate(170%)',
+                background: current ? '#161412' : '#000',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'stretch',
                 flexDirection: 'column',
                 position: 'relative',
                 transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                ...glow,
+                ...islandFrame,
               }}
             >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: -2,
-                  borderRadius: 'inherit',
-                  background: `radial-gradient(circle at 50% 50%, ${alpha(currentTone.secondary, current.majestic ? 0.25 : 0.16)} 0%, transparent 72%)`,
-                  opacity: 1,
-                  pointerEvents: 'none',
-                }}
-              />
-
               <Box
                 sx={{
                   position: 'relative',
@@ -1195,22 +1160,12 @@ const DynamicIslandOverlay: React.FC<{
               sx={{
                 width: searchWidth,
                 borderRadius: '30px',
-                bgcolor: 'rgba(10, 9, 8, 0.96)',
-                backdropFilter: 'blur(30px) saturate(180%)',
+                bgcolor: '#161412',
                 border: `1px solid ${alpha(APP_TONES.connect.secondary, 0.28)}`,
-                boxShadow: `0 0 0 1px ${alpha(APP_TONES.connect.primary, 0.14)}, 0 0 28px ${alpha(APP_TONES.connect.secondary, 0.22)}, 0 20px 55px rgba(0, 0, 0, 0.5)`,
                 overflow: 'hidden',
                 position: 'relative',
               }}
             >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: `radial-gradient(circle at 50% 0%, ${alpha(APP_TONES.connect.secondary, 0.18)} 0%, transparent 55%)`,
-                  pointerEvents: 'none',
-                }}
-              />
               <Box sx={{ position: 'relative', zIndex: 1, p: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 0.5 }}>
                   <Box
@@ -1218,15 +1173,14 @@ const DynamicIslandOverlay: React.FC<{
                       width: 38,
                       height: 38,
                       borderRadius: searchMode === 'thinking' ? '16px' : '999px',
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: APP_TONES.connect.secondary,
-                      bgcolor: 'rgba(0, 0, 0, 0.96)',
-                      border: `1px solid ${alpha(APP_TONES.connect.secondary, searchMode === 'thinking' ? 0.34 : 0.22)}`,
-                      boxShadow: `0 0 18px ${alpha(APP_TONES.connect.secondary, searchMode === 'thinking' ? 0.3 : 0.22)}`,
-                      flexShrink: 0,
-                      transition: 'border-radius 320ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: APP_TONES.connect.secondary,
+                        bgcolor: alpha(APP_TONES.connect.secondary, 0.08),
+                        border: `1px solid ${alpha(APP_TONES.connect.secondary, searchMode === 'thinking' ? 0.34 : 0.22)}`,
+                        flexShrink: 0,
+                        transition: 'border-radius 320ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
                   >
                     <AnimatePresence mode="wait">
                       {searchMode === 'idle' ? (
@@ -1466,22 +1420,12 @@ const DynamicIslandOverlay: React.FC<{
                 borderRadius: '999px',
                 display: 'grid',
                 placeItems: 'center',
-                bgcolor: 'rgba(10, 9, 8, 0.9)',
-                backdropFilter: 'blur(28px) saturate(170%)',
+                bgcolor: '#161412',
                 position: 'relative',
                 overflow: 'hidden',
-                ...glow,
+                ...islandFrame,
               }}
             >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 'inherit',
-                  background: `radial-gradient(circle at 50% 50%, ${alpha(APP_TONES.connect.secondary, 0.18)} 0%, transparent 72%)`,
-                  opacity: 1,
-                }}
-              />
               <motion.div
                 animate={{
                   scale: [1, 1.06, 1],

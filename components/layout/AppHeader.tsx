@@ -93,12 +93,12 @@ export const AppHeader = () => {
       ref={headerRef}
       position="fixed"
       elevation={0}
-      sx={{
-        zIndex: 1201,
-        bgcolor: 'var(--color-surface)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        backgroundImage: 'none',
-        display: 'flex',
+        sx={{
+          zIndex: 1201,
+          bgcolor: 'var(--color-surface)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          backgroundImage: 'none',
+          display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
         justifyContent: 'flex-start',
@@ -182,7 +182,7 @@ export const AppHeader = () => {
                 borderRadius: '12px',
                 width: { xs: 36, sm: 42 },
                 height: { xs: 36, sm: 42 },
-                '&:hover': { bgcolor: alpha('#F59E0B', 0.08), boxShadow: '0 0 15px rgba(245, 158, 11, 0.2)' },
+                '&:hover': { bgcolor: alpha('#F59E0B', 0.08) },
               }}
             >
               <Wallet size={18} strokeWidth={1.5} />
@@ -243,8 +243,7 @@ export const AppHeader = () => {
             display: 'flex',
             alignItems: 'stretch',
             borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-            bgcolor: '#000000',
-            backgroundImage: 'linear-gradient(180deg, rgba(31, 29, 27, 0.95) 0%, rgba(12, 11, 10, 0.98) 46%, #000000 100%)',
+            bgcolor: '#0A0908',
             overflow: 'hidden',
           }}
         >
@@ -269,9 +268,6 @@ export const AppHeader = () => {
                       color: panel === 'profile' ? '#6366F1' : '#F59E0B',
                       bgcolor: '#000000',
                       border: '1px solid rgba(255,255,255,0.08)',
-                      boxShadow: panel === 'profile'
-                        ? '0 0 18px rgba(99, 102, 241, 0.18)'
-                        : '0 0 18px rgba(245, 158, 11, 0.18)',
                       flexShrink: 0,
                     }}
                   >

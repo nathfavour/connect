@@ -105,10 +105,8 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                     sx={{
                         p: 0,
                         borderRadius: '32px',
-                        bgcolor: 'rgba(10, 10, 10, 0.8)',
-                        backdropFilter: 'blur(40px) saturate(180%)',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
-                        boxShadow: '0 32px 64px rgba(0,0,0,0.7), 0 0 100px rgba(99, 102, 241, 0.05)',
                         overflow: 'hidden'
                     }}
                 >
@@ -190,13 +188,12 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                                             border: '1px solid rgba(255, 255, 255, 0.06)',
                                             color: 'white',
                                             textAlign: 'left',
-                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            transition: 'background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                             cursor: 'pointer',
                                             '&:hover': {
                                                 bgcolor: 'rgba(255, 255, 255, 0.06)',
                                                 borderColor: alpha(app.color, 0.4),
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: `0 8px 24px ${alpha(app.color, 0.1)}`
+                                                transform: 'translateY(-1px)'
                                             },
                                             '&:active': {
                                                 transform: 'scale(0.98)'
@@ -207,11 +204,11 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                                             width: 48,
                                             height: 48,
                                             borderRadius: '14px',
-                                            bgcolor: alpha(app.color, 0.15),
+                                            bgcolor: alpha(app.color, 0.08),
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            border: `1px solid ${alpha(app.color, 0.2)}`,
+                                            border: `1px solid ${alpha(app.color, 0.24)}`,
                                             overflow: 'hidden'
                                         }}>
                                             <Logo app={app.id as KylrixApp} size={28} variant="icon" />
@@ -231,8 +228,8 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                     </Box>
 
                     {/* Footer */}
-                    <Box sx={{ p: 2, bgcolor: 'rgba(99, 102, 241, 0.03)', display: 'flex', justifyContent: 'center' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(99, 102, 241, 0.4)', fontWeight: 700, letterSpacing: '0.05em' }}>
+                    <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'center' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.05em' }}>
                             KYLRIX ECOSYSTEM v1.0
                         </Typography>
                     </Box>
