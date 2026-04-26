@@ -12,6 +12,7 @@ import {
     ListItemIcon, 
     ListItemText, 
     Paper,
+    IconButton,
     BottomNavigation,
     BottomNavigationAction,
 } from '@mui/material';
@@ -265,55 +266,66 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
                 </Box>
             </Box>
 
-            {/* Mobile Bottom Nav */}
+            {/* Mobile Bottom Navigation - Kylrix Unified Style */}
             {!isFullscreenContent && (
-                <Paper 
-                    elevation={0}
-                    sx={{ 
-                        position: 'fixed', 
-                        bottom: `calc(${bottomNavOffset}px + env(safe-area-inset-bottom))`, 
-                        left: 0, 
-                        right: 0, 
-                        display: { xs: 'block', md: 'none' },
-                        borderRadius: '20px 20px 0 0', 
-                        overflow: 'hidden',
-                        border: '1px solid',
-                        borderColor: 'rgba(255, 255, 255, 0.06)',
-                        bgcolor: '#161412',
-                        zIndex: 1000
-                    }} 
+                <Box
+                    component="footer"
+                    sx={{
+                        position: 'fixed',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 1300,
+                        display: { xs: 'block', md: 'none' }
+                    }}
                 >
-                    <BottomNavigation
-                        value={pathname}
+                    <Paper
+                        elevation={0}
                         sx={{
+                            width: '100%',
                             bgcolor: '#161412',
-                            backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 18%, #161412 100%)',
-                            height: 72,
-                            pb: 'env(safe-area-inset-bottom)',
-                            px: 1,
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderBottom: 0,
+                            borderRadius: '24px 24px 0 0',
+                            px: 2,
+                            pt: 1.5,
+                            pb: 'calc(1.5rem + env(safe-area-inset-bottom))',
+                            display: 'flex',
+                            justifyContent: 'space-around',
+                            alignItems: 'center',
+                            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 -12px 32px rgba(0,0,0,0.45)',
+                            backgroundImage: 'none'
                         }}
                     >
-                        {navItems.map((item) => (
-                            <BottomNavigationAction
-                                key={item.href}
-                                icon={item.icon}
-                                component={Link}
-                                href={item.href}
-                                value={item.href}
-                                sx={{ 
-                                    color: '#FFFFFF',
-                                    minWidth: 0,
-                                    padding: '12px 0',
-                                    opacity: 0.92,
-                                    '&.Mui-selected': { 
-                                        color: '#FFFFFF',
-                                        opacity: 1
-                                    }
-                                }}
-                            />
-                        ))}
-                    </BottomNavigation>
-                </Paper>
+                        {navItems.map((item) => {
+                            const isActive = pathname === item.href;
+                            return (
+                                <IconButton
+                                    key={item.href}
+                                    component={Link}
+                                    href={item.href}
+                                    sx={{
+                                        color: isActive ? '#000' : 'rgba(255, 255, 255, 0.6)',
+                                        bgcolor: isActive ? '#F59E0B' : 'transparent',
+                                        borderRadius: '16px',
+                                        p: 1.5,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            bgcolor: isActive ? '#F59E0B' : 'rgba(255, 255, 255, 0.05)',
+                                            transform: 'translateY(-2px)'
+                                        },
+                                        ...(isActive && {
+                                            boxShadow: '0 0 15px rgba(245, 158, 11, 0.4)',
+                                            transform: 'translateY(-4px)'
+                                        })
+                                    }}
+                                >
+                                    {item.icon}
+                                </IconButton>
+                            );
+                        })}
+                    </Paper>
+                </Box>
             )}
         </Box>
     );
