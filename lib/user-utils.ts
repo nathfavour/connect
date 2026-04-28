@@ -14,6 +14,14 @@ export function getUserProfilePicId(user: any): string | null {
   return getUserField<string>(user, 'avatar') || getUserField<string>(user, 'profilePicId');
 }
 
+export function getUserSubscriptionTier(user: any): string {
+  return (
+    getUserField<string>(user, 'tier') ||
+    getUserField<string>(user, 'subscriptionTier') ||
+    'FREE'
+  ).toString().toUpperCase();
+}
+
 export function getUserProfilePreviewSource(user: any): string | null {
   return (
     getUserField<string>(user, 'avatarUrl') ||
