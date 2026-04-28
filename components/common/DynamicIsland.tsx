@@ -16,6 +16,7 @@ import {
   Divider,
   IconButton,
   Skeleton,
+  Stack,
   alpha,
 } from '@mui/material';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
@@ -54,6 +55,7 @@ import {
   User as UserIcon,
   LogOut as LogOutIcon,
 } from 'lucide-react';
+import { IdentityAvatar } from './IdentityBadge';
 
 export type IslandType = 'success' | 'error' | 'warning' | 'info' | 'pro' | 'system' | 'suggestion' | 'connect';
 
@@ -78,6 +80,7 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [notifications, setNotifications] = useState<IslandNotification[]>([]);
   const [panel, setPanel] = useState<IslandPanel | null>(null);
   const [lastActivity, setLastActivity] = useState(0);
+  const activeNotification = notifications.length > 0 ? notifications[notifications.length - 1] : null;
 
   useEffect(() => {
     const timer = setTimeout(() => setLastActivity(Date.now()), 0);
@@ -104,6 +107,17 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const closePanel = useCallback(() => {
     setPanel(null);
   }, []);
+
+  useEffect(() => {
+    const handleExternalNotification = (event: Event) => {
+      const customEvent = event as CustomEvent<Omit<IslandNotification, 'id'>>;
+      if (!customEvent.detail?.title) return;
+      showIsland(customEvent.detail);
+    };
+
+    window.addEventListener('kylrix:island-notification', handleExternalNotification as EventListener);
+    return () => window.removeEventListener('kylrix:island-notification', handleExternalNotification as EventListener);
+  }, [showIsland]);
 
   // Track user activity
   useEffect(() => {
@@ -165,7 +179,7 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [lastActivity, notifications.length, showIsland, user]);
 
   return (
-    <IslandContext.Provider value={{ openPanel, closePanel, isActive: Boolean(panel), panel }}>
+    <IslandContext.Provider value={{ openPanel, closePanel, isActive: Boolean(panel), panel, activeNotification }}>
       {children}
     </IslandContext.Provider>
   );
@@ -337,9 +351,9 @@ const shortenUserId = (value?: string | null) => {
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
 };
 
-const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ onClosePanel }) => {
+export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ onClosePanel }) => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { profile: profileFromContext, isLoading } = useProfile();
   const cachedIdentity = user?.$id ? getCachedIdentityById(user.$id) : null;
   const profile = profileFromContext || cachedIdentity || null;
@@ -900,7 +914,9 @@ const DynamicIslandOverlay: React.FC<{
   const searchMode: IslandGlyphMode = !queryText ? 'idle' : searching ? 'thinking' : 'typing';
 
   const currentIcon = current ? (
-    current.type === 'success' ? <SuccessIcon fontSize="small" /> :
+    current.app ? (
+      <Logo app={getLogoApp(current.app)} size={15} variant="icon" />
+    ) : current.type === 'success' ? <SuccessIcon fontSize="small" /> :
     current.type === 'error' ? <ErrorIcon fontSize="small" /> :
     current.type === 'warning' ? <WarningIcon fontSize="small" /> :
     current.type === 'pro' ? <ProIcon fontSize="small" /> :
@@ -932,13 +948,14 @@ const DynamicIslandOverlay: React.FC<{
   const panelWidth = isMobile ? 'calc(100vw - 24px)' : 'min(680px, calc(100vw - 48px))';
   const restingSize = '42px';
   const collapsedSize = '52px';
+  const notificationWidth = isMobile ? 'min(280px, calc(100vw - 24px))' : 'min(320px, calc(100vw - 48px))';
   const islandHeight = current || isSearchOpen ? 52 : 42;
-  const islandWidth = current || isSearchOpen ? (isExpanded ? searchWidth : collapsedSize) : restingSize;
+  const islandWidth = current ? (isExpanded ? searchWidth : notificationWidth) : isSearchOpen ? (isExpanded ? searchWidth : collapsedSize) : restingSize;
 
   const containerWidth = panel
     ? panelWidth
     : current
-    ? (isExpanded ? searchWidth : restingSize)
+    ? (isExpanded ? searchWidth : notificationWidth)
     : isSearchOpen
       ? searchWidth
       : restingSize;
@@ -1083,7 +1100,7 @@ const DynamicIslandOverlay: React.FC<{
                 height: islandHeight,
                 width: islandWidth,
                 borderRadius: '999px',
-                background: current ? '#161412' : '#000',
+                background: current ? '#000000' : '#000',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'stretch',
@@ -1147,24 +1164,32 @@ const DynamicIslandOverlay: React.FC<{
                 )}
 
                 {!isExpanded && (
-                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
-                    {current ? (
-                      [0, 1, 2].map((index) => (
-                        <motion.div
-                          key={index}
-                          animate={{ scale: [1, 1.35, 1], opacity: [0.35, 1, 0.35] }}
-                          transition={{ duration: 2, repeat: Infinity, delay: index * 0.22 }}
-                          style={{
-                            width: 3,
-                            height: 3,
-                            borderRadius: '50%',
-                            background: currentTone.secondary,
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <OrbitalGlyph mode={searchMode} tone={APP_TONES.connect.secondary} />
-                    )}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: 0.05, flex: 1 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'white',
+                        fontWeight: 900,
+                        fontSize: '0.8rem',
+                        fontFamily: 'var(--font-space-grotesk)',
+                        lineHeight: 1.1,
+                      }}
+                      noWrap
+                    >
+                      {current.personal ? `Hey, ${current.title}` : current.title}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: alpha('#fff', 0.58),
+                        fontWeight: 600,
+                        fontSize: '0.68rem',
+                        lineHeight: 1.1,
+                      }}
+                      noWrap
+                    >
+                      Tap to expand
+                    </Typography>
                   </Box>
                 )}
               </Box>

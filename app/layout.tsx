@@ -43,7 +43,6 @@ import { IslandProvider } from '@/components/common/DynamicIsland';
 import { SudoProvider } from '@/context/SudoContext';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { DataNexusProvider } from '@/context/DataNexusContext';
-import { Suspense } from 'react';
 
 export default function RootLayout({
   children,
@@ -85,9 +84,7 @@ export default function RootLayout({
                                   }
                                 }}
                               />
-                              <Suspense fallback={null}>
-                                {children}
-                              </Suspense>
+                              {children}
                               </ChatNotificationProvider>
                             </PresenceProvider>
                           </ProfileProvider>

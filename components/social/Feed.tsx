@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
@@ -792,7 +792,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         // Hydrate the current view immediately so tab switches feel instant.
         momentsRef.current = [];
         const memoryCached = feedCacheRef.current[view];
@@ -1076,7 +1076,39 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
         // Real-time subscription for new posts
         const unsubFunc = SocialService.subscribeToFeed(async (event) => {
             if (event.type === 'create') {
-                // ... create logic ...
+                const payload = event.payload as any;
+                const authorId = payload?.userId || payload?.authorId || payload?.createdBy || payload?.$createdBy || payload?.creatorId || payload?.creator?.$id || payload?.creator?.userId || payload?.user?.$id || payload?.user?.userId;
+
+                if (authorId && user?.$id && authorId === user.$id) {
+                    return;
+                }
+
+                const enriched = await SocialService.enrichMoment(payload, user?.$id);
+                const nextMoment = enriched || payload;
+                const authorLabel =
+                    nextMoment?.displayName ||
+                    nextMoment?.username ||
+                    nextMoment?.author?.displayName ||
+                    nextMoment?.author?.username ||
+                    (authorId ? resolveIdentityUsername(getCachedIdentityById(authorId), authorId) : null) ||
+                    'Someone';
+                const teaser = (nextMoment?.caption || nextMoment?.content || nextMoment?.text || 'shared a new post').toString().trim();
+
+                setPendingMoments((prev) => [nextMoment, ...prev.filter((moment) => moment.$id !== nextMoment.$id)]);
+                setShowNewPosts(true);
+
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('kylrix:island-notification', {
+                        detail: {
+                            type: 'connect',
+                            title: `New post from ${authorLabel}`,
+                            message: teaser,
+                            app: 'connect',
+                            majestic: true,
+                            duration: 7000,
+                        },
+                    }));
+                }
             } else if (event.type === 'delete') {
                 setMoments(prev => {
                     const next = prev.filter(m => m.$id !== event.payload.$id);

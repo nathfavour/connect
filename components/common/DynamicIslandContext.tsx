@@ -9,6 +9,7 @@ export type IslandContextType = {
   closePanel: () => void;
   isActive: boolean;
   panel: IslandPanel | null;
+  activeNotification: { id: string } | null;
 };
 
 export const IslandContext = createContext<IslandContextType | undefined>(undefined);

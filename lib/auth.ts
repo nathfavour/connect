@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Client, Account } from 'appwrite';
 import { APPWRITE_CONFIG } from './appwrite/config';
 import { getCurrentUser, getCurrentUserSnapshot, invalidateCurrentUserCache } from './appwrite/client';
+import { UsersService } from '@/lib/services/users';
 
 // Initialize Appwrite
 const client = new Client()
@@ -64,7 +65,16 @@ export function useAuth() {
     const checkSession = useCallback(async (forceRefresh = false, retryCount = 0): Promise<void> => {
         try {
             const session = await getCurrentUser(forceRefresh);
-            setUser(session);
+            if (session?.$id) {
+                try {
+                    const profile = await UsersService.getProfileById(session.$id);
+                    setUser(profile ? { ...session, ...profile } : session);
+                } catch {
+                    setUser(session);
+                }
+            } else {
+                setUser(session);
+            }
             setLoading(false);
             
             // Clear the auth=success param from URL if it exists
@@ -125,7 +135,12 @@ export function useAuth() {
             const session = await getCurrentUser(true);
             if (session) {
                 console.log('Active session detected in kylrixconnect, skipping IDM window');
-                setUser(session);
+                try {
+                    const profile = await UsersService.getProfileById(session.$id);
+                    setUser(profile ? { ...session, ...profile } : session);
+                } catch {
+                    setUser(session);
+                }
                 setIsAuthenticating(false);
                 return;
             }
@@ -138,7 +153,12 @@ export function useAuth() {
         try {
             const session = await getCurrentUser(true);
             if (session) {
-                setUser(session);
+                try {
+                    const profile = await UsersService.getProfileById(session.$id);
+                    setUser(profile ? { ...session, ...profile } : session);
+                } catch {
+                    setUser(session);
+                }
                 setIsAuthenticating(false);
                 return;
             }

@@ -19,7 +19,6 @@ import {
 import { ChevronDown, Search, X as CloseIcon, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { getUserProfilePreviewSource } from '@/lib/user-utils';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import Logo, { type KylrixApp as LogoApp } from '../common/Logo';
@@ -28,11 +27,13 @@ import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { usePotato } from '@/components/providers/PotatoProvider';
 import { useIsland } from '@/components/common/DynamicIslandContext';
+import { ProfilePanelSurface } from '@/components/common/DynamicIsland';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { UsersService } from '@/lib/services/users';
 import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
 import { stageProfileView } from '@/lib/profile-handoff';
+import { getUserProfilePicId, getUserProfilePreviewSource } from '@/lib/user-utils';
 
 export const AppHeader = () => {
   const { user } = useAuth();
@@ -45,6 +46,7 @@ export const AppHeader = () => {
     const snapshot = getCurrentUserSnapshot();
     return snapshot?.$id ? getCachedIdentityById(snapshot.$id) : null;
   });
+  const [profileRecord, setProfileRecord] = useState<any | null>(null);
   const { profile: cachedProfile } = useProfile();
   const potato = usePotato();
 
@@ -52,18 +54,24 @@ export const AppHeader = () => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { mode, headerHeight, setChromeState } = useAppChrome();
-  const { openPanel, closePanel, panel, isActive: isIslandActive } = useIsland();
+  const { openPanel, closePanel, panel, isActive: isIslandActive, activeNotification } = useIsland() as any;
   const headerRef = useRef<HTMLDivElement | null>(null);
   const dockContentRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const displayUser = fastUser || user;
-  const displayProfile = cachedProfile || fastProfile;
-  const profilePreviewSource = displayProfile?.avatarUrl || displayProfile?.avatarFileId || displayProfile?.avatar || getUserProfilePreviewSource(displayUser);
+  const displayProfile = cachedProfile || fastProfile || profileRecord;
+  const profilePreviewSource =
+    displayProfile?.avatarUrl ||
+    displayProfile?.avatarFileId ||
+    displayProfile?.avatar ||
+    getUserProfilePreviewSource(displayUser) ||
+    getUserProfilePicId(displayUser);
   const profileUrl = useCachedProfilePreview(profilePreviewSource || null, 64, 64);
   const isExpanded = Boolean(panel);
   const searchSurface = potato.buildSearchSurface(searchQuery);
   const searchDockMaxHeight = '50vh';
-  const profileSeed = displayProfile || (displayUser ? { ...displayUser, avatar: displayUser?.prefs?.profilePicId || null } : null);
+  const profileSeed = displayProfile || (displayUser ? { ...displayUser, avatar: profilePreviewSource || null } : null);
+  const shouldCollapseChrome = Boolean(activeNotification);
   useEffect(() => {
     if (searchParams.get('openWallet') === 'true') {
       setTimeout(() => setIsWalletOpen(true), 0);
@@ -79,6 +87,40 @@ export const AppHeader = () => {
       setFastUser(user);
     }
   }, [user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProfileRecord = async () => {
+      const userId = displayUser?.$id || user?.$id;
+      if (!userId) {
+        setProfileRecord(null);
+        return;
+      }
+
+      const cached = getCachedIdentityById(userId);
+      if (cached && mounted) {
+        setProfileRecord(cached);
+      }
+
+      try {
+        const record = await UsersService.getProfileById(userId);
+        if (!mounted) return;
+        if (record) {
+          seedIdentityCache(record);
+          setProfileRecord(record);
+        }
+      } catch (error) {
+        console.warn('[AppHeader] Failed to load profile record:', error);
+      }
+    };
+
+    void loadProfileRecord();
+
+    return () => {
+      mounted = false;
+    };
+  }, [displayUser?.$id, user?.$id]);
 
   useEffect(() => {
     if (profileSeed?.$id || profileSeed?.userId) {
@@ -124,15 +166,15 @@ export const AppHeader = () => {
   }, []);
 
   const identitySignals = computeIdentityFlags({
-    createdAt: cachedProfile?.$createdAt || fastProfile?.cachedAt || (displayUser as any)?.$createdAt || null,
-    lastUsernameEdit: cachedProfile?.preferences?.last_username_edit || fastProfile?.preferences?.last_username_edit || displayUser?.prefs?.last_username_edit || null,
-    profilePicId: displayProfile?.avatar || displayUser?.prefs?.profilePicId || null,
-    username: cachedProfile?.username || fastProfile?.username || displayUser?.prefs?.username || displayUser?.name || null,
-    bio: cachedProfile?.bio || fastProfile?.bio || displayUser?.prefs?.bio || null,
-    tier: displayUser?.prefs?.tier || null,
-    publicKey: cachedProfile?.publicKey || fastProfile?.publicKey || null,
+    createdAt: cachedProfile?.$createdAt || fastProfile?.cachedAt || profileRecord?.$createdAt || (displayUser as any)?.$createdAt || null,
+    lastUsernameEdit: cachedProfile?.preferences?.last_username_edit || fastProfile?.preferences?.last_username_edit || profileRecord?.preferences?.last_username_edit || displayUser?.prefs?.last_username_edit || null,
+    profilePicId: displayProfile?.avatar || profileRecord?.avatar || getUserProfilePicId(displayUser) || null,
+    username: cachedProfile?.username || fastProfile?.username || profileRecord?.username || displayUser?.prefs?.username || displayUser?.name || null,
+    bio: cachedProfile?.bio || fastProfile?.bio || profileRecord?.bio || displayUser?.prefs?.bio || null,
+    tier: profileRecord?.tier || displayUser?.prefs?.tier || null,
+    publicKey: cachedProfile?.publicKey || fastProfile?.publicKey || profileRecord?.publicKey || null,
     emailVerified: Boolean((displayUser as any)?.emailVerification),
-    preferences: cachedProfile?.preferences || fastProfile?.preferences || null,
+    preferences: cachedProfile?.preferences || fastProfile?.preferences || profileRecord?.preferences || null,
   });
 
   const baseHeaderHeight = mode === 'compact' ? 72 : mode === 'hidden' ? 0 : 88;
@@ -269,7 +311,8 @@ export const AppHeader = () => {
           justifyContent: 'space-between',
           position: 'relative',
         }}>
-          <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+          {!shouldCollapseChrome && (
+            <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
             <motion.div style={{ display: 'inline-flex' }}>
               <Box
                 component="button"
@@ -304,10 +347,12 @@ export const AppHeader = () => {
                 </IconButton>
               </Box>
             </motion.div>
-          </motion.div>
+            </motion.div>
+          )}
 
-          <Box sx={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', pointerEvents: isIslandActive ? 'none' : 'auto', zIndex: 2 }}>
-            <motion.div {...stageMotion}>
+          {displayUser && !shouldCollapseChrome && (
+            <Box sx={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', pointerEvents: isIslandActive ? 'none' : 'auto', zIndex: 2 }}>
+              <motion.div {...stageMotion}>
               <Box
                 component="button"
                 onClick={() => (panel === 'search' ? closePanel() : openPanel('search'))}
@@ -348,11 +393,14 @@ export const AppHeader = () => {
                   <Search size={16} strokeWidth={2.25} style={{ flexShrink: 0, opacity: 0.84 }} />
                 </Box>
               </Box>
-            </motion.div>
-          </Box>
+              </motion.div>
+            </Box>
+          )}
 
-          <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
-            <Tooltip title="Wallet">
+          {!shouldCollapseChrome && (
+            <motion.div {...stageMotion} style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, pointerEvents: isIslandActive ? 'none' : 'auto' }}>
+            {displayUser && (
+              <Tooltip title="Wallet">
               <IconButton
                 onClick={() => setIsWalletOpen(true)}
                 sx={{
@@ -368,7 +416,8 @@ export const AppHeader = () => {
               >
                 <Wallet size={18} strokeWidth={1.5} />
               </IconButton>
-            </Tooltip>
+              </Tooltip>
+            )}
 
             {displayUser ? (
               <motion.div style={{ display: 'inline-flex' }}>
@@ -430,7 +479,8 @@ export const AppHeader = () => {
                 Connect
               </Button>
             )}
-          </motion.div>
+            </motion.div>
+          )}
         </Toolbar>
       )}
 
@@ -721,40 +771,7 @@ export const AppHeader = () => {
                     })}
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    <Box
-                      component="button"
-                      onClick={() => {
-                        closePanel();
-                        router.push('/settings');
-                      }}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.25,
-                        px: 1.5,
-                        py: 1.1,
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        color: 'white',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
-                        <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
-                      </Box>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                          Profile
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                          Open your public profile
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
+                  <ProfilePanelSurface onClosePanel={closePanel} />
                 )}
               </Box>
             </motion.div>
