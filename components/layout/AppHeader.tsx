@@ -94,7 +94,6 @@ export const AppHeader = () => {
   });
 
   const headerTitle = label || (pathname === '/' ? 'Feed' : pathname === '/chats' ? 'Chats' : pathname === '/calls' ? 'Calls' : pathname?.startsWith('/post/') ? 'Moment' : 'Connect');
-  const isCompact = mode === 'compact';
   const baseHeaderHeight = mode === 'compact' ? 72 : mode === 'hidden' ? 0 : 88;
 
   useEffect(() => {
