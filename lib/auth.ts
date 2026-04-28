@@ -83,28 +83,17 @@ export function useAuth() {
                 invalidateCurrentUserCache(undefined);
                 return checkSession(true, retryCount + 1);
             }
-
-            // Try silent discovery
-            await attemptSilentAuth();
-            invalidateCurrentUserCache(undefined);
-
-            try {
-                const retrySession = await getCurrentUser(true);
-                setUser(retrySession);
-            } catch {
-                const err = error as any;
-                const isNetworkError = !err.response && (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch'));
-                if (!isNetworkError) {
-                    setUser(null);
-                }
-            } finally {
-                setLoading(false);
+            const err = error as any;
+            const isNetworkError = !err.response && (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch'));
+            if (!isNetworkError) {
+                setUser(null);
             }
+            setLoading(false);
         }
     }, [attemptSilentAuth]);
 
     useEffect(() => {
-        checkSession(true);
+        checkSession(false);
     }, [checkSession]);
 
     // Listen for postMessage from IDM window

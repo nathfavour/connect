@@ -15,7 +15,6 @@ import {
 import { Wallet, ChevronDown, X as CloseIcon } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useProfile } from '@/components/providers/ProfileProvider';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
@@ -24,10 +23,14 @@ import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useIsland } from '@/components/common/DynamicIslandContext';
+import { useProfile } from '@/components/providers/ProfileProvider';
+import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 
 export const AppHeader = () => {
   const { user } = useAuth();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [fastUser, setFastUser] = useState<any>(() => getCurrentUserSnapshot());
+  const { profile: cachedProfile } = useProfile();
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,8 +38,8 @@ export const AppHeader = () => {
   const { mode, label, headerHeight, setChromeState } = useAppChrome();
   const { openPanel, closePanel, panel, isActive: isIslandActive } = useIsland();
   const headerRef = useRef<HTMLDivElement | null>(null);
-  const { profile: myProfile } = useProfile();
-  const profilePicId = myProfile?.avatar || getUserProfilePicId(user);
+  const displayUser = fastUser || user;
+  const profilePicId = cachedProfile?.avatar || getUserProfilePicId(displayUser);
   const profileUrl = useCachedProfilePreview(profilePicId || null, 64, 64);
 
   useEffect(() => {
@@ -49,16 +52,44 @@ export const AppHeader = () => {
     }
   }, [searchParams, router, pathname]);
 
+  useEffect(() => {
+    if (user?.$id) {
+      setFastUser(user);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const resolveUser = async () => {
+      const snapshot = getCurrentUserSnapshot();
+      if (snapshot?.$id && mounted) {
+        setFastUser(snapshot);
+      }
+
+      const current = snapshot?.$id ? snapshot : await getCurrentUser();
+      if (!mounted) return;
+      if (current?.$id) {
+        setFastUser(current);
+      }
+    };
+
+    void resolveUser();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const identitySignals = computeIdentityFlags({
-    createdAt: myProfile?.$createdAt || myProfile?.createdAt || (user as any)?.$createdAt || null,
-    lastUsernameEdit: myProfile?.last_username_edit || user?.prefs?.last_username_edit || null,
-    profilePicId: myProfile?.avatar || user?.prefs?.profilePicId || null,
-    username: myProfile?.username || user?.prefs?.username || user?.name || null,
-    bio: myProfile?.bio || user?.prefs?.bio || null,
-    tier: myProfile?.tier || user?.prefs?.tier || null,
-    publicKey: myProfile?.publicKey || null,
-    emailVerified: Boolean((user as any)?.emailVerification),
-    preferences: myProfile?.preferences || null,
+    createdAt: cachedProfile?.$createdAt || (displayUser as any)?.$createdAt || null,
+    lastUsernameEdit: cachedProfile?.preferences?.last_username_edit || displayUser?.prefs?.last_username_edit || null,
+    profilePicId: cachedProfile?.avatar || displayUser?.prefs?.profilePicId || null,
+    username: cachedProfile?.username || displayUser?.prefs?.username || displayUser?.name || null,
+    bio: cachedProfile?.bio || displayUser?.prefs?.bio || null,
+    tier: displayUser?.prefs?.tier || null,
+    publicKey: cachedProfile?.publicKey || null,
+    emailVerified: Boolean((displayUser as any)?.emailVerification),
+    preferences: cachedProfile?.preferences || null,
   });
 
   const headerTitle = label || (pathname === '/' ? 'Feed' : pathname === '/chats' ? 'Chats' : pathname === '/calls' ? 'Calls' : pathname?.startsWith('/post/') ? 'Moment' : 'Connect');
@@ -189,7 +220,7 @@ export const AppHeader = () => {
             </IconButton>
           </Tooltip>
 
-          {user ? (
+          {displayUser ? (
             <motion.div style={{ display: 'inline-flex' }}>
               <Box
                 component="button"
@@ -205,8 +236,8 @@ export const AppHeader = () => {
               >
                 <IdentityAvatar
                   src={profileUrl || undefined}
-                  alt={user?.name || user?.email || 'profile'}
-                  fallback={user?.name ? user.name[0].toUpperCase() : 'U'}
+                  alt={displayUser?.name || displayUser?.email || 'profile'}
+                  fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'}
                   verified={identitySignals.verified}
                   verifiedOn={identitySignals.verifiedOn}
                   pro={identitySignals.pro}
@@ -271,11 +302,11 @@ export const AppHeader = () => {
                       flexShrink: 0,
                     }}
                   >
-                    {panel === 'profile' ? <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={user?.name ? user.name[0].toUpperCase() : 'U'} size={38} borderRadius="14px" /> : <Logo app="connect" size={18} variant="icon" />}
+                     {panel === 'profile' ? <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={38} borderRadius="14px" /> : <Logo app="connect" size={18} variant="icon" />}
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.1 }} noWrap>
-                      {panel === 'profile' ? (user?.name || user?.email || 'Profile') : 'Ecosystem apps'}
+                      {panel === 'profile' ? (displayUser?.name || displayUser?.email || 'Profile') : 'Ecosystem apps'}
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.52)', fontWeight: 700 }} noWrap>
                       {panel === 'profile' ? 'Profile commands' : 'Jump between apps'}
@@ -365,7 +396,7 @@ export const AppHeader = () => {
                     }}
                   >
                     <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
-                      <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={user?.name ? user.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
+                      <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
                     </Box>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
