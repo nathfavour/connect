@@ -42,6 +42,7 @@ export const AppHeader = () => {
   const profilePicId = cachedProfile?.avatar || getUserProfilePicId(displayUser);
   const profileUrl = useCachedProfilePreview(profilePicId || null, 64, 64);
   const isExpanded = Boolean(panel);
+  const isFloatingSearch = false;
 
   useEffect(() => {
     if (searchParams.get('openWallet') === 'true') {
@@ -201,33 +202,59 @@ export const AppHeader = () => {
               gap: 1.25,
               px: 1.75,
               py: 1.15,
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: isFloatingSearch ? '1px solid transparent' : '1px solid rgba(255,255,255,0.08)',
               borderBottomWidth: isExpanded ? 0 : 1,
-              bgcolor: isExpanded ? '#050505' : 'rgba(255,255,255,0.04)',
+              bgcolor: isFloatingSearch ? 'transparent' : (isExpanded ? '#050505' : '#000000'),
               color: 'white',
               borderRadius: isExpanded ? '18px 18px 0 0' : '999px',
-              boxShadow: isExpanded ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+              boxShadow: isFloatingSearch
+                ? 'none'
+                : (isExpanded
+                  ? 'none'
+                  : '0 0 0 1px rgba(255,255,255,0.04), 0 0 0 6px rgba(245, 158, 11, 0.02), 0 0 26px rgba(0, 0, 0, 0.55)'),
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 220ms ease',
-              '&:hover': { bgcolor: isExpanded ? '#050505' : 'rgba(255,255,255,0.06)' },
+              animation: isExpanded || isFloatingSearch ? 'none' : 'connectSearchPulse 3.2s ease-in-out infinite',
+              '@keyframes connectSearchPulse': {
+                '0%, 100%': {
+                  boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 0 6px rgba(245, 158, 11, 0.02), 0 0 26px rgba(0, 0, 0, 0.55)',
+                },
+                '50%': {
+                  boxShadow: '0 0 0 1px rgba(255,255,255,0.07), 0 0 0 8px rgba(245, 158, 11, 0.05), 0 0 34px rgba(0, 0, 0, 0.72)',
+                },
+              },
+              '&:hover': { bgcolor: isFloatingSearch ? 'transparent' : (isExpanded ? '#050505' : '#050505') },
             }}
           >
-            <Search size={16} strokeWidth={2.25} style={{ flexShrink: 0, opacity: 0.75 }} />
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: '999px',
+                bgcolor: isFloatingSearch ? 'transparent' : 'rgba(255,255,255,0.06)',
+                border: isFloatingSearch ? '1px solid transparent' : '1px solid rgba(255,255,255,0.06)',
+                flexShrink: 0,
+              }}
+            >
+              <Search size={16} strokeWidth={2.25} style={{ flexShrink: 0, opacity: 0.82 }} />
+            </Box>
             <Typography
               variant="caption"
               noWrap
               sx={{
                 flex: 1,
-                color: 'rgba(255,255,255,0.7)',
+                color: isFloatingSearch ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.82)',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
               }}
             >
-              {isExpanded ? (panel === 'profile' ? (displayUser?.name || displayUser?.email || 'Profile') : 'Ecosystem apps') : 'Search people, apps, and moments'}
+              {isExpanded ? (panel === 'profile' ? (displayUser?.name || displayUser?.email || 'Profile') : 'Ecosystem apps') : 'Search'}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700 }} noWrap>
+            <Typography variant="caption" sx={{ color: isFloatingSearch ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.35)', fontWeight: 700 }} noWrap>
               {isExpanded ? 'Close' : headerTitle}
             </Typography>
           </Box>
