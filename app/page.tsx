@@ -3,14 +3,8 @@
 import React, { useState } from 'react';
 import { Container, Tabs, Tab, Box } from '@mui/material';
 import { TrendingUp, MessageCircle, Search } from 'lucide-react';
-import dynamic from 'next/dynamic';
-
-const AppShell = dynamic(() => import('@/components/layout/AppShell').then((mod) => mod.AppShell), {
-  ssr: false,
-});
-const Feed = dynamic(() => import('@/components/social/Feed').then((mod) => mod.Feed), {
-  ssr: false,
-});
+import { AppShell } from '@/components/layout/AppShell';
+import { Feed } from '@/components/social/Feed';
 
 export default function Home() {
   const [tabValue, setTabValue] = useState(0);

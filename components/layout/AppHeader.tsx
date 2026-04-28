@@ -9,28 +9,44 @@ import {
   Typography,
   IconButton,
   Tooltip,
+  TextField,
+  InputAdornment,
+  Chip,
+  Stack,
   alpha,
   Button,
 } from '@mui/material';
 import { ChevronDown, Search, X as CloseIcon, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { getUserProfilePicId, getUserProfilePreviewSource } from '@/lib/user-utils';
+import { getUserProfilePreviewSource } from '@/lib/user-utils';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import Logo, { type KylrixApp as LogoApp } from '../common/Logo';
 import { WalletSidebar } from '../overlays/WalletSidebar';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
+import { usePotato } from '@/components/providers/PotatoProvider';
 import { useIsland } from '@/components/common/DynamicIslandContext';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { UsersService } from '@/lib/services/users';
+import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
+import { stageProfileView } from '@/lib/profile-handoff';
 
 export const AppHeader = () => {
   const { user } = useAuth();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [peopleResults, setPeopleResults] = useState<any[]>([]);
+  const [searchingPeople, setSearchingPeople] = useState(false);
   const [fastUser, setFastUser] = useState<any>(() => getCurrentUserSnapshot());
+  const [fastProfile, setFastProfile] = useState<any | null>(() => {
+    const snapshot = getCurrentUserSnapshot();
+    return snapshot?.$id ? getCachedIdentityById(snapshot.$id) : null;
+  });
   const { profile: cachedProfile } = useProfile();
+  const potato = usePotato();
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,11 +55,15 @@ export const AppHeader = () => {
   const { openPanel, closePanel, panel, isActive: isIslandActive } = useIsland();
   const headerRef = useRef<HTMLDivElement | null>(null);
   const dockContentRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const displayUser = fastUser || user;
-  const profilePreviewSource = cachedProfile?.avatarUrl || cachedProfile?.avatarFileId || cachedProfile?.avatar || getUserProfilePreviewSource(displayUser);
-  const profilePicId = cachedProfile?.avatar || getUserProfilePicId(displayUser);
+  const displayProfile = cachedProfile || fastProfile;
+  const profilePreviewSource = displayProfile?.avatarUrl || displayProfile?.avatarFileId || displayProfile?.avatar || getUserProfilePreviewSource(displayUser);
   const profileUrl = useCachedProfilePreview(profilePreviewSource || null, 64, 64);
   const isExpanded = Boolean(panel);
+  const searchSurface = potato.buildSearchSurface(searchQuery);
+  const searchDockMaxHeight = '50vh';
+  const profileSeed = displayProfile || (displayUser ? { ...displayUser, avatar: displayUser?.prefs?.profilePicId || null } : null);
   useEffect(() => {
     if (searchParams.get('openWallet') === 'true') {
       setTimeout(() => setIsWalletOpen(true), 0);
@@ -59,6 +79,27 @@ export const AppHeader = () => {
       setFastUser(user);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (profileSeed?.$id || profileSeed?.userId) {
+      stageProfileView(profileSeed, profileUrl || null);
+    }
+  }, [profileSeed, profileUrl]);
+
+  useEffect(() => {
+    const userId = displayUser?.$id;
+    if (!userId) {
+      setFastProfile(null);
+      return;
+    }
+
+    setFastProfile(getCachedIdentityById(userId));
+    return subscribeIdentityCache((identity) => {
+      if (identity.userId === userId) {
+        setFastProfile(identity);
+      }
+    });
+  }, [displayUser?.$id]);
 
   useEffect(() => {
     let mounted = true;
@@ -83,15 +124,15 @@ export const AppHeader = () => {
   }, []);
 
   const identitySignals = computeIdentityFlags({
-    createdAt: cachedProfile?.$createdAt || (displayUser as any)?.$createdAt || null,
-    lastUsernameEdit: cachedProfile?.preferences?.last_username_edit || displayUser?.prefs?.last_username_edit || null,
-    profilePicId: cachedProfile?.avatar || displayUser?.prefs?.profilePicId || null,
-    username: cachedProfile?.username || displayUser?.prefs?.username || displayUser?.name || null,
-    bio: cachedProfile?.bio || displayUser?.prefs?.bio || null,
+    createdAt: cachedProfile?.$createdAt || fastProfile?.cachedAt || (displayUser as any)?.$createdAt || null,
+    lastUsernameEdit: cachedProfile?.preferences?.last_username_edit || fastProfile?.preferences?.last_username_edit || displayUser?.prefs?.last_username_edit || null,
+    profilePicId: displayProfile?.avatar || displayUser?.prefs?.profilePicId || null,
+    username: cachedProfile?.username || fastProfile?.username || displayUser?.prefs?.username || displayUser?.name || null,
+    bio: cachedProfile?.bio || fastProfile?.bio || displayUser?.prefs?.bio || null,
     tier: displayUser?.prefs?.tier || null,
-    publicKey: cachedProfile?.publicKey || null,
+    publicKey: cachedProfile?.publicKey || fastProfile?.publicKey || null,
     emailVerified: Boolean((displayUser as any)?.emailVerification),
-    preferences: cachedProfile?.preferences || null,
+    preferences: cachedProfile?.preferences || fastProfile?.preferences || null,
   });
 
   const baseHeaderHeight = mode === 'compact' ? 72 : mode === 'hidden' ? 0 : 88;
@@ -122,6 +163,56 @@ export const AppHeader = () => {
       window.removeEventListener('resize', measureDockHeight);
     };
   }, [panel, setChromeState]);
+
+  useEffect(() => {
+    if (panel !== 'search') {
+      setSearchQuery('');
+      setPeopleResults([]);
+      setSearchingPeople(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [panel]);
+
+  useEffect(() => {
+    if (panel !== 'search') return;
+
+    const text = searchQuery.trim().toLowerCase();
+    if (text.length < 2) {
+      setPeopleResults([]);
+      setSearchingPeople(false);
+      return;
+    }
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      setSearchingPeople(true);
+      try {
+        const result = await UsersService.searchUsers(text);
+        if (!active) return;
+        const rows = (result.rows || []).filter((candidate: any) => (candidate.userId || candidate.$id) !== displayUser?.$id);
+        rows.forEach((candidate: any) => seedIdentityCache(candidate));
+        setPeopleResults(rows.slice(0, 5));
+      } catch (error) {
+        if (active) {
+          console.warn('[AppHeader] People search failed:', error);
+          setPeopleResults([]);
+        }
+      } finally {
+        if (active) setSearchingPeople(false);
+      }
+    }, 260);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [displayUser?.$id, panel, searchQuery]);
 
   useEffect(() => {
     if (!panel) return;
@@ -219,7 +310,7 @@ export const AppHeader = () => {
             <motion.div {...stageMotion}>
               <Box
                 component="button"
-                onClick={() => (panel ? closePanel() : openPanel('ecosystem'))}
+                onClick={() => (panel === 'search' ? closePanel() : openPanel('search'))}
                 sx={{
                   width: { xs: 44, md: 114 },
                   minWidth: { xs: 44, md: 114 },
@@ -283,7 +374,24 @@ export const AppHeader = () => {
               <motion.div style={{ display: 'inline-flex' }}>
                 <Box
                   component="button"
-                  onClick={() => openPanel('profile')}
+                  onMouseEnter={() => {
+                    if (profileSeed?.username) {
+                      void router.prefetch(`/u/${encodeURIComponent(profileSeed.username)}`);
+                    }
+                    if (profileSeed) {
+                      stageProfileView(profileSeed, profileUrl || null);
+                    }
+                  }}
+                  onClick={async () => {
+                    if (profileSeed) {
+                      stageProfileView(profileSeed, profileUrl || null);
+                      const username = profileSeed.username || profileSeed.displayName?.toString().trim().toLowerCase();
+                      if (username) {
+                        void router.prefetch(`/u/${encodeURIComponent(username)}`);
+                      }
+                    }
+                    openPanel('profile');
+                  }}
                   sx={{
                     p: 0,
                     border: 'none',
@@ -336,79 +444,290 @@ export const AppHeader = () => {
               borderTop: '1px solid rgba(255, 255, 255, 0.05)',
               bgcolor: '#161412',
               overflow: 'hidden',
+              maxHeight: panel === 'search' ? searchDockMaxHeight : 'none',
             }}
           >
-          <motion.div
-            key={`dock-${panel}`}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-            style={{ width: '100%', display: 'flex' }}
-          >
-            <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-                  <Box
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: '14px',
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: panel === 'profile' ? '#6366F1' : '#F59E0B',
-                      bgcolor: '#000000',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {panel === 'profile' ? (
-                      <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={38} borderRadius="14px" />
-                    ) : (
-                      <Logo app="connect" size={18} variant="icon" />
-                    )}
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.1 }} noWrap>
-                      {panel === 'profile' ? (displayUser?.name || displayUser?.email || 'Profile') : 'Ecosystem apps'}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.52)', fontWeight: 700 }} noWrap>
-                      {panel === 'profile' ? 'Profile commands' : 'Jump between apps'}
-                    </Typography>
-                  </Box>
-                </Box>
-                <IconButton
-                  onClick={closePanel}
-                  aria-label="Close topbar panel"
-                  size="small"
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: '999px',
-                    color: 'rgba(255,255,255,0.92)',
-                    bgcolor: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    flexShrink: 0,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
-                  }}
-                >
-                  <CloseIcon size={16} />
-                </IconButton>
-              </Box>
-
-              {panel === 'ecosystem' ? (
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  {[
-                    { app: 'note' as const, label: 'Note', description: 'Secure notes and research.' },
-                    { app: 'vault' as const, label: 'Vault', description: 'Passwords, 2FA, and keys.' },
-                    { app: 'flow' as const, label: 'Flow', description: 'Tasks and workflows.' },
-                    { app: 'connect' as const, label: 'Connect', description: 'Secure messages and sharing.' },
-                    { app: 'root' as const, label: 'Accounts', description: 'Your Kylrix account.' },
-                  ].map((app) => (
+            <motion.div
+              key={`dock-${panel}`}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              style={{ width: '100%', display: 'flex' }}
+            >
+              <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch', minHeight: 0 }}>
+                {panel === 'search' ? (
+                  <Box sx={{ display: 'grid', gap: 1.25, minHeight: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                        <Search size={16} />
+                      </Box>
+                      <TextField
+                        inputRef={searchInputRef}
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search notes, goals, moments, calls, people, apps"
+                        variant="standard"
+                        fullWidth
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: {
+                            color: 'white',
+                            fontWeight: 800,
+                            fontSize: '0.98rem',
+                            '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                          },
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
+                                Search
+                              </Typography>
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ flex: 1, minWidth: { xs: '100%', md: 320 } }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            closePanel();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={closePanel}
+                        sx={{
+                          minWidth: 0,
+                          px: 2,
+                          height: 38,
+                          borderRadius: '999px',
+                          bgcolor: 'rgba(255,255,255,0.06)',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
+                        }}
+                      >
+                        Close
+                      </Button>
+                    </Box>
                     <Box
-                      key={app.label}
+                      sx={{
+                        display: 'grid',
+                        gap: 1,
+                        minHeight: 0,
+                        maxHeight: `calc(${searchDockMaxHeight} - 88px)`,
+                        overflowY: 'auto',
+                        pr: 0.5,
+                        pb: 0.5,
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                        {searchSurface.snippets.slice(0, 4).map((snippet) => (
+                          <Chip
+                            key={snippet.id}
+                            label={snippet.title}
+                            size="small"
+                            sx={{
+                              bgcolor: 'rgba(255,255,255,0.04)',
+                              color: 'rgba(255,255,255,0.84)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              '& .MuiChip-label': { px: 1.25 },
+                            }}
+                          />
+                        ))}
+                      </Stack>
+
+                      <Box sx={{ display: 'grid', gap: 0.75 }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Quick actions
+                        </Typography>
+                        <Box sx={{ display: 'grid', gap: 0.75 }}>
+                          {searchSurface.quickActions.slice(0, 3).map((action) => (
+                            <Box
+                              key={action.id}
+                              component="button"
+                              onClick={action.onSelect}
+                              sx={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.25,
+                                px: 1.5,
+                                py: 1.1,
+                                borderRadius: '18px',
+                                bgcolor: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                color: 'white',
+                                textAlign: 'left',
+                                opacity: action.disabled ? 0.5 : 1,
+                                pointerEvents: action.disabled ? 'none' : 'auto',
+                              }}
+                            >
+                              <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                                <Logo app="connect" size={16} variant="icon" />
+                              </Box>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                                  {action.title}
+                                </Typography>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                                  {action.description}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'grid', gap: 0.75 }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Search across apps
+                        </Typography>
+                        <Box sx={{ display: 'grid', gap: 0.75 }}>
+                          {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                            <Box
+                              key={action.id}
+                              component="button"
+                              onClick={action.onSelect}
+                              sx={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.25,
+                                px: 1.5,
+                                py: 1.1,
+                                borderRadius: '18px',
+                                bgcolor: action.kind === potato.currentApp ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${action.kind === potato.currentApp ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.05)'}`,
+                                color: 'white',
+                                textAlign: 'left',
+                              }}
+                            >
+                              <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                                <Logo app="connect" size={16} variant="icon" />
+                              </Box>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                                  {action.title}
+                                </Typography>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                                  {action.description}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+
+                      {searchingPeople || peopleResults.length > 0 ? (
+                        <Box sx={{ display: 'grid', gap: 0.75 }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                            People
+                          </Typography>
+                          {searchingPeople ? (
+                            <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
+                              Searching people...
+                            </Typography>
+                          ) : (
+                            peopleResults.slice(0, 3).map((person) => (
+                              <Box
+                                key={person.$id || person.userId}
+                                component="button"
+                                onClick={() => {
+                                  setSearchQuery(person.displayName || person.username || person.name || '');
+                                }}
+                                sx={{
+                                  width: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.25,
+                                  px: 1.5,
+                                  py: 1.1,
+                                  borderRadius: '18px',
+                                  bgcolor: 'rgba(255,255,255,0.02)',
+                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  color: 'white',
+                                  textAlign: 'left',
+                                }}
+                              >
+                                <IdentityAvatar
+                                  src={person.avatarUrl || person.avatar || undefined}
+                                  alt={person.displayName || person.username || person.name || 'person'}
+                                  fallback={(person.displayName || person.username || person.name || 'U')[0]?.toUpperCase() || 'U'}
+                                  size={32}
+                                  borderRadius="12px"
+                                />
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
+                                  <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                                    {person.displayName || person.username || person.name || 'Person'}
+                                  </Typography>
+                                  <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                                    {person.username ? `@${String(person.username).replace(/^@/, '')}` : 'Direct chat target'}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))
+                          )}
+                        </Box>
+                      ) : null}
+                    </Box>
+                  </Box>
+                ) : panel === 'ecosystem' ? (
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {[
+                      { app: 'note' as const, label: 'Note', description: 'Secure notes and research.' },
+                      { app: 'vault' as const, label: 'Vault', description: 'Passwords, 2FA, and keys.' },
+                      { app: 'flow' as const, label: 'Goals', description: 'Tasks, plans, and follow-through.' },
+                      { app: 'connect' as const, label: 'Connect', description: 'Secure messages and sharing.' },
+                      { app: 'root' as const, label: 'Accounts', description: 'Your Kylrix account.' },
+                    ].map((app) => {
+                      const selected = app.app === 'connect';
+                      return (
+                        <Box
+                          key={app.label}
+                          component="button"
+                          onClick={() => {
+                            if (selected) return;
+                            window.location.assign(getEcosystemUrl(app.app === 'root' ? 'accounts' : app.app));
+                          }}
+                          aria-disabled={selected}
+                          sx={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.25,
+                            px: 1.5,
+                            py: 1.1,
+                            borderRadius: '18px',
+                            bgcolor: selected ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${selected ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.05)'}`,
+                            color: 'white',
+                            textAlign: 'left',
+                            opacity: selected ? 0.6 : 1,
+                            pointerEvents: selected ? 'none' : 'auto',
+                          }}
+                        >
+                          <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', flexShrink: 0 }}>
+                            <Logo app={app.app as LogoApp} size={16} variant="icon" />
+                          </Box>
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                              {app.label}
+                              {selected ? ' • Current app' : ''}
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                              {app.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    <Box
                       component="button"
-                      onClick={() => window.location.assign(getEcosystemUrl(app.app === 'root' ? 'accounts' : app.app))}
+                      onClick={() => {
+                        closePanel();
+                        router.push('/settings');
+                      }}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -423,60 +742,24 @@ export const AppHeader = () => {
                         textAlign: 'left',
                       }}
                     >
-                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', flexShrink: 0 }}>
-                        <Logo app={app.app as LogoApp} size={16} variant="icon" />
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
+                        <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
                       </Box>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                          {app.label}
+                          Profile
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                          {app.description}
+                          Open your public profile
                         </Typography>
                       </Box>
                     </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  <Box
-                    component="button"
-                    onClick={() => {
-                      closePanel();
-                      router.push('/settings');
-                    }}
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.25,
-                      px: 1.5,
-                      py: 1.1,
-                      borderRadius: '18px',
-                      bgcolor: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      color: 'white',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
-                      <IdentityAvatar src={profileUrl || undefined} alt="profile" fallback={displayUser?.name ? displayUser.name[0].toUpperCase() : 'U'} size={32} borderRadius="12px" />
-                    </Box>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                        Profile
-                      </Typography>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                        Open your public profile
-                      </Typography>
-                    </Box>
                   </Box>
-                </Box>
-              )}
-            </Box>
-          </motion.div>
-        </Box>
-      )}
+                )}
+              </Box>
+            </motion.div>
+          </Box>
+        )}
 
       <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
     </AppBar>

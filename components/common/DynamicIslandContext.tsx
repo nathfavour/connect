@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext } from 'react';
 
-export type IslandPanel = 'ecosystem' | 'profile';
+export type IslandPanel = 'ecosystem' | 'profile' | 'search';
 
 export type IslandContextType = {
   openPanel: (panel: IslandPanel) => void;

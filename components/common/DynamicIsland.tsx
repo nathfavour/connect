@@ -15,6 +15,7 @@ import {
   Avatar,
   Divider,
   IconButton,
+  Skeleton,
   alpha,
 } from '@mui/material';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
@@ -26,7 +27,10 @@ import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
-import { seedIdentityCache } from '@/lib/identity-cache';
+import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
+import { stageProfileView } from '@/lib/profile-handoff';
+import { useProfile } from '@/components/providers/ProfileProvider';
+import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import toast from 'react-hot-toast';
 import { IslandContext, IslandPanel } from './DynamicIslandContext';
 import Logo from './Logo';
@@ -42,6 +46,7 @@ import {
 import {
   Search as SearchIcon,
   ArrowRight as ArrowRightIcon,
+  Copy as CopyIcon,
   X as CloseIcon,
   MessageCircle as MessageCircleIcon,
   Phone as PhoneIcon,
@@ -326,6 +331,187 @@ const OrbitalGlyph: React.FC<{
   );
 };
 
+const shortenUserId = (value?: string | null) => {
+  if (!value) return 'unknown';
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+};
+
+const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ onClosePanel }) => {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { profile: profileFromContext, isLoading } = useProfile();
+  const cachedIdentity = user?.$id ? getCachedIdentityById(user.$id) : null;
+  const profile = profileFromContext || cachedIdentity || null;
+  const previewSource = profile?.avatarUrl || profile?.avatarFileId || profile?.avatar || user?.prefs?.profilePicId || null;
+  const profilePreviewUrl = useCachedProfilePreview(previewSource, 160, 160);
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+
+  useEffect(() => {
+    setCopyState('idle');
+  }, [profile?.userId, profile?.$id]);
+
+  const username = profile?.username ? String(profile.username).replace(/^@+/, '').toLowerCase() : null;
+  const displayName = profile?.displayName || username || user?.name || user?.email || 'Profile';
+  const fullUserId = profile?.userId || profile?.$id || user?.$id || null;
+  const bio = (profile?.bio || '').trim();
+  const shortUserId = shortenUserId(fullUserId);
+
+  const openFullProfile = useCallback(async () => {
+    if (!username) return;
+    if (profile) {
+      stageProfileView(profile, profilePreviewUrl || previewSource || null);
+    }
+    await router.prefetch(`/u/${encodeURIComponent(username)}`);
+    onClosePanel();
+    router.push(`/u/${encodeURIComponent(username)}?transition=profile`);
+  }, [onClosePanel, profile, previewSource, profilePreviewUrl, router, username]);
+
+  const handleCopyUserId = useCallback(async () => {
+    if (!fullUserId || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(fullUserId);
+    setCopyState('copied');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [fullUserId]);
+
+  const handleSignOut = useCallback(() => {
+    onClosePanel();
+    void logout();
+  }, [logout, onClosePanel]);
+
+  if (isLoading && !profile) {
+    return (
+      <Box sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.25 }}>
+          <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <Skeleton variant="rounded" width={104} height={104} sx={{ borderRadius: '28px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Skeleton width="48%" height={34} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <Skeleton width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+          </Box>
+        </Box>
+        <Skeleton variant="rounded" height={96} sx={{ borderRadius: '22px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+        <Box sx={{ display: 'grid', gap: 0.75 }}>
+          <Skeleton variant="rounded" height={48} sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+          <Skeleton variant="rounded" height={48} sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.25 }}>
+        <motion.div
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 140 }}
+          dragElastic={0.14}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 64) {
+              void openFullProfile();
+            }
+          }}
+          style={{ touchAction: 'pan-y', cursor: 'grab' }}
+        >
+          <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
+        </motion.div>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', minWidth: 0 }}>
+        <Box sx={{ flexShrink: 0 }}>
+          <IdentityAvatar
+            src={profilePreviewUrl || previewSource || undefined}
+            alt={displayName}
+            fallback={(displayName || 'P')[0]?.toUpperCase() || 'P'}
+            size={104}
+            borderRadius="28px"
+          />
+        </Box>
+
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.05 }} noWrap>
+            {displayName}
+          </Typography>
+          <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.35 }} noWrap>
+            @{username || 'profile'}
+          </Typography>
+          <Typography sx={{ color: alpha('#fff', 0.52), fontFamily: 'var(--font-mono)', fontSize: '0.72rem', mt: 0.75 }} noWrap>
+            {shortUserId}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ borderRadius: '22px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)', p: 1.5, minWidth: 0 }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.75 }}>
+          Bio
+        </Typography>
+        <Typography sx={{ color: 'white', fontSize: '0.88rem', lineHeight: 1.55, minHeight: 22, wordBreak: 'break-word' }}>
+          {bio || 'No bio yet.'}
+        </Typography>
+      </Box>
+
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Button
+          onClick={handleCopyUserId}
+          startIcon={<CopyIcon size={16} />}
+          sx={{
+            minWidth: 0,
+            flex: '1 1 180px',
+            justifyContent: 'flex-start',
+            borderRadius: '16px',
+            bgcolor: 'rgba(255,255,255,0.03)',
+            color: 'white',
+            px: 1.5,
+            py: 1.15,
+            textTransform: 'none',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+          }}
+        >
+          {copyState === 'copied' ? 'Copied user id' : `Copy ${shortUserId}`}
+        </Button>
+        <Button
+          onClick={handleSignOut}
+          sx={{
+            minWidth: 0,
+            flex: '1 1 180px',
+            borderRadius: '16px',
+            bgcolor: 'rgba(255, 77, 77, 0.08)',
+            color: '#FF4D4D',
+            px: 1.5,
+            py: 1.15,
+            textTransform: 'none',
+            '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.14)' },
+          }}
+        >
+          Sign out
+        </Button>
+      </Stack>
+
+      <Button
+        onClick={openFullProfile}
+        disabled={!username}
+        variant="contained"
+        sx={{
+          borderRadius: '16px',
+          px: 2,
+          py: 1.25,
+          textTransform: 'none',
+          fontWeight: 900,
+          bgcolor: '#6366F1',
+          color: '#000',
+          '&:hover': { bgcolor: alpha('#6366F1', 0.86) },
+          '&.Mui-disabled': { bgcolor: 'rgba(99,102,241,0.28)', color: 'rgba(255,255,255,0.6)' },
+        }}
+      >
+        See full profile
+      </Button>
+    </Box>
+  );
+};
+
 export const DynamicIslandPanelSurface: React.FC<{
   panel: IslandPanel | null;
   onClosePanel: () => void;
@@ -450,86 +636,7 @@ export const DynamicIslandPanelSurface: React.FC<{
                 })}
               </Box>
             ) : (
-              <Box sx={{ display: 'grid', gap: 0.75 }}>
-                <ListItemButton
-                  onClick={() => {
-                    onClosePanel();
-                    router.push('/settings');
-                  }}
-                  sx={{
-                    borderRadius: '18px',
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    px: 1.5,
-                    py: 1.25,
-                    gap: 1.25,
-                  }}
-                >
-                  <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(panelTone, 0.12), color: panelTone, flexShrink: 0 }}>
-                    <UserIcon size={16} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                      Profile
-                    </Typography>
-                    <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                      Open your public profile
-                    </Typography>
-                  </Box>
-                </ListItemButton>
-                <ListItemButton
-                  onClick={() => {
-                    onClosePanel();
-                    router.push('/settings');
-                  }}
-                  sx={{
-                    borderRadius: '18px',
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    px: 1.5,
-                    py: 1.25,
-                    gap: 1.25,
-                  }}
-                >
-                  <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha('#6366F1', 0.12), color: '#6366F1', flexShrink: 0 }}>
-                    <SettingsIcon size={16} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                      Settings
-                    </Typography>
-                    <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                      Adjust your Connect preferences
-                    </Typography>
-                  </Box>
-                </ListItemButton>
-                <ListItemButton
-                  onClick={() => {
-                    onClosePanel();
-                    void logout();
-                  }}
-                  sx={{
-                    borderRadius: '18px',
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    px: 1.5,
-                    py: 1.25,
-                    gap: 1.25,
-                  }}
-                >
-                  <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha('#FF4D4D', 0.12), color: '#FF4D4D', flexShrink: 0 }}>
-                    <LogOutIcon size={16} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                      Sign out
-                    </Typography>
-                    <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                      End this Connect session
-                    </Typography>
-                  </Box>
-                </ListItemButton>
-              </Box>
+              <ProfilePanelSurface onClosePanel={onClosePanel} />
             )}
           </Box>
         </Paper>
@@ -951,88 +1058,7 @@ const DynamicIslandOverlay: React.FC<{
                     })}
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    <ListItemButton
-                      onClick={() => {
-                        onClosePanel();
-                        router.push('/settings');
-                      }}
-                      sx={{
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        px: 1.5,
-                        py: 1.25,
-                        gap: 1.25,
-                      }}
-                    >
-                      <motion.div style={{ display: 'inline-flex' }}>
-                        <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(panelTone, 0.12), color: panelTone, flexShrink: 0 }}>
-                          <UserIcon size={16} />
-                        </Box>
-                      </motion.div>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                          Profile
-                        </Typography>
-                        <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                          Open your public profile
-                        </Typography>
-                      </Box>
-                    </ListItemButton>
-                    <ListItemButton
-                      onClick={() => {
-                        onClosePanel();
-                        router.push('/settings');
-                      }}
-                      sx={{
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        px: 1.5,
-                        py: 1.25,
-                        gap: 1.25,
-                      }}
-                    >
-                      <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha('#6366F1', 0.12), color: '#6366F1', flexShrink: 0 }}>
-                        <SettingsIcon size={16} />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                          Settings
-                        </Typography>
-                        <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                          Adjust your Connect preferences
-                        </Typography>
-                      </Box>
-                    </ListItemButton>
-                    <ListItemButton
-                      onClick={() => {
-                        onClosePanel();
-                        void logout();
-                      }}
-                      sx={{
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        px: 1.5,
-                        py: 1.25,
-                        gap: 1.25,
-                      }}
-                    >
-                      <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha('#FF4D4D', 0.12), color: '#FF4D4D', flexShrink: 0 }}>
-                        <LogOutIcon size={16} />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }}>
-                          Sign out
-                        </Typography>
-                        <Typography sx={{ color: alpha('#fff', 0.56), fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
-                          End this Connect session
-                        </Typography>
-                      </Box>
-                    </ListItemButton>
-                  </Box>
+                  <ProfilePanelSurface onClosePanel={onClosePanel} />
                 )}
               </Box>
             </Paper>

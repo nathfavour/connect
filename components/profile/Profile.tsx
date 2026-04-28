@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { UsersService } from '@/lib/services/users';
 import { SocialService } from '@/lib/services/social';
 import { useAuth } from '@/lib/auth';
@@ -32,8 +33,10 @@ import { ActorsListDrawer, Actor } from '../social/ActorsListDrawer';
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
+import { getProfileView, stageProfileView } from '@/lib/profile-handoff';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
 import ReportUserDialog from './ReportUserDialog';
+import { useSearchParams } from 'next/navigation';
 
 interface ProfileProps {
     username?: string;
@@ -48,10 +51,13 @@ export const Profile = ({ username }: ProfileProps) => {
     const { user: currentUser } = useAuth();
     const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const normalizedUsername = normalizeUsername(username);
-    const [profile, setProfile] = useState<any>(() => normalizedUsername ? getCachedIdentityByUsername(normalizedUsername) : null);
+    const preloadedProfile = normalizedUsername ? getProfileView(normalizedUsername)?.profile || null : null;
+    const cachedUsernameProfile = normalizedUsername ? getCachedIdentityByUsername(normalizedUsername) : null;
+    const [profile, setProfile] = useState<any>(() => preloadedProfile || cachedUsernameProfile);
     const [profileUrl, setProfileUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(() => !normalizedUsername || !getCachedIdentityByUsername(normalizedUsername));
+    const [loading, setLoading] = useState(() => !normalizedUsername || !(preloadedProfile || cachedUsernameProfile));
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -64,6 +70,7 @@ export const Profile = ({ username }: ProfileProps) => {
     const [actorsDrawerOpen, setActorsDrawerOpen] = useState(false);
     const [actorsTitle, setActorsTitle] = useState('');
     const [actorsList, setActorsList] = useState<Actor[]>([]);
+    const morphFromPanel = searchParams.get('transition') === 'profile';
 
     // Load the profile avatar preview. Prefer the viewed profile's avatar if present;
     // fall back to the logged-in user's profile pic when viewing an identity without an avatar.
@@ -126,9 +133,48 @@ export const Profile = ({ username }: ProfileProps) => {
         preferences: profile?.preferences || null,
     });
 
+    const loadRelatedData = useCallback(async (data: any) => {
+        if (!data) return;
+
+        const targetId = data.userId || data.$id;
+        if (!targetId) return;
+
+        setMomentsLoading(true);
+        try {
+            const [feedRes, followStats, followingStatus] = await Promise.all([
+                SocialService.getFeed(currentUser?.$id, targetId),
+                SocialService.getFollowStats(targetId),
+                currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false),
+            ]);
+
+            setMoments(feedRes.rows);
+            setStats({
+                posts: feedRes.total,
+                followers: typeof followStats.followers === 'number' ? followStats.followers : (followStats.followerRows ? followStats.followerRows.length : 0),
+                following: typeof followStats.following === 'number' ? followStats.following : (followStats.followingRows ? followStats.followingRows.length : 0),
+            });
+            setIsFollowing(Boolean(followingStatus));
+        } catch (error: unknown) {
+            console.error('Failed to load profile activity:', error);
+        } finally {
+            setMomentsLoading(false);
+        }
+    }, [currentUser]);
+
     const loadProfile = useCallback(async () => {
+        const stagedProfile = normalizedUsername ? (preloadedProfile || cachedUsernameProfile) : null;
+
+        if (stagedProfile) {
+            seedIdentityCache(stagedProfile);
+            stageProfileView(stagedProfile, null);
+            setProfile(stagedProfile);
+            setLoading(false);
+            void loadRelatedData(stagedProfile);
+            return;
+        }
+
         setLoading(true);
-        
+
         try {
             let data;
             if (normalizedUsername) {
@@ -151,36 +197,15 @@ export const Profile = ({ username }: ProfileProps) => {
 
             if (data) {
                 seedIdentityCache(data);
-                // Only update profile state if it actually changed to prevent re-renders
+                stageProfileView(data, profileUrl || null);
                 setProfile((prev: any) => {
-                    // Use a more robust check for profile equality
                     if (prev && prev.$id === data.$id && prev.username === data.username && prev.bio === data.bio && prev.displayName === data.displayName && prev.avatar === data.avatar) {
                         return prev;
                     }
                     return data;
                 });
-                
-                // Load Stats & Moments
-                setMomentsLoading(true);
-                const targetId = data.userId || data.$id;
-                const [feedRes, followStats, followingStatus] = await Promise.all([
-                    SocialService.getFeed(currentUser?.$id, targetId),
-                    SocialService.getFollowStats(targetId),
-                    currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false)
-                ]);
-
-                setMoments(feedRes.rows);
-
-                // followStats may now include rows for deeper validation
-                setStats({
-                    posts: feedRes.total,
-                    followers: typeof followStats.followers === 'number' ? followStats.followers : (followStats.followerRows ? followStats.followerRows.length : 0),
-                    following: typeof followStats.following === 'number' ? followStats.following : (followStats.followingRows ? followStats.followingRows.length : 0)
-                });
-
-                // Ensure UI reflects authoritative following state
-                setIsFollowing(Boolean(followingStatus));
-                setMomentsLoading(false);
+                stageProfileView(data, null);
+                void loadRelatedData(data);
             } else {
                 setProfile(null);
             }
@@ -189,7 +214,7 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [normalizedUsername, currentUser, myProfile]);
+    }, [cachedUsernameProfile, currentUser, loadRelatedData, myProfile, normalizedUsername, preloadedProfile]);
 
     useEffect(() => {
         loadProfile();
@@ -320,6 +345,11 @@ export const Profile = ({ username }: ProfileProps) => {
     };
 
     return (
+        <motion.div
+            initial={morphFromPanel ? { opacity: 0, y: 18, scale: 0.985 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+        >
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
                 <Paper sx={{ 
                     p: 4, 
@@ -697,5 +727,6 @@ export const Profile = ({ username }: ProfileProps) => {
                 onAction={handleActorAction}
             />
         </Box>
+        </motion.div>
     );
 };
