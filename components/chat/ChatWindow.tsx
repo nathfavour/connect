@@ -77,6 +77,8 @@ import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
+import { getUserSubscriptionTier } from '@/lib/user-utils';
+import { showUpgradeIsland } from '@/lib/upgrade-island';
 
 type ChatMessage = Models.Row & Record<string, any>;
 type ChatReaction = Models.Row & {
@@ -200,9 +202,11 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     attachment,
     sending,
     isRecording,
+    attachmentDisabled = false,
     enableMentions,
     mentionTargets,
     onAttach,
+    onUpgradeRequested,
     onSend,
     onToggleRecording,
 }: {
@@ -212,6 +216,8 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     enableMentions?: boolean;
     mentionTargets?: Array<{ id: string; label: string; token: string }>;
     onAttach: (event: React.MouseEvent<HTMLElement>) => void;
+    attachmentDisabled?: boolean;
+    onUpgradeRequested: () => void;
     onSend: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
 }) {
@@ -251,18 +257,18 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
                 <IconButton
                     size="small"
-                    onClick={onAttach}
+                    onClick={attachmentDisabled ? onUpgradeRequested : onAttach}
                     sx={{
-                        color: 'text.secondary',
+                        color: attachmentDisabled ? 'rgba(255,255,255,0.32)' : 'text.secondary',
                         width: 40,
                         height: 40,
                         flexShrink: 0,
-                        bgcolor: 'rgba(255, 255, 255, 0.02)',
+                        bgcolor: attachmentDisabled ? 'rgba(255, 255, 255, 0.015)' : 'rgba(255, 255, 255, 0.02)',
                         border: '1px solid rgba(255, 255, 255, 0.06)',
                         '&:hover': {
-                            bgcolor: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(245, 158, 11, 0.35)',
-                            color: '#F59E0B',
+                            bgcolor: attachmentDisabled ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.05)',
+                            borderColor: attachmentDisabled ? 'rgba(255,255,255,0.08)' : 'rgba(245, 158, 11, 0.35)',
+                            color: attachmentDisabled ? 'rgba(255,255,255,0.42)' : '#F59E0B',
                         },
                     }}
                 >
@@ -433,6 +439,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
     const [, startTransition] = useTransition();
+    const isProPlan = getUserSubscriptionTier(user) === 'PRO';
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2253,9 +2260,11 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         attachment={attachment}
                         sending={sending}
                         isRecording={isRecording}
+                        attachmentDisabled={!isProPlan}
                         enableMentions={conversation?.type === 'group'}
                         mentionTargets={groupMentionTargets}
                         onAttach={(e) => setAttachAnchorEl(e.currentTarget)}
+                        onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
                         onSend={handleSend}
                         onToggleRecording={toggleRecording}
                     />
