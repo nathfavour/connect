@@ -59,6 +59,13 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
         ],
     });
 
+    const navItems = useMemo(() => [
+        { label: 'Home', href: '/', icon: <Home size={20} /> },
+        { label: 'Chats', href: '/chats', icon: <MessageCircle size={20} /> },
+        { label: 'Calls', href: '/calls', icon: <Phone size={20} /> },
+        { label: 'Settings', href: '/settings', icon: <Settings size={20} /> },
+    ], []);
+
 
     if (isEmbedded) {
         return (
