@@ -534,7 +534,16 @@ export const AppHeader = () => {
               transition={{ duration: 0.18 }}
               style={{ width: '100%', display: 'flex' }}
             >
-              <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch', minHeight: 0 }}>
+              <Box
+                onWheel={(event) => {
+                  const node = event.currentTarget;
+                  if (event.deltaY < 0 && node.scrollTop <= 0) {
+                    event.preventDefault();
+                    closePanel();
+                  }
+                }}
+                sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'stretch', minHeight: 0 }}
+              >
                 {panel === 'search' ? (
                   <Box sx={{ display: 'grid', gap: 1.25, minHeight: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -749,7 +758,16 @@ export const AppHeader = () => {
                     </Box>
                   </Box>
                 ) : panel === 'ecosystem' ? (
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Box
+                    onWheel={(event) => {
+                      const node = event.currentTarget;
+                      if (event.deltaY < 0 && node.scrollTop <= 0) {
+                        event.preventDefault();
+                        closePanel();
+                      }
+                    }}
+                    sx={{ display: 'grid', gap: 0.75 }}
+                  >
                     {[
                       { app: 'note' as const, label: 'Note', description: 'Secure notes and research.' },
                       { app: 'vault' as const, label: 'Vault', description: 'Passwords, 2FA, and keys.' },

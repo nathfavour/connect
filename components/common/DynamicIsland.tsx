@@ -360,6 +360,7 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   const previewSource = profile?.avatarUrl || profile?.avatarFileId || profile?.avatar || user?.prefs?.profilePicId || null;
   const profilePreviewUrl = useCachedProfilePreview(previewSource, 160, 160);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setCopyState('idle');
@@ -393,6 +394,25 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
     void logout();
   }, [logout, onClosePanel]);
 
+  const handleProfileWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const node = scrollContainerRef.current;
+    if (!node) return;
+
+    const atTop = node.scrollTop <= 0;
+    const atBottom = Math.ceil(node.scrollTop + node.clientHeight) >= node.scrollHeight;
+
+    if (event.deltaY < 0 && atTop) {
+      event.preventDefault();
+      onClosePanel();
+      return;
+    }
+
+    if (event.deltaY > 0 && atBottom) {
+      event.preventDefault();
+      void openFullProfile();
+    }
+  }, [onClosePanel, openFullProfile]);
+
   if (isLoading && !profile) {
     return (
       <Box sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}>
@@ -417,22 +437,11 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.25 }}>
-        <motion.div
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 140 }}
-          dragElastic={0.14}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 64) {
-              void openFullProfile();
-            }
-          }}
-          style={{ touchAction: 'pan-y', cursor: 'grab' }}
-        >
-          <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
-        </motion.div>
-      </Box>
+    <Box
+      ref={scrollContainerRef}
+      onWheel={handleProfileWheel}
+      sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}
+    >
 
       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', minWidth: 0 }}>
         <Box sx={{ flexShrink: 0 }}>
@@ -522,6 +531,22 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
       >
         See full profile
       </Button>
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.25, pb: 0.25 }}>
+        <motion.div
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 140 }}
+          dragElastic={0.14}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 64) {
+              void openFullProfile();
+            }
+          }}
+          style={{ touchAction: 'pan-y', cursor: 'grab' }}
+        >
+          <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
+        </motion.div>
+      </Box>
     </Box>
   );
 };
