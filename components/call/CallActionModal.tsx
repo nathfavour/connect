@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Dialog,
+    Drawer,
     DialogTitle,
     DialogContent,
     List,
@@ -191,18 +191,19 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
     };
 
     return (
-        <Dialog 
+        <Drawer 
             open={open} 
             onClose={onClose}
-            fullScreen={isMobile}
+            anchor={isMobile ? 'bottom' : 'right'}
             PaperProps={{
                 sx: {
                     bgcolor: COLORS.surface,
                     backgroundImage: 'none',
-                    borderRadius: isMobile ? 0 : '28px',
-                    border: isMobile ? 'none' : `1px solid ${COLORS.rim}`,
+                    borderRadius: isMobile ? '24px 24px 0 0' : '28px 0 0 28px',
+                    border: `1px solid ${COLORS.rim}`,
                     maxWidth: '480px',
                     width: '100%',
+                    height: isMobile ? '92vh' : '100%',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     overflow: 'hidden'
                 }
@@ -507,6 +508,6 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                     </Stack>
                 )}
             </DialogContent>
-        </Dialog>
+        </Drawer>
     );
 };

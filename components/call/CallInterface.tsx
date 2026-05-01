@@ -216,14 +216,20 @@ export const CallInterface = ({
             },
             onStateChange: (state: string) => setStatus(state),
             onSignal: async (signal: any) => {
-                if (signal.target) {
-                    try {
-                        // Include callId in signal for better tracking
-                        await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: callCode || conversationId });
-                    } catch (_e) {
-                        console.error('Failed to send signal');
+                if (['join_request', 'let_in', 'presence', 'chat_message'].includes(signal.type)) {
+                    if (signal.target) {
+                        try {
+                            // Include callId in signal for better tracking
+                            await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: callCode || conversationId });
+                        } catch (_e) {
+                            console.error('Failed to send signal');
+                        }
                     }
+                    return;
                 }
+
+                // Media negotiation is now handled by Cloudflare session APIs.
+                if (['offer', 'answer', 'candidate'].includes(signal.type)) return;
             }
         });
 

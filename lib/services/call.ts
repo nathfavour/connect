@@ -3,12 +3,23 @@ import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
 import { sendKylrixEmailNotification } from '../email-notifications';
+import { buildCallJoinUrl, createCallMetadata, isCallActive, parseCallMetadata, type KylrixCallScope } from '../sdk/calls';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
 const ACTIVITY_TABLE = APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY;
 
 import { account as authAccount } from '../appwrite/client';
+
+type CallContext = {
+    scope?: KylrixCallScope;
+    participantIds?: string[];
+    sourceApp?: 'connect' | 'note' | 'flow' | 'vault';
+    noteId?: string;
+    huddleId?: string;
+    isPrivate?: boolean;
+    allowGuests?: boolean;
+};
 
 export const CallService = {
     async createAnonymousSession() {
@@ -20,25 +31,40 @@ export const CallService = {
         }
     },
 
-    async createCallLink(userId: string, type: 'audio' | 'video' = 'video', conversationId?: string, title?: string, startsAt?: string, durationMinutes: number = 120) {
+    async createCallLink(userId: string, type: 'audio' | 'video' = 'video', conversationId?: string, title?: string, startsAt?: string, durationMinutes: number = 120, context: CallContext = {}) {
         try {
             // Default to starting now if not provided
             const startTime = startsAt ? new Date(startsAt) : null;
             // Expire based on duration (default 2 hours)
             const expiresAt = new Date((startTime?.getTime() || Date.now()) + durationMinutes * 60 * 1000).toISOString();
+            const scope = context.scope || (conversationId ? 'direct' : 'link');
+            const participantIds = context.participantIds || [];
 
             // Create the row with the new concise structure
             const payload: any = {
                 userId,
                 type,
                 expiresAt,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                metadata: createCallMetadata({
+                    scope,
+                    hostId: userId,
+                    title: title || undefined,
+                    sourceApp: context.sourceApp || 'connect',
+                    conversationId,
+                    noteId: context.noteId,
+                    huddleId: context.huddleId,
+                    participantIds,
+                    isPrivate: context.isPrivate ?? false,
+                    allowGuests: context.allowGuests ?? true,
+                    startsAt: startTime?.toISOString() || null,
+                    expiresAt,
+                })
             };
 
             if (startTime) payload.startsAt = startTime.toISOString();
 
             if (title) payload.title = title;
-            if (conversationId) payload.metadata = JSON.stringify({ conversationId });
 
             console.log('[CallService] Creating call in new table with payload:', payload);
 
@@ -63,18 +89,19 @@ export const CallService = {
         try {
             const link = await tablesDB.getRow(DB_ID, LINKS_TABLE, id) as any;
             const now = new Date();
-            const startsAt = link.startsAt ? new Date(link.startsAt) : new Date(link.$createdAt);
-            const expiresAt = link.expiresAt ? new Date(link.expiresAt) : new Date(startsAt.getTime() + 3 * 60 * 60 * 1000);
+            const meta = parseCallMetadata(link.metadata);
+            const startsAt = link.startsAt ? new Date(link.startsAt) : (meta.startsAt ? new Date(meta.startsAt) : new Date(link.$createdAt));
+            const expiresAt = link.expiresAt ? new Date(link.expiresAt) : (meta.expiresAt ? new Date(meta.expiresAt) : new Date(startsAt.getTime() + 3 * 60 * 60 * 1000));
             
             if (now > expiresAt) {
-                return { ...link, isExpired: true, isScheduled: false };
+                return { ...link, metadata: meta, isExpired: true, isScheduled: false };
             }
             
             if (now < startsAt) {
-                return { ...link, isExpired: false, isScheduled: true };
+                return { ...link, metadata: meta, isExpired: false, isScheduled: true };
             }
             
-            return { ...link, isExpired: false, isScheduled: false };
+            return { ...link, metadata: meta, isExpired: false, isScheduled: false };
         } catch (_e) {
             console.error('Failed to get call link:', _e);
             return null;
@@ -82,21 +109,25 @@ export const CallService = {
     },
 
     async getCallLinkByCode(_code: string) {
-        return null;
+        return this.getCallLink(_code);
     },
 
     async cleanupOldCallLogs() {
         try {
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-            const oldLogs = await tablesDB.listRows(DB_ID, LINKS_TABLE, [
-                Query.lessThan('startsAt', sevenDaysAgo),
-                Query.limit(100)
-            ]);
+            const cleanupUrl = `${getEcosystemUrl('accounts')}/api/connect/calls/cleanup`;
+            const response = await fetch(cleanupUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId: null }),
+            });
 
-            for (const log of oldLogs.rows) {
-                await tablesDB.deleteRow(DB_ID, LINKS_TABLE, log.$id);
+            if (!response.ok) {
+                throw new Error(await response.text());
             }
-            return oldLogs.total;
+
+            const data = await response.json().catch(() => ({ deleted: 0 }));
+            return Number(data.deleted || 0);
         } catch (_e) {
             console.error('Failed to cleanup old calls:', _e);
             return 0;
@@ -156,7 +187,16 @@ export const CallService = {
         };
 
         if (receiverId || conversationId) {
-            payload.metadata = JSON.stringify({ receiverId, conversationId });
+            payload.metadata = createCallMetadata({
+                scope: (conversationId || receiverId) ? 'direct' : 'link',
+                hostId: callerId,
+                sourceApp: 'connect',
+                conversationId,
+                participantIds: receiverId ? [callerId, receiverId] : [callerId],
+                allowGuests: false,
+                startsAt: new Date().toISOString(),
+                expiresAt: payload.expiresAt,
+            });
         }
 
         const call = await tablesDB.createRow(DB_ID, LINKS_TABLE, ID.unique(), payload, [
@@ -175,7 +215,7 @@ export const CallService = {
                 resourceTitle: type === 'audio' ? 'Audio call' : 'Video call',
                 resourceType: 'call',
                 templateKey: `connect:call-started:${conversationId || receiverId}`,
-                ctaUrl: `${getEcosystemUrl('connect')}/call/${call.$id}`,
+                ctaUrl: buildCallJoinUrl(getEcosystemUrl('connect'), call.$id),
                 ctaText: 'Join call',
             }).catch((error) => {
                 console.error('[CallService] Failed to queue call email', error);
@@ -188,10 +228,7 @@ export const CallService = {
     async updateCallStatus(callId: string, status: 'completed' | 'declined' | 'missed', _duration: number = 0) {
         try {
             const call = await tablesDB.getRow(DB_ID, LINKS_TABLE, callId);
-            let meta = {};
-            try {
-                if (call.metadata) meta = JSON.parse(call.metadata);
-            } catch (_e) {}
+            const meta = parseCallMetadata(call.metadata);
 
             return await tablesDB.updateRow(DB_ID, LINKS_TABLE, callId, {
                 metadata: JSON.stringify({ ...meta, status }),
@@ -204,7 +241,16 @@ export const CallService = {
 
     async cleanupCall(callId: string) {
         try {
-            await tablesDB.deleteRow(DB_ID, LINKS_TABLE, callId);
+            const response = await fetch(`${getEcosystemUrl('accounts')}/api/connect/calls/cleanup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ callId }),
+            });
+
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
         } catch (_e) {
             console.error('Failed to cleanup call:', _e);
         }
@@ -222,15 +268,9 @@ export const CallService = {
         ]);
         
         const allRows = [...asCreator.rows, ...asReceiver.rows].map(row => {
-            let receiverId = null;
-            let status = 'ongoing';
-            try {
-                if (row.metadata) {
-                    const meta = JSON.parse(row.metadata);
-                    receiverId = meta.receiverId;
-                    status = meta.status || (new Date(row.expiresAt) < new Date() ? 'completed' : 'ongoing');
-                }
-            } catch {}
+            const meta = parseCallMetadata(row.metadata);
+            const receiverId = meta.participantIds?.find((id) => id !== row.userId) || null;
+            const status = meta.status || (isCallActive(row) ? 'ongoing' : 'completed');
 
             return {
                 ...row,
@@ -238,7 +278,8 @@ export const CallService = {
                 receiverId,
                 status,
                 startedAt: row.startsAt || row.$createdAt,
-                isLink: !receiverId
+                isLink: meta.scope === 'link' || meta.scope === 'note' || meta.scope === 'huddle',
+                metadata: meta,
             };
         });
 

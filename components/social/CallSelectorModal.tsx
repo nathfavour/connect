@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { 
-    Dialog, 
+    Drawer,
     DialogTitle, 
     DialogContent, 
     DialogActions, 
@@ -16,7 +16,6 @@ import {
     Box,
     IconButton,
     alpha,
-    Fade,
     InputBase
 } from '@mui/material';
 import {
@@ -69,12 +68,9 @@ export const CallSelectorModal = ({ open, onClose, onSelect }: CallSelectorModal
     );
 
     return (
-        <Dialog 
+        <Drawer 
             open={open} 
             onClose={onClose} 
-            maxWidth="sm" 
-            fullWidth 
-            TransitionComponent={Fade}
             PaperProps={{ 
                 sx: { 
                     borderRadius: '28px',
@@ -86,6 +82,7 @@ export const CallSelectorModal = ({ open, onClose, onSelect }: CallSelectorModal
                     overflow: 'hidden'
                 } 
             }}
+            anchor="bottom"
         >
             <DialogTitle sx={{ 
                 p: 3, 
@@ -252,6 +249,6 @@ export const CallSelectorModal = ({ open, onClose, onSelect }: CallSelectorModal
                     Cancel
                 </Button>
             </DialogActions>
-        </Dialog>
+        </Drawer>
     );
 };

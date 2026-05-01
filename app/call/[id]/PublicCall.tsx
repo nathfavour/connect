@@ -100,6 +100,12 @@ export function PublicCall({ id }: { id: string }) {
                 setShowPreCheck(false);
                 setAutoStartAfterPreCheck(false);
                 setResolvedTargetId(link.userId);
+
+                if (link.isExpired) {
+                    void CallService.cleanupLink(link.$id).catch((error) => {
+                        console.warn('[PublicCall] Failed to clean expired call link', error);
+                    });
+                }
                 
                 // Fetch host profile
                 const host = await UsersService.getProfileById(link.userId);

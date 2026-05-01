@@ -129,14 +129,14 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
 
     const startCall = (call: any) => {
         if (call.isLink) {
-            window.open(`/call/${call.$id}`, '_blank');
+            window.location.assign(`/call/${call.$id}`);
             return;
         }
         if (!call.otherUser?.$id) {
             toast.error("User ID not available for this call");
             return;
         }
-        window.open(`/chat/${call.otherUser.$id}`, '_blank');
+        window.location.assign(`/chat/${call.otherUser.$id}`);
     };
 
     if (loading) {

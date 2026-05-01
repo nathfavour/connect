@@ -20,14 +20,13 @@ export class WebRTCManager {
   private recordedChunks: Blob[] = [];
   private screenStream: MediaStream | null = null;
   private sessionId: string | null = null;
-  private cloudflareSessionToken: string | null = null;
 
   constructor(events: PeerConnectionEvents) {
     this.events = events;
   }
 
   private async fetchCloudflareSession() {
-    if (this.sessionId) return { sessionId: this.sessionId, sessionToken: this.cloudflareSessionToken };
+    if (this.sessionId) return { sessionId: this.sessionId };
     
     console.log('[WebRTCManager] Fetching Cloudflare session...');
     const response = await fetch('/api/calls/session', { method: 'POST' });
@@ -39,7 +38,6 @@ export class WebRTCManager {
     const data = await response.json();
     console.log('[WebRTCManager] Cloudflare session created:', data.sessionId);
     this.sessionId = data.sessionId;
-    this.cloudflareSessionToken = data.sessionToken;
     return data;
   }
 
@@ -197,56 +195,67 @@ export class WebRTCManager {
 
   public async createOffer(senderId: string, targetId: string) {
     try {
-            const { sessionId } = await this.fetchCloudflareSession();
-            this.createPeerConnection(senderId, targetId);
-            if (!this.peerConnection) return;
-
-      // Push local tracks to Cloudflare
-      const tracks = this.localStream?.getTracks().map(track => ({
-        location: "local",
-        mid: track.kind === 'audio' ? '0' : '1',
-        trackName: `${track.kind}-${senderId}`
-      }));
-
-      const trackRes = await fetch('/api/calls/tracks', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId, tracks })
-      });
-      
-      if (!trackRes.ok) throw new Error('Failed to push tracks to Cloudflare');
-      const trackData = await trackRes.json();
-
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-
-      this.events.onSignal({
-        type: 'offer',
-        sdp: offer.sdp,
-        target: targetId,
-        sender: senderId,
-        cloudflareSessionId: sessionId,
-        cloudflareTracks: trackData.tracks
-      });
-    } catch (error) {
-      console.error('Cloudflare SFU Initiation failed, falling back to pure P2P:', error);
-      
-      // Fallback to pure P2P signaling
+      const { sessionId } = await this.fetchCloudflareSession();
       this.createPeerConnection(senderId, targetId);
       if (!this.peerConnection) return;
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
-      this.events.onSignal({
-        type: 'offer',
-        sdp: offer.sdp,
-        target: targetId,
-        sender: senderId
+      const tracks = this.localStream?.getTracks().map((track, index) => ({
+        location: 'local',
+        mid: String(index),
+        trackName: `${track.kind}-${senderId}-${index}`,
+        kind: track.kind,
+      })) || [];
+
+      const trackRes = await fetch('/api/calls/tracks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          tracks,
+          sessionDescription: {
+            type: 'offer',
+            sdp: offer.sdp,
+          },
+        })
       });
+
+      if (!trackRes.ok) {
+        throw new Error(await trackRes.text());
+      }
+
+      const trackData = await trackRes.json();
+      const remoteDescription = trackData.sessionDescription;
+      if (remoteDescription?.type && remoteDescription?.sdp) {
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDescription));
+        this.isRemoteDescriptionSet = true;
+        await this.processCandidateQueue();
+      }
+
+      if (trackData.requiresImmediateRenegotiation && remoteDescription?.type === 'offer') {
+        const answer = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answer);
+        await fetch('/api/calls/renegotiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            sessionDescription: {
+              type: 'answer',
+              sdp: answer.sdp,
+            },
+          })
+        });
+      }
+    } catch (error) {
+      console.error('Cloudflare SFU initiation failed:', error);
+      throw error;
     }
   }
 
-    public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[], ts?: number }) {
+  public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[], ts?: number }) {
     if (!this.peerConnection && signal.type === 'offer') {
       this.createPeerConnection(signal.target, signal.sender);
     }
