@@ -77,6 +77,7 @@ import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
+import { buildNoteAttachmentMetadata } from '@/lib/sdk';
 import { getUserSubscriptionTier } from '@/lib/user-utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 
@@ -1234,16 +1235,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         if (!user) return;
         setSending(true);
         try {
-            const metadata: AttachmentMetadata = {
-                type: 'attachment',
-                entity: 'note',
-                subType: 'ghost_note',
-                referenceId: note.$id,
-                payload: {
-                    label: note.title || 'Attached Note',
-                    preview: note.content?.substring(0, 100)
-                }
-            };
+            const metadata = buildNoteAttachmentMetadata(note) as AttachmentMetadata;
             await ChatService.sendMessage(
                 conversationId,
                 user.$id,
