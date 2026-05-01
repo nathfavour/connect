@@ -26,6 +26,7 @@ import { useAuth } from '@/lib/auth';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { SudoModal } from '../overlays/SudoModal';
 import { generateSync } from 'otplib';
+import toast from 'react-hot-toast';
 
 interface SecretSelectorModalProps {
     open: boolean;
@@ -43,7 +44,6 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
     const [searchTerm, setSearchTerm] = useState('');
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
     const [pendingSelection, setPendingSelection] = useState<{ item: any, type: 'secret' | 'totp' } | null>(null);
-
     const loadData = React.useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -70,7 +70,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
     const handleSelect = async (item: any, type: 'secret' | 'totp') => {
         if (type === 'secret' && !isSelf) {
             // Restrictions: Can only share secrets to self for now
-            alert("For security, secrets can only be shared in your self-chat. TOTP codes can be shared anywhere.");
+            toast.error("Secrets can only be shared in your self-chat.");
             return;
         }
 
@@ -102,7 +102,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
     return (
         <>
             <Drawer anchor="bottom" open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: '24px 24px 0 0', bgcolor: 'rgba(15, 15, 15, 0.98)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 -24px 60px rgba(0,0,0,0.6)', maxHeight: { xs: '88dvh', sm: '72vh' } } }}>
-                <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '72vh' }}>
+                <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '72vh', minHeight: 0, overflow: 'hidden' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Box>
                             <Typography variant="h6" sx={{ fontWeight: 900, color: 'white', letterSpacing: '-0.02em', fontFamily: 'var(--font-space-grotesk)' }}>Attach Secret</Typography>
@@ -117,9 +117,9 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                     </Tabs>
                     <TextField fullWidth size="small" placeholder={`Search ${tab === 0 ? 'credentials' : 'TOTP'}...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} variant="filled" InputProps={{ disableUnderline: true, sx: { borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }, startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} /></InputAdornment>) }} />
                     {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, minHeight: 0 }}><CircularProgress size={24} /></Box>
                     ) : (
-                        <List sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                        <List sx={{ maxHeight: '400px', overflowY: 'auto', minHeight: 0 }}>
                             {_filteredItems.length === 0 ? (
                                 <Typography variant="body2" sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>No items found.</Typography>
                             ) : (
