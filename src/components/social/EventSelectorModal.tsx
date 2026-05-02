@@ -92,7 +92,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
                 } 
             }}
         >
-            <Box sx={{ 
+            <DialogTitle sx={{ 
                 p: 3, 
                 pb: 2, 
                 display: 'flex', 

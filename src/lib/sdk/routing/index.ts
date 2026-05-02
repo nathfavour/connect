@@ -1,2 +1,2 @@
-export { useLastActiveApp } from './useLastActiveApp';
-export type { KylrixAppId, UseLastActiveAppReturn } from './useLastActiveApp';
+// useLastActiveApp has been moved to ecosystem module
+export { useLastActiveApp, type AppName } from '../ecosystem';

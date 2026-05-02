@@ -12,6 +12,14 @@ export const KYLRIX_DOMAIN = 'kylrix.space';
 export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
 export const KYLRIX_AUTH_URI = `https://${KYLRIX_AUTH_SUBDOMAIN}.${KYLRIX_DOMAIN}`;
 
+export const APP_CONFIG = {
+  name: 'Kylrix Connect',
+  logo: {
+    url: '/logo.svg',
+    alt: 'Kylrix Connect Logo',
+  },
+};
+
 export const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: 'file-text', color: '#EC4899', description: 'Secure notes and research.' },
   { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: 'shield', color: '#10B981', description: 'Passwords, 2FA, and keys.' },
