@@ -25,7 +25,6 @@ import {
   useMediaQuery,
   useTheme,
   Avatar,
-  alpha,
 } from '@mui/material';
 import { MessageCircle, Phone, Plus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';

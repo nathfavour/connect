@@ -273,7 +273,7 @@ const ThreadPostView = ({
     handle,
     timeLabel,
     caption,
-    attachments,
+    _attachments,
     avatarSrc,
     avatarLabel,
     replyingTo,

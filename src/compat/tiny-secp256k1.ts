@@ -1,4 +1,4 @@
-import { Point, getPublicKey, getSharedSecret, recoverPublicKey, schnorr, sign, verify, hashes } from '@noble/secp256k1'
+import { Point, getPublicKey, getSharedSecret, recoverPublicKey as _recoverPublicKey, schnorr, sign, verify, hashes } from '@noble/secp256k1'
 import { hmac } from '@noble/hashes/hmac.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 
@@ -7,7 +7,7 @@ hashes.hmacSha256 = (key, msg) => hmac(sha256, key, msg)
 
 const CURVE_N = Point.CURVE().n
 const COMPRESSED_LENGTH = 33
-const UNCOMPRESSED_LENGTH = 65
+const _UNCOMPRESSED_LENGTH = 65
 
 function toBytes(value: Uint8Array | Buffer): Uint8Array {
   return value instanceof Uint8Array ? value : new Uint8Array(value)
@@ -186,7 +186,7 @@ export function ecdh(privateKey: Uint8Array | Buffer, publicKey: Uint8Array | Bu
   }
 }
 
-export default {
+const tinySecp256k1 = {
   isXOnlyPoint,
   isPoint,
   isPrivate,
@@ -207,3 +207,5 @@ export default {
   xOnlyPointFromScalar,
   ecdh,
 }
+
+export default tinySecp256k1
