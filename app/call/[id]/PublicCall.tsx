@@ -33,9 +33,10 @@ import toast from 'react-hot-toast';
 import { client, account as authAccount } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ChatService } from '@/lib/services/chat';
+import { getEcosystemUrl } from '@/lib/constants';
 
 export function PublicCall({ id }: { id: string }) {
-    const { user, login } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const callerRequested = searchParams.get('caller') === 'true';
@@ -437,12 +438,16 @@ export function PublicCall({ id }: { id: string }) {
                                     <Button
                                         fullWidth
                                         startIcon={<LogIn size={18} />}
-                                        onClick={() => login()}
-                                        sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}
+                                        onClick={() => {
+                                            const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
+                                            window.location.href = loginUrl;
+                                        }}
+                                        sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 800 }}
                                     >
                                         Sign in for better experience
                                     </Button>
                                 )}
+
                             </Stack>
                         ) : (
                             <Stack spacing={3} alignItems="center" sx={{ py: 2 }}>
