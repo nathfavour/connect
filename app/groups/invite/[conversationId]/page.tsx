@@ -34,7 +34,7 @@ export default function GroupInvitePage() {
   const params = useParams();
   const router = useRouter();
   const conversationId = params.conversationId as string;
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [requestState, setRequestState] = useState<'idle' | 'loading' | 'pending' | 'joined' | 'error'>('idle');
@@ -55,15 +55,15 @@ export default function GroupInvitePage() {
   }, [conversationId]);
 
   useEffect(() => {
-    if (loading || user || !inviteUrl) return;
+    if (isLoading || user || !inviteUrl) return;
 
     const loginUrl = new URL('/login', 'https://accounts.kylrix.space');
     loginUrl.searchParams.set('source', inviteUrl);
     window.location.replace(loginUrl.toString());
-  }, [inviteUrl, loading, user]);
+  }, [inviteUrl, isLoading, user]);
 
   useEffect(() => {
-    if (!conversationId || loading) return;
+    if (!conversationId || isLoading) return;
 
     let active = true;
     const loadPreview = async () => {
@@ -104,7 +104,7 @@ export default function GroupInvitePage() {
     return () => {
       active = false;
     };
-  }, [conversationId, loading, user?.$id]);
+  }, [conversationId, isLoading, user?.$id]);
 
   const handleRequestJoin = async () => {
     if (!conversationId) return;
