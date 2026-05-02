@@ -955,10 +955,10 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     if (feedPrefetchRef.current[oppositeView]) return;
                     feedPrefetchRef.current[oppositeView] = (async () => {
                         try {
-                            const response = oppositeView === 'trending'
+                            const prefetchResponse = oppositeView === 'trending'
                                 ? await SocialService.getTrendingFeed(user?.$id)
                                 : await SocialService.getFeed(user?.$id);
-                            const rows = response?.rows || [];
+                            const rows = prefetchResponse?.rows || [];
                             const filtered = rows.filter((m: any) => {
                                 const creatorId = m.userId || m.creatorId;
                                 const type = m.metadata?.type || 'post';
@@ -1006,22 +1006,22 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
             // Trigger a single state update for all posts by this creator
             setMoments(prev => {
                 const next = prev.map(m => {
-                    let updated = m;
+                    let nextUpdated = m;
                     const mCreatorId = m.userId || m.creatorId;
                     if (mCreatorId === id) {
-                        updated = { ...updated, creator: profileRegistry.get(id) };
+                        nextUpdated = { ...nextUpdated, creator: profileRegistry.get(id) };
                     }
                             // Also hydrate sourceMoment creators if they match this ID
-                            if (updated.sourceMoment) {
-                                const sCreatorId = updated.sourceMoment.userId || updated.sourceMoment.creatorId;
+                            if (nextUpdated.sourceMoment) {
+                                const sCreatorId = nextUpdated.sourceMoment.userId || nextUpdated.sourceMoment.creatorId;
                                 if (sCreatorId === id) {
-                                    updated = { 
-                                        ...updated, 
-                                        sourceMoment: { ...updated.sourceMoment, creator: profileRegistry.get(id) } 
+                                    nextUpdated = { 
+                                        ...nextUpdated, 
+                                        sourceMoment: { ...nextUpdated.sourceMoment, creator: profileRegistry.get(id) } 
                                     };
                                 }
                     }
-                    return updated;
+                    return nextUpdated;
                 });
                 momentsRef.current = next;
                 return next;

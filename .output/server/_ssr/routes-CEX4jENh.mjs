@@ -14,7 +14,7 @@ import { i as getUserSubscriptionTier, t as AppShell } from "./AppShell-JgOEZgrs
 import { n as showUpgradeIsland, t as EcosystemService } from "./upgrade-island-DBox53k5.mjs";
 import { n as SocialService, s as seedMomentPreview, t as ActorsListDrawer } from "./ActorsListDrawer-NQvy58wX.mjs";
 import { n as resolveIdentity, r as resolveIdentityUsername, t as formatPostTimestamp } from "./time-pgZ5YIc8.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BOzDMOLB.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CEX4jENh.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var FastDraftInput = (0, import_react.forwardRef)(function FastDraftInput({ initialValue = "", placeholder, rows = 3, autoFocus = false, onEmptyChange }, ref) {
@@ -2320,21 +2320,21 @@ var Feed = ({ view = "personal" }) => {
 					seedIdentityCache(hydratedProfile);
 					setMoments((prev) => {
 						const next = prev.map((m) => {
-							let updated = m;
-							if ((m.userId || m.creatorId) === id) updated = {
-								...updated,
+							let nextUpdated = m;
+							if ((m.userId || m.creatorId) === id) nextUpdated = {
+								...nextUpdated,
 								creator: profileRegistry.get(id)
 							};
-							if (updated.sourceMoment) {
-								if ((updated.sourceMoment.userId || updated.sourceMoment.creatorId) === id) updated = {
-									...updated,
+							if (nextUpdated.sourceMoment) {
+								if ((nextUpdated.sourceMoment.userId || nextUpdated.sourceMoment.creatorId) === id) nextUpdated = {
+									...nextUpdated,
 									sourceMoment: {
-										...updated.sourceMoment,
+										...nextUpdated.sourceMoment,
 										creator: profileRegistry.get(id)
 									}
 								};
 							}
-							return updated;
+							return nextUpdated;
 						});
 						momentsRef.current = next;
 						return next;

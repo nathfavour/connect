@@ -328,7 +328,7 @@ export const CallInterface = ({
         setJoinRequests(prev => prev.filter(r => r.senderId !== request.senderId));
     };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     const endCall = () => {
         if (rtcManager.current) {
             rtcManager.current.cleanup();

@@ -149,7 +149,7 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
 
   useEffect(() => {
     fetchSubmissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [formId]);
 
   const handleToggleRead = async (id: string, read: boolean) => {

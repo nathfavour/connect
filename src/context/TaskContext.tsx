@@ -1088,15 +1088,17 @@ export function TaskProvider({ children }: TaskProviderProps) {
       let comparison = 0;
       
       switch (field) {
-        case 'dueDate':
+        case 'dueDate': {
           const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
           const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
           comparison = aDate - bDate;
           break;
-        case 'priority':
+        }
+        case 'priority': {
           const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
           comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
           break;
+        }
         case 'createdAt':
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
@@ -1106,10 +1108,11 @@ export function TaskProvider({ children }: TaskProviderProps) {
         case 'title':
           comparison = a.title.localeCompare(b.title);
           break;
-        case 'status':
+        case 'status': {
           const statusOrder = { todo: 0, 'in-progress': 1, blocked: 2, done: 3, cancelled: 4 };
           comparison = statusOrder[a.status] - statusOrder[b.status];
           break;
+        }
         case 'position':
           comparison = a.position - b.position;
           break;

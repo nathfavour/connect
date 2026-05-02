@@ -11,7 +11,7 @@ import { C as useCachedProfilePreview, O as useProfile, _ as fetchProfilePreview
 import { t as AppShell } from "./AppShell-JgOEZgrs.mjs";
 import { a as getCachedMomentThread, c as seedMomentThread, i as getCachedMomentPreview, n as SocialService, o as isFreshMomentThread, r as THREAD_CACHE_STALE_AFTER_MS, s as seedMomentPreview, t as ActorsListDrawer } from "./ActorsListDrawer-NQvy58wX.mjs";
 import { n as resolveIdentity, t as formatPostTimestamp } from "./time-pgZ5YIc8.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/post._id-DDlCBi2D.js
+//#region node_modules/.nitro/vite/services/ssr/assets/post._id-BbgZS1Iy.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var EXPORT_CARD = "#161514";
@@ -969,9 +969,9 @@ function PostViewClient() {
 	const touchStartYRef = import_react.useRef(null);
 	const pullActiveRef = import_react.useRef(false);
 	const userAvatarUrl = useCachedProfilePreview(myProfile?.avatar || user?.prefs?.profilePicId || null, 64, 64);
-	const fetchActorsForPulses = async (momentId) => {
+	const fetchActorsForPulses = async (targetMomentId) => {
 		try {
-			const pulses = await SocialService._listPulsesFor(momentId);
+			const pulses = await SocialService._listPulsesFor(targetMomentId);
 			return await Promise.all(pulses.map(async (p) => {
 				try {
 					const prof = getCachedIdentityById(p.userId) || await UsersService.getProfileById(p.userId);

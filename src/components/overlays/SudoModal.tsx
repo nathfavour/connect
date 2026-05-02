@@ -70,9 +70,9 @@ export function SudoModal({
 
                 // Passkey Incentive
                 const entries = await KeychainService.listKeychainEntries(user.$id);
-                const hasPasskey = entries.some((e: any) => e.type === 'passkey');
+                const existingPasskey = entries.some((e: any) => e.type === 'passkey');
 
-                if (!hasPasskey) {
+                if (!existingPasskey) {
                     const skipTimestamp = localStorage.getItem(`passkey_skip_${user.$id}`);
                     const sevenDays = 7 * 24 * 60 * 60 * 1000;
                     if (!skipTimestamp || (Date.now() - parseInt(skipTimestamp)) > sevenDays) {

@@ -75,10 +75,10 @@ export default function SudoModal({
 
                 // Passkey Incentive
                 const entries = await AppwriteService.listKeychainEntries(user.$id);
-                const hasPasskey = entries.some((e: any) => e.type === 'passkey');
+                const existingPasskey = entries.some((ent: any) => ent.type === 'passkey');
                 const onKylrixDomain = window.location.hostname === 'kylrix.space' || window.location.hostname.endsWith('.kylrix.space');
                 
-                if (!hasPasskey && onKylrixDomain) {
+                if (!existingPasskey && onKylrixDomain) {
                     const lastSkip = localStorage.getItem(`passkey_skip_${user.$id}`);
                     const sevenDays = 7 * 24 * 60 * 60 * 1000;
                     if (!lastSkip || (Date.now() - parseInt(lastSkip)) > sevenDays) {
@@ -105,7 +105,7 @@ export default function SudoModal({
         setLoading(true);
         try {
             const entries = await AppwriteService.listKeychainEntries(user.$id);
-            const entry = entries.find((e: any) => e.type === 'password');
+            const entry = entries.find((ent: any) => ent.type === 'password');
 
             if (!entry) {
                 handleRedirectToVaultSetup();

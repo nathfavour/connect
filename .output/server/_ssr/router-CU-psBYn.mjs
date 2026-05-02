@@ -12,7 +12,7 @@ import { i as useAuth, o as usePathname, t as ChatService } from "./chat-GLmU6cB
 import { t as Fe } from "../_libs/react-hot-toast.mjs";
 import { f as ProfileProvider, m as SudoProvider, n as ChatNotificationProvider, o as IslandProvider, r as DataNexusProvider, t as AppChromeProvider, u as PotatoProvider } from "./DynamicIsland-DPFhB0ig.mjs";
 import { n as PresenceProvider, t as ActivityService } from "./PresenceProvider-C-XMou-3.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-DMkH3e-P.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-CU-psBYn.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var globals_default = "/assets/globals-BXDo2CS9.css";
@@ -664,7 +664,7 @@ var Route$11 = createFileRoute("/calls")({
 	errorComponent: lazyRouteComponent($$splitErrorComponentImporter$6, "errorComponent"),
 	component: lazyRouteComponent($$splitComponentImporter$6, "component")
 });
-var $$splitComponentImporter$5 = () => import("./routes-BOzDMOLB.mjs");
+var $$splitComponentImporter$5 = () => import("./routes-CEX4jENh.mjs");
 var $$splitErrorComponentImporter$5 = () => import("./routes-Cpzrm4M_.mjs");
 var Route$10 = createFileRoute("/")({
 	errorComponent: lazyRouteComponent($$splitErrorComponentImporter$5, "errorComponent"),
@@ -676,7 +676,7 @@ var Route$9 = createFileRoute("/u/$username")({
 	errorComponent: lazyRouteComponent($$splitErrorComponentImporter$4, "errorComponent"),
 	component: lazyRouteComponent($$splitComponentImporter$4, "component")
 });
-var $$splitComponentImporter$3 = () => import("./post._id-DDlCBi2D.mjs");
+var $$splitComponentImporter$3 = () => import("./post._id-BbgZS1Iy.mjs");
 var $$splitErrorComponentImporter$3 = () => import("./post._id-pA0ljDIR.mjs");
 var Route$8 = createFileRoute("/post/$id")({
 	errorComponent: lazyRouteComponent($$splitErrorComponentImporter$3, "errorComponent"),

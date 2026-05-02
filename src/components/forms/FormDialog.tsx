@@ -450,7 +450,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         DraftsService.clearDraft(formId);
         setHasUnsavedChanges(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [title, description, status, fields, open, isRestored]);
 
   // Handle focus behavior when fields change

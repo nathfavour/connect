@@ -841,9 +841,9 @@ export function PostViewClient() {
     const pullActiveRef = React.useRef(false);
     const userAvatarUrl = useCachedProfilePreview(myProfile?.avatar || (user?.prefs?.profilePicId as string | undefined) || null, 64, 64);
 
-    const fetchActorsForPulses = async (momentId: string) => {
+    const fetchActorsForPulses = async (targetMomentId: string) => {
         try {
-            const pulses = await SocialService._listPulsesFor(momentId);
+            const pulses = await SocialService._listPulsesFor(targetMomentId);
             const actors = await Promise.all(pulses.map(async (p: any) => {
                 try {
                     const prof = getCachedIdentityById(p.userId) || await UsersService.getProfileById(p.userId);
