@@ -4,7 +4,7 @@ type DynamicOptions = {
   ssr?: boolean
 }
 
-export default function dynamic<TProps>(
+export default function dynamic<TProps extends object>(
   loader: () => Promise<{ default: React.ComponentType<TProps> }>,
   _options?: DynamicOptions,
 ) {

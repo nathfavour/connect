@@ -313,7 +313,7 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
     return () => {
       active = false;
     };
-  }, [task]);
+  }, [task, listTaskCollaborators]);
 
   if (!task) {
     return (

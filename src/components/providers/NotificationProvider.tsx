@@ -164,7 +164,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (typeof unsub === 'function') (unsub as any)();
       else (unsub as any).unsubscribe?.();
     };
-  }, [user?.$id, calculateUnread]);
+  }, [user?.$id, calculateUnread, saveCachedNotifications]);
 
   const markAsRead = async (id: string) => {
     const notification = notifications.find(n => n.$id === id);

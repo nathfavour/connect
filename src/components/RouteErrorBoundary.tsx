@@ -1,7 +1,11 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import type { ErrorComponentProps } from '@tanstack/router-core';
-
-export function RouteErrorBoundary({ error, reset }: ErrorComponentProps) {
+export function RouteErrorBoundary({ 
+  error, 
+  reset 
+}: { 
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
       <Paper sx={{ p: 3, bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.08)', maxWidth: 520, width: '100%' }}>

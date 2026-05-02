@@ -2,12 +2,13 @@
 
 import { useAuth } from '@/lib/auth';
 import { usePathname } from 'next/navigation';
+import { getEcosystemUrl } from '@/lib/constants';
 
 export const AuthOverlay = () => {
-    const { user, loading, login } = useAuth();
+    const { user, isLoading } = useAuth();
     const pathname = usePathname();
 
-    if (loading) return null;
+    if (isLoading) return null;
 
     // Allow public profiles, posts and home feed to be viewed by guests
     const isPublicRoute = pathname === '/' || pathname?.startsWith('/u/') || pathname?.startsWith('/post/');
@@ -55,7 +56,10 @@ export const AuthOverlay = () => {
                         Access the bridge to your private network. Sign in with your Kylrix ID to continue.
                     </p>
                     <button
-                        onClick={login}
+                        onClick={() => {
+                            const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
+                            window.location.href = loginUrl;
+                        }}
                         style={{
                             backgroundColor: 'var(--color-electric)',
                             color: 'var(--color-void)',

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
+import { getEcosystemUrl } from '@/lib/constants';
 import { useAuth } from '@/lib/auth';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import {
@@ -273,7 +274,8 @@ const ThreadPostView = ({
     handle,
     timeLabel,
     caption,
-    _attachments,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    attachments,
     avatarSrc,
     avatarLabel,
     replyingTo,
@@ -815,7 +817,7 @@ export function PostViewClient() {
     const params = useParams();
     const momentId = Array.isArray(params.id) ? params.id[0] : params.id;
     const router = useRouter();
-    const { user, login } = useAuth();
+    const { user } = useAuth();
     const { profile: myProfile } = useProfile();
     const hasPreviewRef = React.useRef(Boolean(getCachedMomentPreview(momentId)));
     const [moment, setMoment] = useState<any>(() => getCachedMomentPreview(momentId) || null);
@@ -839,7 +841,7 @@ export function PostViewClient() {
     const pullStartYRef = React.useRef<number | null>(null);
     const touchStartYRef = React.useRef<number | null>(null);
     const pullActiveRef = React.useRef(false);
-    const userAvatarUrl = useCachedProfilePreview(myProfile?.avatar || (user?.prefs?.profilePicId as string | undefined) || null, 64, 64);
+    const userAvatarUrl = useCachedProfilePreview(myProfile?.avatar || ((user?.prefs as any)?.profilePicId as string | undefined) || null, 64, 64);
 
     const fetchActorsForPulses = async (targetMomentId: string) => {
         try {
@@ -1265,7 +1267,10 @@ export function PostViewClient() {
                         severity="info" 
                         icon={<LogIn size={20} />}
                         action={
-                            <Button color="inherit" size="small" onClick={login} sx={{ fontWeight: 800 }}>
+                            <Button color="inherit" size="small" onClick={() => {
+                                const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
+                                window.location.href = loginUrl;
+                            }} sx={{ fontWeight: 800 }}>
                                 LOGIN
                             </Button>
                         }

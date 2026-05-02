@@ -524,6 +524,58 @@ export const useTask = () => {
   return context;
 };
 
+async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: string[], taskTitle: string, previousAssigneeIds: string[] = []) {
+  const collaboratorRows = await taskCollaborators.list(taskId);
+  const collaboratorIds = new Set(collaboratorRows.map((row) => row.userId));
+  const normalizedAssigneeIds = Array.from(new Set(assigneeIds.filter((id): id is string => Boolean(id) && id !== 'guest')));
+  const newlyAddedAssignees = normalizedAssigneeIds.filter((id) => !previousAssigneeIds.includes(id));
+
+  for (const assigneeId of normalizedAssigneeIds) {
+    if (!collaboratorIds.has(assigneeId)) {
+      const created = await taskCollaborators.create(taskId, assigneeId, 'read', creatorId);
+      collaboratorRows.push(created);
+      collaboratorIds.add(assigneeId);
+    } else {
+      const existing = collaboratorRows.find((row) => row.userId === assigneeId);
+      if (existing && existing.permission !== 'read') {
+        const updated = await taskCollaborators.update(existing.id, { permission: 'read' }, creatorId, taskId);
+        const rowIndex = collaboratorRows.findIndex((row) => row.id === existing.id);
+        if (rowIndex !== -1) {
+          collaboratorRows[rowIndex] = updated;
+        }
+      }
+    }
+  }
+
+  const permissions = buildTaskPermissions(creatorId, normalizedAssigneeIds, collaboratorRows);
+  await taskApi.update(taskId, { assigneeIds: normalizedAssigneeIds }, permissions);
+
+  if (newlyAddedAssignees.length > 0) {
+    await notifyTaskAssignment({
+      taskId,
+      taskTitle,
+      creatorId,
+      recipientIds: newlyAddedAssignees,
+    }).catch((error) => {
+      console.error('[TaskContext] Failed to queue task assignment email', error);
+    });
+  }
+
+  await Promise.all(
+    collaboratorRows.map((collaborator) =>
+      taskCollaborators.update(
+        collaborator.id,
+        { permission: collaborator.permission as CollaboratorPermission },
+        creatorId,
+        taskId,
+        permissions
+      )
+    )
+  );
+
+  return collaboratorRows;
+}
+
 // Provider
 interface TaskProviderProps {
   children: ReactNode;
@@ -762,58 +814,6 @@ export function TaskProvider({ children }: TaskProviderProps) {
     dispatch({ type: 'SELECT_TASK', payload: id });
   }, []);
 
-  const syncTaskAccess = useCallback(async (taskId: string, creatorId: string, assigneeIds: string[], taskTitle: string, previousAssigneeIds: string[] = []) => {
-    const collaboratorRows = await taskCollaborators.list(taskId);
-    const collaboratorIds = new Set(collaboratorRows.map((row) => row.userId));
-    const normalizedAssigneeIds = Array.from(new Set(assigneeIds.filter((id): id is string => Boolean(id) && id !== 'guest')));
-    const newlyAddedAssignees = normalizedAssigneeIds.filter((id) => !previousAssigneeIds.includes(id));
-
-    for (const assigneeId of normalizedAssigneeIds) {
-      if (!collaboratorIds.has(assigneeId)) {
-        const created = await taskCollaborators.create(taskId, assigneeId, 'read', creatorId);
-        collaboratorRows.push(created);
-        collaboratorIds.add(assigneeId);
-      } else {
-        const existing = collaboratorRows.find((row) => row.userId === assigneeId);
-        if (existing && existing.permission !== 'read') {
-          const updated = await taskCollaborators.update(existing.id, { permission: 'read' }, creatorId, taskId);
-          const rowIndex = collaboratorRows.findIndex((row) => row.id === existing.id);
-          if (rowIndex !== -1) {
-            collaboratorRows[rowIndex] = updated;
-          }
-        }
-      }
-    }
-
-    const permissions = buildTaskPermissions(creatorId, normalizedAssigneeIds, collaboratorRows);
-    await taskApi.update(taskId, { assigneeIds: normalizedAssigneeIds }, permissions);
-
-    if (newlyAddedAssignees.length > 0) {
-      await notifyTaskAssignment({
-        taskId,
-        taskTitle,
-        creatorId,
-        recipientIds: newlyAddedAssignees,
-      }).catch((error) => {
-        console.error('[TaskContext] Failed to queue task assignment email', error);
-      });
-    }
-
-    await Promise.all(
-      collaboratorRows.map((collaborator) =>
-        taskCollaborators.update(
-          collaborator.id,
-          { permission: collaborator.permission as CollaboratorPermission },
-          creatorId,
-          taskId,
-          permissions
-        )
-      )
-    );
-
-    return collaboratorRows;
-  }, []);
-
   // Subtask actions (Local only for now)
   const addSubtask = useCallback(async (taskId: string, title: string) => {
     const parentTask = state.tasks.find(task => task.id === taskId);
@@ -905,7 +905,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
       },
     });
     return created;
-  }, [state.tasks, syncTaskAccess]);
+  }, [state.tasks]);
 
   const updateTaskCollaborator = useCallback(async (taskId: string, collaboratorId: string, permission: CollaboratorPermission) => {
     const task = state.tasks.find((item) => item.id === taskId);
@@ -925,7 +925,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
       },
     });
     return collaborator;
-  }, [state.tasks, syncTaskAccess]);
+  }, [state.tasks]);
 
   const deleteTaskCollaborator = useCallback(async (taskId: string, collaboratorId: string) => {
     const task = state.tasks.find((item) => item.id === taskId);
@@ -946,7 +946,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
         updates: { assigneeIds: nextAssigneeIds },
       },
     });
-  }, [state.tasks, syncTaskAccess]);
+  }, [state.tasks]);
 
   // Project actions
   const addProject = useCallback(

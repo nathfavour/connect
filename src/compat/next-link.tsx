@@ -1,15 +1,13 @@
 import React from 'react'
-import { Link as RouterLink } from '@tanstack/react-router'
+import Link from 'next/link'
 
-type NextLinkProps = React.ComponentPropsWithoutRef<'a'> & {
-  href: string
-}
+type NextLinkProps = React.ComponentPropsWithoutRef<typeof Link>
 
 const NextLink = React.forwardRef<HTMLAnchorElement, NextLinkProps>(
-  ({ href, children, ...props }, ref) => (
-    <RouterLink ref={ref} to={href} {...props}>
+  ({ children, ...props }, ref) => (
+    <Link ref={ref} {...props}>
       {children}
-    </RouterLink>
+    </Link>
   ),
 )
 

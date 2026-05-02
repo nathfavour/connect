@@ -64,11 +64,20 @@ export default function UserSearch({
     setIsSearching(true);
     try {
       const users = await UsersService.searchUsers(searchQuery);
-      const filtered = users.filter(u => 
-        !selectedUsers.some(s => s.id === u.id) && 
-        !excludeIds.includes(u.id)
+      const filtered = (users.rows || []).filter(u => 
+        !selectedUsers.some(s => s.id === u.$id) && 
+        !excludeIds.includes(u.$id)
       );
-      setResults(filtered as User[]);
+
+      const mappedResults: User[] = filtered.map(u => ({
+        id: u.$id,
+        title: (u as any).displayName || (u as any).username || 'Unknown User',
+        subtitle: `@${(u as any).username || u.$id}`,
+        avatar: (u as any).avatar || null,
+        profilePicId: (u as any).profilePicId || null
+      }));
+
+      setResults(mappedResults);
     } catch (err) {
       console.error('User search failed:', err);
       setResults([]);
