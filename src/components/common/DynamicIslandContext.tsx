@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import _React, { createContext, useContext } from 'react';
 
 export type IslandPanel = 'ecosystem' | 'profile' | 'search';
 

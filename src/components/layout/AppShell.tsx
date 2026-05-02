@@ -13,8 +13,8 @@ import {
     ListItemText, 
     Paper,
     IconButton,
-    BottomNavigation,
-    BottomNavigationAction, Button 
+    BottomNavigation as _BottomNavigation,
+    BottomNavigationAction as _BottomNavigationAction, Button 
 } from '@mui/material';
 
 import { 
@@ -37,7 +37,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [_anchorEl, _setAnchorEl] = useState<null | HTMLElement>(null);
-    const [bottomNavOffset, setBottomNavOffset] = useState(0);
+    const [_bottomNavOffset, _setBottomNavOffset] = useState(0);
     const { headerHeight } = useAppChrome();
 
     const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);

@@ -33,16 +33,16 @@ export interface UseLastActiveAppReturn {
  * ```
  */
 export function useLastActiveApp(): UseLastActiveAppReturn {
-  const [appId, setAppId] = useState<KylrixAppId>('accounts');
+  const [appId, _setAppId] = useState<KylrixAppId>('accounts');
   const [lastAppId, setLastAppIdState] = useState<KylrixAppId | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [_mounted, _setMounted] = useState(false);
 
   // Initialize from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(LAST_APP_KEY);
       setLastAppIdState((stored as KylrixAppId) || null);
-      setMounted(true);
+      _setMounted(true);
     }
   }, []);
 
@@ -54,7 +54,7 @@ export function useLastActiveApp(): UseLastActiveAppReturn {
   }, []);
 
   // Determine the effective last app ID (default to DEFAULT_APP if none found)
-  const effectiveLastAppId = lastAppId || DEFAULT_APP;
+  const _effectiveLastAppId = lastAppId || DEFAULT_APP;
 
   return {
     appId,

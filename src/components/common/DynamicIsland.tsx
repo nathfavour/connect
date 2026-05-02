@@ -56,7 +56,8 @@ import {
   Phone as PhoneIcon,
   Settings as SettingsIcon,
   User as UserIcon,
-  LogOut as LogOutIcon,
+  LogOut as _LogOutIcon,
+  Sparkles as SparklesIcon,
 } from 'lucide-react';
 import { IdentityAvatar } from './IdentityBadge';
 

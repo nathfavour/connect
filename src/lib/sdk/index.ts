@@ -1,4 +1,4 @@
-import { Client, Account, Databases, ID, Query, Realtime } from 'appwrite';
+import { Client, Account, Databases, ID, Realtime } from 'appwrite';
 import { KylrixSecurity } from './security';
 import { getEcosystemUrl, ECOSYSTEM_CONFIG, TABLE_DB } from './ecosystem';
 import { KylrixPulse } from './pulse';
@@ -89,28 +89,28 @@ export class Kylrix {
   /**
    * Standardized listRows (formerly listDocuments)
    */
-  async listRows<T>(databaseId: string, tableId: string, queries: string[] = []) {
+  async listRows<_T>(databaseId: string, tableId: string, queries: string[] = []) {
     return await this.databases.listDocuments<any>(databaseId, tableId, queries);
   }
 
   /**
    * Standardized getRow (formerly getDocument)
    */
-  async getRow<T>(databaseId: string, tableId: string, rowId: string) {
+  async getRow<_T>(databaseId: string, tableId: string, rowId: string) {
     return await this.databases.getDocument<any>(databaseId, tableId, rowId);
   }
 
   /**
    * Standardized createRow (formerly createDocument)
    */
-  async createRow<T>(databaseId: string, tableId: string, data: T, rowId: string = ID.unique(), permissions?: string[]) {
+  async createRow<_T>(databaseId: string, tableId: string, data: _T, rowId: string = ID.unique(), permissions?: string[]) {
     return await this.databases.createDocument<any>(databaseId, tableId, rowId, data as any, permissions);
   }
 
   /**
    * Standardized updateRow (formerly updateDocument)
    */
-  async updateRow<T>(databaseId: string, tableId: string, rowId: string, data: Partial<T>, permissions?: string[]) {
+  async updateRow<_T>(databaseId: string, tableId: string, rowId: string, data: Partial<_T>, permissions?: string[]) {
     return await this.databases.updateDocument<any>(databaseId, tableId, rowId, data as any, permissions);
   }
 

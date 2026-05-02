@@ -16,7 +16,7 @@ import {
   alpha,
   Button,
 } from '@mui/material';
-import { ChevronDown, Search, X as CloseIcon, Wallet } from 'lucide-react';
+import { ChevronDown, Search, X as _CloseIcon, Wallet } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
